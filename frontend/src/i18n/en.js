@@ -29,6 +29,7 @@ const en = {
     essayGrader:  'Essay Grader',
     allStudents:  'All Students',
     payment:      'Payment',
+    wallet:       'Wallet',
     help:         'Help Center',
     logout:       'Sign Out',
   },
@@ -287,6 +288,78 @@ const en = {
     notFound:    'Page not found',
     unauthorized:'Unauthorized. Please sign in',
     network:     'Check your internet connection',
+  },
+
+  board: {
+    title:       'Announcements Board',
+    newPost:     'New Post',
+    noResults:   'No posts yet',
+    writePost:   'Write something...',
+    postBtn:     'Post',
+    likes:       'Likes',
+    comments:    'Comments',
+  },
+
+  notificationsPage: {
+    title:       'Notifications',
+    markAll:     'Mark all as read',
+    empty:       'No new notifications',
+    allRead:     'All caught up!',
+  },
+
+  focus: {
+    title:       'Focus Timer',
+    start:       'Start Session',
+    stop:        'Stop',
+    pause:       'Pause',
+    resume:      'Resume',
+    breakTime:   'Break Time',
+    sessions:    'Sessions',
+    totalTime:   'Total Time',
+  },
+
+  achievementsPage: {
+    title:       'Achievements',
+    earned:      'Earned',
+    locked:      'Locked',
+    progress:    'Progress',
+    total:       'Total',
+  },
+
+  quizHistory: {
+    title:       'Quiz History',
+    score:       'Score',
+    date:        'Date',
+    subject:     'Subject',
+    difficulty:  'Difficulty',
+    noQuizzes:   'No quizzes taken yet',
+    retake:      'Retake Quiz',
+  },
+
+  chatPage: {
+    title:       'Messages',
+    typeMessage: 'Type a message...',
+    send:        'Send',
+    online:      'Online',
+    offline:     'Offline',
+    noMessages:  'No messages yet',
+    startChat:   'Start a conversation',
+  },
+
+  paymentPage: {
+    title:       'Payment & Subscriptions',
+    wallet:      'Wallet',
+    history:     'Transaction History',
+    topup:       'Top Up',
+    balance:     'Current Balance',
+  },
+
+  examPage: {
+    title:       'Exam Mode',
+    start:       'Start Exam',
+    timeLeft:    'Time Left',
+    submit:      'Submit Exam',
+    results:     'Results',
   },
 };
 

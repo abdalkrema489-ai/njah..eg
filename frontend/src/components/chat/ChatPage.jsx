@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -90,6 +90,26 @@ export default function ChatPage() {
       if (contact) selectChat(contact);
     }
   }, [searchParams, recentChats.length]);
+
+  // ── 2b. Handle navigation from StudentsOverview ──
+  const location = useLocation();
+  useEffect(() => {
+    if (location.state?.openUserId) {
+      const targetId = location.state.openUserId;
+      const targetName = location.state.userName || 'User';
+      // Check if already in contacts
+      const existing = recentChats.find(c => c.id === targetId);
+      if (existing) {
+        selectChat(existing);
+      } else {
+        // Create a temporary contact entry and open chat
+        const tempContact = { id: targetId, name: targetName, chatType: 'private' };
+        selectChat(tempContact);
+      }
+      // Clear state to prevent re-opening on navigation
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, recentChats.length]);
 
   // ── 3. Socket handlers ──
   useEffect(() => {

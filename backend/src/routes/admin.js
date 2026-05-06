@@ -59,10 +59,17 @@ router.post('/login', adminLoginLimiter, async (req, res) => {
   if (email.toLowerCase().trim() !== OWNER_EMAIL.toLowerCase())
     return res.status(401).json({ error: 'Invalid credentials' });
 
-  // bcrypt compare — not plain text
-  const isValid = OWNER_HASH
-    ? await bcrypt.compare(password, OWNER_HASH)
-    : password === (process.env.OWNER_PASSWORD || '');  // fallback for dev only
+  // bcrypt compare or plain-text fallback
+  const OWNER_PASS = process.env.OWNER_PASSWORD || 'Admin@Najah2026!';
+  let isValid = false;
+  if (OWNER_HASH && OWNER_HASH.startsWith('$2')) {
+    // Production: bcrypt hash
+    isValid = await bcrypt.compare(password, OWNER_HASH);
+  } else {
+    // Development fallback: plain text
+    isValid = password === OWNER_PASS;
+    if (isValid) console.warn('⚠️ SECURITY WARNING: Admin using plain-text password. Set OWNER_PASSWORD_HASH in production!');
+  }
 
   if (!isValid)
     return res.status(401).json({ error: 'Invalid credentials' });

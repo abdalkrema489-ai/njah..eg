@@ -140,6 +140,85 @@ router.get('/stats', async (req, res) => {
   res.json({ stats: rows[0] });
 });
 
+// ── GET /my-students (Teacher) ────────────────────────────
+router.get('/my-students', async (req, res) => {
+  try {
+    if (req.user.role !== 'teacher')
+      return res.status(403).json({ error: 'Teachers only' });
+
+    const Group = require('../models/Group');
+    const groups = await Group.find({ teacherId: req.user.id }, 'name students');
+
+    // Aggregate unique students across all groups
+    const studentMap = new Map();
+    for (const group of groups) {
+      for (const s of group.students || []) {
+        if (!studentMap.has(s.userId)) {
+          studentMap.set(s.userId, {
+            userId: s.userId,
+            name: s.name || 'Unknown',
+            email: s.email || '',
+            groups: [],
+            joinedAt: s.joinedAt,
+          });
+        }
+        studentMap.get(s.userId).groups.push(group.name);
+      }
+    }
+
+    const studentIds = [...studentMap.keys()];
+    if (studentIds.length > 0) {
+      // Quiz averages
+      const { rows: grades } = await pool.query(`
+        SELECT user_id::text,
+               ROUND(AVG(score_pct))::int AS avg_grade,
+               COUNT(*) AS quiz_count
+        FROM quiz_attempts
+        WHERE user_id::text = ANY($1) AND created_at > NOW() - INTERVAL '90 days'
+        GROUP BY user_id
+      `, [studentIds]);
+
+      // User info
+      const { rows: users } = await pool.query(`
+        SELECT id::text, grade, last_active, xp_points, level, is_active
+        FROM users WHERE id::text = ANY($1)
+      `, [studentIds]);
+
+      for (const u of users) {
+        const student = studentMap.get(u.id);
+        if (student) {
+          student.grade = u.grade;
+          student.lastActive = u.last_active;
+          student.xp = u.xp_points;
+          student.level = u.level;
+          student.isActive = u.is_active;
+        }
+      }
+      for (const g of grades) {
+        const student = studentMap.get(g.user_id);
+        if (student) {
+          student.avgGrade = g.avg_grade;
+          student.quizCount = parseInt(g.quiz_count);
+        }
+      }
+    }
+
+    const students = [...studentMap.values()].map(s => ({
+      ...s,
+      avgGrade: s.avgGrade || null,
+      quizCount: s.quizCount || 0,
+      status: !s.isActive ? 'Inactive'
+        : (s.avgGrade != null && s.avgGrade < 60) ? 'At Risk'
+        : (s.avgGrade != null && s.avgGrade < 75) ? 'Monitor'
+        : 'Active',
+    }));
+
+    res.json({ success: true, students, total: students.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── GET Public Profile by ID ──────────────────────────────
 // IMPORTANT: This wildcard must come AFTER all literal routes above
 router.get('/:id', async (req, res) => {

@@ -49,7 +49,7 @@ export default function AffiliateDashboard() {
 
   const totalClicks = links.reduce((acc, l) => acc + l.clicks, 0);
   const totalConversions = links.reduce((acc, l) => acc + l.conversions, 0);
-  const totalEarnings = links.reduce((acc, l) => acc + (l.totalEarned || 0), 0);
+  const totalEarnings = links.reduce((acc, l) => acc + (l.earnedAmount || 0), 0);
 
   return (
     <div className="animate-fade-up">
@@ -120,7 +120,7 @@ export default function AffiliateDashboard() {
                   <div style={{ fontSize:12, color:'var(--text3)', display:'flex', gap:12 }}>
                     <span>🖱️ {link.clicks} {isAr ? 'نقرة' : 'clicks'}</span>
                     <span>🎯 {link.conversions} {isAr ? 'تحويل' : 'conv'}</span>
-                    <span style={{ color:'var(--success)', fontWeight:800 }}>💰 {link.totalEarned || 0} EGP</span>
+                    <span style={{ color:'var(--success)', fontWeight:800 }}>💰 {(link.earnedAmount || 0).toFixed(2)} EGP</span>
                   </div>
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => copyToClipboard(link.code)}>

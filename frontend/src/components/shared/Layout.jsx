@@ -104,10 +104,11 @@ const TEACHER_SECTIONS_DEF = [
   {
     labelKey: 'Communication',
     items: [
-      { key:'messages',     path:'/chat',         Icon: Icons.messages,     tKey:'nav.messages', badge: true },
-      { key:'notifications',path:'/notifications',Icon: Icons.notifications,tKey:'nav.notifications', badge: true },
-      { key:'payment',      path:'/payment',      Icon: Icons.payment,      tKey:'nav.payment' },
-      { key:'help',         path:'/help',         Icon: Icons.help,         tKey:'nav.help' },
+      { key:'messages',     path:'/chat',            Icon: Icons.messages,     tKey:'nav.messages', badge: true },
+      { key:'notifications',path:'/notifications',   Icon: Icons.notifications,tKey:'nav.notifications', badge: true },
+      { key:'wallet',       path:'/teacher/wallet',   Icon: Icons.payment,      tKey:'nav.wallet' },
+      { key:'payment',      path:'/payment',          Icon: Icons.payment,      tKey:'nav.payment' },
+      { key:'help',         path:'/help',             Icon: Icons.help,         tKey:'nav.help' },
     ],
   },
 ];

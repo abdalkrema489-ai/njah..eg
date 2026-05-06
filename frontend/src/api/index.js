@@ -95,6 +95,7 @@ export const usersAPI = {
   getPublicStats: ()       => client.get('/users/public/stats'),
   getUser:        id       => client.get(`/users/${id}`),
   searchUsers:    q        => client.get('/users/search', { params: { q } }),
+  getMyStudents:  ()       => client.get('/users/my-students'),
 };
 
 export const plannerAPI = {

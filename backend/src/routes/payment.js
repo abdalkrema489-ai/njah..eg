@@ -363,7 +363,7 @@ router.post('/webhook', validatePaymobHMAC, async (req, res) => {
             const commission = (transaction.amount * aff.commissionRate) / 100;
             transaction.affiliateCommission = commission;
             aff.conversions += 1;
-            aff.totalEarned += commission;
+            aff.earnedAmount += commission;
             await aff.save();
             await pool.query('UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2', [commission, aff.userId]);
             logger.info(`Credited affiliate ${aff.userId} with ${commission} EGP commission.`);
@@ -446,7 +446,7 @@ router.post('/simulate-success', devOnly, authenticate, simulateLimiter, async (
           const commission = (transaction.amount * aff.commissionRate) / 100;
           transaction.affiliateCommission = commission;
           aff.conversions += 1;
-          aff.totalEarned += commission;
+          aff.earnedAmount += commission;
           await aff.save();
           await pool.query('UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2', [commission, aff.userId]);
           logger.info(`[Sim] Credited affiliate ${aff.userId} with ${commission} EGP commission.`);

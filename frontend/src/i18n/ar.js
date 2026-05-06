@@ -30,6 +30,7 @@ const ar = {
     essayGrader:  'مقيّم الإجابات',
     allStudents:  'جميع الطلاب',
     payment:      'الدفع والاشتراكات',
+    wallet:       'المحفظة',
     help:         'مركز المساعدة',
     logout:       'تسجيل الخروج',
   },
@@ -312,6 +313,86 @@ const ar = {
     notFound:    'الصفحة غير موجودة',
     unauthorized:'غير مخول. سجل الدخول أولاً',
     network:     'تحقق من الاتصال بالإنترنت',
+  },
+
+  // Board
+  board: {
+    title:       'لوحة الإعلانات',
+    newPost:     'منشور جديد',
+    noResults:   'لا توجد منشورات',
+    writePost:   'اكتب شيئاً...',
+    postBtn:     'نشر',
+    likes:       'إعجاب',
+    comments:    'تعليقات',
+  },
+
+  // Notifications page
+  notificationsPage: {
+    title:       'الإشعارات',
+    markAll:     'تحديد الكل كمقروء',
+    empty:       'لا توجد إشعارات جديدة',
+    allRead:     'تم قراءة جميع الإشعارات',
+  },
+
+  // Focus page
+  focus: {
+    title:       'وضع التركيز',
+    start:       'ابدأ الجلسة',
+    stop:        'إيقاف',
+    pause:       'توقف مؤقت',
+    resume:      'استئناف',
+    breakTime:   'وقت الراحة',
+    sessions:    'الجلسات',
+    totalTime:   'الوقت الإجمالي',
+  },
+
+  // Achievements page
+  achievementsPage: {
+    title:       'الإنجازات',
+    earned:      'تم الحصول عليه',
+    locked:      'مقفل',
+    progress:    'التقدم',
+    total:       'الإجمالي',
+  },
+
+  // Quiz History
+  quizHistory: {
+    title:       'سجل الاختبارات',
+    score:       'الدرجة',
+    date:        'التاريخ',
+    subject:     'المادة',
+    difficulty:  'المستوى',
+    noQuizzes:   'لم تجرِ أي اختبار بعد',
+    retake:      'إعادة الاختبار',
+  },
+
+  // Chat page
+  chatPage: {
+    title:       'الرسائل',
+    typeMessage: 'اكتب رسالة...',
+    send:        'إرسال',
+    online:      'متصل',
+    offline:     'غير متصل',
+    noMessages:  'لا توجد رسائل',
+    startChat:   'ابدأ محادثة',
+  },
+
+  // Payment
+  paymentPage: {
+    title:       'الدفع والاشتراكات',
+    wallet:      'المحفظة',
+    history:     'سجل المعاملات',
+    topup:       'شحن رصيد',
+    balance:     'الرصيد الحالي',
+  },
+
+  // Exam
+  examPage: {
+    title:       'وضع الامتحان',
+    start:       'ابدأ الامتحان',
+    timeLeft:    'الوقت المتبقي',
+    submit:      'تسليم الامتحان',
+    results:     'النتائج',
   },
 };
 

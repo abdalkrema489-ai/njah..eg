@@ -53,4 +53,20 @@ router.get('/click/:code', async (req, res) => {
   }
 });
 
+// Aggregate affiliate stats for teacher
+router.get('/stats', authenticate, async (req, res) => {
+  try {
+    const affiliates = await Affiliate.find({ teacherId: req.user.id });
+    const stats = {
+      totalClicks:      affiliates.reduce((a, l) => a + l.clicks, 0),
+      totalConversions: affiliates.reduce((a, l) => a + l.conversions, 0),
+      totalEarned:      affiliates.reduce((a, l) => a + l.earnedAmount, 0),
+      activeLinks:      affiliates.filter(l => l.isActive).length,
+    };
+    res.json({ success: true, data: stats });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
