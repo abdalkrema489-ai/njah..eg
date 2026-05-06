@@ -51,6 +51,7 @@ const paymentRoutes       = require('./routes/payment');
 const adminRoutes         = require('./routes/admin');
 const aiSearchRoutes      = require('./routes/ai-search');
 const affiliateRoutes     = require('./routes/affiliates');
+const walletRoutes        = require('./routes/wallet');
 
 const app        = express();
 const httpServer = createServer(app);
@@ -153,6 +154,7 @@ app.use('/api/payment',       paymentRoutes);
 app.use('/api/admin',         adminRoutes);
 app.use('/api/ai-search',     aiSearchRoutes);
 app.use('/api/affiliates',    affiliateRoutes);
+app.use('/api/wallet',        walletRoutes);
 
 // ── 404 ──
 app.use('*', (_req, res) => res.status(404).json({ error: 'Not found' }));

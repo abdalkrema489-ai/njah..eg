@@ -230,6 +230,13 @@ export const paymentAPI = {
   validateCoupon:  d => client.post('/payment/validate-coupon', d),
 };
 
+export const walletAPI = {
+  getBalance:      () => client.get('/wallet/balance'),
+  getEarnings:     p  => client.get('/wallet/earnings', { params: p }),
+  getWithdrawals:  () => client.get('/wallet/withdrawals'),
+  withdraw:        d  => client.post('/wallet/withdraw', d),
+};
+
 export const adminAPI = {
   login:       d  => client.post('/admin/login', d),
   me:          () => client.get('/admin/me'),
@@ -239,6 +246,9 @@ export const adminAPI = {
   updateUser:  (id, d) => client.patch(`/admin/users/${id}`, d),
   groups:      () => client.get('/admin/groups'),
   updateFee:   d  => client.patch('/admin/settings/fee', d),
+  // Withdrawals
+  getWithdrawals:  p  => client.get('/admin/withdrawals', { params: p }),
+  processWithdrawal: (id, d) => client.patch(`/admin/withdrawals/${id}`, d),
 };
 
 export const aiSearchAPI = {

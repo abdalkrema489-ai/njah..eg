@@ -530,4 +530,76 @@ router.patch('/settings/fee', adminAuth, (req, res) => {
   res.json({ success: true, feePercent });
 });
 
+// ── GET /api/admin/withdrawals — كل طلبات السحب ──────────
+router.get('/withdrawals', adminAuth, async (req, res) => {
+  try {
+    const { status = 'pending' } = req.query;
+    const { rows } = await pool.query(
+      `SELECT w.*, u.name AS teacher_name, u.email AS teacher_email
+       FROM withdrawal_requests w JOIN users u ON w.teacher_id=u.id
+       WHERE w.status=$1 ORDER BY w.requested_at ASC`,
+      [status]
+    );
+    res.json({ withdrawals: rows });
+  } catch (err) {
+    res.status(500).json({ error: 'Withdrawals error: ' + err.message });
+  }
+});
+
+// ── PATCH /api/admin/withdrawals/:id — الموافقة أو الرفض ──
+router.patch('/withdrawals/:id', adminAuth, async (req, res) => {
+  try {
+    const { action, note } = req.body;
+    if (!['approve', 'reject'].includes(action))
+      return res.status(400).json({ error: 'Invalid action' });
+
+    const { rows: wr } = await pool.query(
+      'SELECT * FROM withdrawal_requests WHERE id=$1', [req.params.id]
+    );
+    if (!wr[0]) return res.status(404).json({ error: 'Not found' });
+    const w = wr[0];
+    if (w.status !== 'pending') return res.status(400).json({ error: 'Already processed' });
+
+    const newStatus = action === 'approve' ? 'approved' : 'rejected';
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      await client.query(
+        `UPDATE withdrawal_requests SET status=$1, admin_note=$2, processed_at=NOW(), processed_by=$3
+         WHERE id=$4`,
+        [newStatus, note || '', req.admin.email, req.params.id]
+      );
+
+      if (action === 'approve') {
+        // اخصم من الـ wallet والـ pending
+        await client.query(
+          `UPDATE users SET
+             wallet_balance    = wallet_balance    - $1,
+             pending_withdrawn = pending_withdrawn - $1
+           WHERE id = $2`,
+          [w.amount, w.teacher_id]
+        );
+      } else {
+        // Reject: رجّع الـ pending بس
+        await client.query(
+          `UPDATE users SET pending_withdrawn = pending_withdrawn - $1 WHERE id=$2`,
+          [w.amount, w.teacher_id]
+        );
+      }
+
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+
+    res.json({ success: true, status: newStatus });
+  } catch (err) {
+    res.status(500).json({ error: 'Withdrawal action error: ' + err.message });
+  }
+});
+
 module.exports = router;

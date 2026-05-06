@@ -54,6 +54,7 @@ const AffiliateDashboard   = lazy(() => import('./components/teacher/AffiliateDa
 const LessonPlanner        = lazy(() => import('./components/teacher/LessonPlanner'));
 const ExamBuilder          = lazy(() => import('./components/teacher/ExamBuilder'));
 const EssayGrader          = lazy(() => import('./components/teacher/EssayGrader'));
+const TeacherWallet        = lazy(() => import('./components/teacher/TeacherWallet'));
 
 // ── QueryClient ─────────────────────────────────────────────
 const qc = new QueryClient({
@@ -303,6 +304,7 @@ export default function App() {
             <Route path="/lesson-planner" element={<Protected><LessonPlanner /></Protected>} />
             <Route path="/exam-builder"   element={<Protected><ExamBuilder /></Protected>} />
             <Route path="/essay-grader"   element={<Protected><EssayGrader /></Protected>} />
+            <Route path="/teacher/wallet" element={<Protected><TeacherWallet /></Protected>} />
 
             {/* ── Admin (owner only, protected standalone) ── */}
             <Route path="/admin/login"     element={<Suspense fallback={<PageLoader />}><AdminLoginPage /></Suspense>} />
