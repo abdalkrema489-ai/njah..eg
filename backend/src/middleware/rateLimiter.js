@@ -3,7 +3,7 @@ const rateLimit = require('express-rate-limit');
 
 const rateLimiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-  max:      parseInt(process.env.RATE_LIMIT_MAX) || 100,
+  max:      parseInt(process.env.RATE_LIMIT_MAX) || 500,
   standardHeaders: true,
   legacyHeaders:   false,
   skip: req => req.path === '/health',
@@ -12,7 +12,7 @@ const rateLimiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 30,
   message: { error: 'Too many auth attempts. Try again in 15 minutes.' },
 });
 
@@ -24,7 +24,7 @@ const uploadLimiter = rateLimit({
 
 const aiLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 10,
+  max: 30,
   message: { error: 'AI rate limit reached. Please wait a moment.' },
 });
 

@@ -1,18 +1,18 @@
 // src/controllers/aiController.js  — Gemini-first AI controller
 'use strict';
-const pdfParse   = require('pdf-parse');
-const fetch      = require('node-fetch');
+const pdfParse = require('pdf-parse');
+const fetch = require('node-fetch');
 
-const { pool }               = require('../config/postgres');
-const { AIConversation }     = require('../config/mongo');
+const { pool } = require('../config/postgres');
+const { AIConversation } = require('../config/mongo');
 const { cacheSet, cacheGet } = require('../config/redis');
-const { checkAchievements }  = require('../services/achievementService');
-const localAI                = require('../services/localAI');
-const internalAI             = require('../services/internalAI');
-const deepTutor              = require('../services/deepTutorService');
-const geminiAI               = require('../services/geminiAI');
-const CognitiveEngine        = require('../ai/core/CognitiveEngine');
-const logger                 = require('../utils/logger');
+const { checkAchievements } = require('../services/achievementService');
+const localAI = require('../services/localAI');
+const internalAI = require('../services/internalAI');
+const deepTutor = require('../services/deepTutorService');
+const geminiAI = require('../services/geminiAI');
+const CognitiveEngine = require('../ai/core/CognitiveEngine');
+const logger = require('../utils/logger');
 
 const cognitiveEngine = new CognitiveEngine(internalAI, deepTutor);
 cognitiveEngine.init().catch(e => logger.error('Failed to init CognitiveEngine:', e));
@@ -21,7 +21,7 @@ cognitiveEngine.init().catch(e => logger.error('Failed to init CognitiveEngine:'
 async function fetchPdfText(fileUrl, maxChars = 10000) {
   const resp = await fetch(fileUrl);
   if (!resp.ok) throw new Error('Failed to fetch file');
-  const buf  = Buffer.from(await resp.arrayBuffer());
+  const buf = Buffer.from(await resp.arrayBuffer());
   const data = await pdfParse(buf);
   return { text: data.text.slice(0, maxChars), pages: data.numpages };
 }
@@ -31,31 +31,31 @@ async function getProvider(req, res) {
   res.json({
     primary: geminiAI.isAvailable() ? 'gemini-2.0-flash' : 'internal',
     gemini: {
-      available:    geminiAI.isAvailable(),
-      model:        'gemini-2.0-flash',
-      description:  'Google Gemini 2.0 Flash — Egyptian curriculum AI',
+      available: geminiAI.isAvailable(),
+      model: 'gemini-2.0-flash',
+      description: 'Google Gemini 2.0 Flash — Egyptian curriculum AI',
     },
     internal: {
-      available:    true,
-      description:  'Egyptian curriculum pattern engine (offline fallback)',
+      available: true,
+      description: 'Egyptian curriculum pattern engine (offline fallback)',
     },
   });
 }
 
 async function getCapabilities(req, res) {
   res.json({
-    engine:          geminiAI.isAvailable() ? 'gemini-2.0-flash' : 'internal',
+    engine: geminiAI.isAvailable() ? 'gemini-2.0-flash' : 'internal',
     geminiAvailable: geminiAI.isAvailable(),
     features: {
-      chat:         { supported: true },
-      stream:       { supported: geminiAI.isAvailable() },
-      search:       { supported: geminiAI.isAvailable() },
-      summary:      { supported: true },
-      quiz:         { supported: true },
-      studyPlan:    { supported: true },
-      askFile:      { supported: true },
-      youtube:      { supported: true },
-      imageAnalysis:{ supported: false },
+      chat: { supported: true },
+      stream: { supported: geminiAI.isAvailable() },
+      search: { supported: geminiAI.isAvailable() },
+      summary: { supported: true },
+      quiz: { supported: true },
+      studyPlan: { supported: true },
+      askFile: { supported: true },
+      youtube: { supported: true },
+      imageAnalysis: { supported: false },
     },
   });
 }
@@ -67,7 +67,7 @@ async function saveToConversation(convId, userId, userMsg, replyMsg, language, t
       ? await AIConversation.findOne({ _id: convId, userId })
       : null;
     if (!conv) conv = new AIConversation({ userId, messages: [], language, provider: 'gemini' });
-    conv.messages.push({ role: 'user',      content: userMsg  });
+    conv.messages.push({ role: 'user', content: userMsg });
     conv.messages.push({ role: 'assistant', content: replyMsg });
     if (!conv.title || conv.title === 'New Chat') {
       conv.title = title || userMsg.slice(0, 60);
@@ -90,7 +90,7 @@ async function chat(req, res) {
     try {
       const conv = await AIConversation.findOne({ _id: conversationId, userId: req.user.id });
       history = conv?.messages?.slice(-10) || [];
-    } catch {}
+    } catch { }
   }
 
   let reply = '';
@@ -128,16 +128,16 @@ async function chat(req, res) {
   }
 
   const conv = await saveToConversation(conversationId, req.user.id, message, reply, language, null);
-  pool.query('UPDATE users SET xp_points = xp_points + 5 WHERE id = $1', [req.user.id]).catch(() => {});
-  checkAchievements(req.user.id, 'ai_chat').catch(() => {});
+  pool.query('UPDATE users SET xp_points = xp_points + 5 WHERE id = $1', [req.user.id]).catch(() => { });
+  checkAchievements(req.user.id, 'ai_chat').catch(() => { });
 
   res.json({
     reply,
     conversationId: conv?._id || conversationId,
-    title:          conv?.title,
-    provider:       usedProvider,
+    title: conv?.title,
+    provider: usedProvider,
     suggestions,
-    usage:          { total_tokens: 0 },
+    usage: { total_tokens: 0 },
   });
 }
 
@@ -146,9 +146,9 @@ async function chatStream(req, res) {
   const { message, conversationId, language = 'ar' } = req.body;
   if (!message?.trim()) return res.status(400).json({ error: 'Message is required' });
 
-  res.setHeader('Content-Type',      'text/event-stream');
-  res.setHeader('Cache-Control',     'no-cache');
-  res.setHeader('Connection',        'keep-alive');
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
   res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders?.();
 
@@ -157,7 +157,7 @@ async function chatStream(req, res) {
     try {
       const conv = await AIConversation.findOne({ _id: conversationId, userId: req.user.id });
       history = conv?.messages?.slice(-10) || [];
-    } catch {}
+    } catch { }
   }
 
   try {
@@ -172,15 +172,15 @@ async function chatStream(req, res) {
       res.end();
     }
     // Background tasks
-    saveToConversation(conversationId, req.user.id, message, '', language, null).catch(() => {});
-    pool.query('UPDATE users SET xp_points = xp_points + 5 WHERE id = $1', [req.user.id]).catch(() => {});
+    saveToConversation(conversationId, req.user.id, message, '', language, null).catch(() => { });
+    pool.query('UPDATE users SET xp_points = xp_points + 5 WHERE id = $1', [req.user.id]).catch(() => { });
   } catch (err) {
     logger.error('Stream error:', err.message);
     try {
       const fallback = internalAI.generateChatResponse(message, history, language);
       res.write(`data: ${JSON.stringify({ chunk: fallback })}\n\n`);
       res.write(`data: ${JSON.stringify({ done: true, fullText: fallback, provider: 'internal-fallback' })}\n\n`);
-    } catch {} 
+    } catch { }
     res.end();
   }
 }
@@ -244,7 +244,7 @@ async function summarizePdf(req, res) {
   if (!fileId) return res.status(400).json({ error: 'fileId is required' });
 
   const cacheKey = `summary:${fileId}:${language}:gemini`;
-  const cached   = await cacheGet(cacheKey).catch(() => null);
+  const cached = await cacheGet(cacheKey).catch(() => null);
   if (cached) return res.json(cached);
 
   const { rows } = await pool.query(
@@ -270,7 +270,7 @@ async function summarizePdf(req, res) {
   }
 
   const result = { fileId, fileName: rows[0].original_name, summary, pages, language, provider: usedProvider };
-  await cacheSet(cacheKey, result, 7200).catch(() => {});
+  await cacheSet(cacheKey, result, 7200).catch(() => { });
   res.json(result);
 }
 
@@ -289,13 +289,13 @@ async function generateQuiz(req, res) {
         const { text } = await fetchPdfText(rows[0].file_url, 4000);
         context = text;
       }
-    } catch {}
+    } catch { }
   }
 
   let quiz = internalAI.generateQuiz({ subject, difficulty, count: parseInt(count), language });
   let usedProvider = 'najah_heuristics';
 
-  await checkAchievements(req.user.id, 'quiz_generated').catch(() => {});
+  await checkAchievements(req.user.id, 'quiz_generated').catch(() => { });
   res.json({ subject, topic, difficulty, language, count: quiz.questions?.length, ...quiz, provider: usedProvider });
 }
 
@@ -309,13 +309,13 @@ async function submitQuizResult(req, res) {
       (user_id, subject, topic, total_q, correct_q, score_pct, difficulty, time_taken, questions)
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *
   `, [req.user.id, subject, topic || null, totalQ, correctQ, scorePct,
-      difficulty || 'medium', timeTaken || null, JSON.stringify(questions || [])]);
+  difficulty || 'medium', timeTaken || null, JSON.stringify(questions || [])]);
 
   const xpEarned = Math.max(10, Math.round(scorePct / 10) * 10);
   await pool.query('UPDATE users SET xp_points = xp_points + $1 WHERE id = $2', [xpEarned, req.user.id]);
 
-  if (scorePct === 100) await checkAchievements(req.user.id, 'perfect_quiz').catch(() => {});
-  await checkAchievements(req.user.id, 'quiz_submitted').catch(() => {});
+  if (scorePct === 100) await checkAchievements(req.user.id, 'perfect_quiz').catch(() => { });
+  await checkAchievements(req.user.id, 'quiz_submitted').catch(() => { });
 
   res.json({ attempt: rows[0], xpEarned });
 }
@@ -323,7 +323,7 @@ async function submitQuizResult(req, res) {
 // ── Study Plan ────────────────────────────────────────────────
 async function generateStudyPlan(req, res) {
   const { subject, deadline, dailyHours = 2, currentLevel = 'beginner', language = 'en' } = req.body;
-  if (!subject)  return res.status(400).json({ error: 'subject is required' });
+  if (!subject) return res.status(400).json({ error: 'subject is required' });
   if (!deadline) return res.status(400).json({ error: 'deadline is required' });
 
   const daysUntil = Math.ceil((new Date(deadline) - new Date()) / 86400000);
@@ -339,7 +339,7 @@ async function generateStudyPlan(req, res) {
 async function answerFromFile(req, res) {
   const { question, fileId, language = 'en' } = req.body;
   if (!question) return res.status(400).json({ error: 'question is required' });
-  if (!fileId)   return res.status(400).json({ error: 'fileId is required' });
+  if (!fileId) return res.status(400).json({ error: 'fileId is required' });
 
   const { rows } = await pool.query(
     `SELECT * FROM files WHERE id = $1 AND (user_id = $2 OR is_public = true)`,

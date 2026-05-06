@@ -26,7 +26,7 @@ const ADMIN_SECRET = (process.env.JWT_SECRET           || 'secret') + '_ADMIN_OW
 // ── Rate limiter for admin login ──────────────────────────────
 const adminLoginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,   // 15 minutes
-  max: 5,                      // 5 attempts per window
+  max: 15,                      // 15 attempts per window
   skipSuccessfulRequests: true, // successful logins don't count
   keyGenerator: (req) => req.ip + ':admin_login',
   message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
