@@ -1,12 +1,11 @@
-// src/i18n/index.js — i18n context provider + hooks
-// NOTE: No JSX here — uses React.createElement so this .js file works with Vite/OXC
-import { createElement, createContext, useContext, useState, useEffect, useCallback } from 'react';
+// src/i18n/index.js — Synchronized with UIStore (single source of truth)
+// NOTE: No JSX — uses createElement so this .js file works with Vite/OXC
+import { createElement, createContext, useContext, useCallback } from 'react';
+import { useUIStore } from '../context/store';
 import ar from './ar';
 import en from './en';
 
 const DICTIONARIES = { ar, en };
-const DEFAULT_LANG = 'ar';
-const STORAGE_KEY  = 'najah_lang';
 
 export const I18nContext = createContext(null);
 
@@ -15,29 +14,25 @@ function deepGet(obj, path) {
   return path.split('.').reduce((acc, key) => acc?.[key], obj) ?? path;
 }
 
-/* ── Provider (no JSX — pure createElement) ───────────────── */
+/* ── Provider — reads language from UIStore (single source) ── */
 export function I18nProvider({ children }) {
-  const [lang, setLang] = useState(
-    () => (typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null) || DEFAULT_LANG
-  );
-
-  const dict = DICTIONARIES[lang] ?? DICTIONARIES[DEFAULT_LANG];
-
-  useEffect(() => {
-    const dir = lang === 'ar' ? 'rtl' : 'ltr';
-    document.documentElement.setAttribute('dir', dir);
-    document.documentElement.setAttribute('lang', lang);
-    localStorage.setItem(STORAGE_KEY, lang);
-  }, [lang]);
+  // Language is now owned by UIStore; i18n reads from it
+  const { language: lang, setLanguage } = useUIStore();
+  const dict = DICTIONARIES[lang] ?? DICTIONARIES['ar'];
 
   const t = useCallback(
     (key) => deepGet(dict, key),
     [dict]
   );
 
+  // setLang updates UIStore which handles localStorage + dir attribute
+  const setLang = useCallback((newLang) => {
+    setLanguage(newLang);
+  }, [setLanguage]);
+
   const toggleLang = useCallback(() => {
-    setLang(prev => (prev === 'ar' ? 'en' : 'ar'));
-  }, []);
+    setLang(lang === 'ar' ? 'en' : 'ar');
+  }, [lang, setLang]);
 
   const value = {
     lang,
@@ -48,7 +43,6 @@ export function I18nProvider({ children }) {
     dir:   lang === 'ar' ? 'rtl' : 'ltr',
   };
 
-  // Use createElement instead of JSX so this file can stay .js
   return createElement(I18nContext.Provider, { value }, children);
 }
 

@@ -161,7 +161,6 @@ function GlobalSync() {
     const ref = urlParams.get('ref');
     if (ref) {
       localStorage.setItem('affiliate_ref', ref);
-      console.log('Referral tracked:', ref);
     }
   }, []);
 

@@ -29,35 +29,27 @@ async function fetchPdfText(fileUrl, maxChars = 10000) {
 // ── Provider Info ────────────────────────────────────────────
 async function getProvider(req, res) {
   res.json({
+    primary: geminiAI.isAvailable() ? 'gemini-2.0-flash' : 'internal',
     gemini: {
-      available:      false,
-      name:           'Deprecated External AI',
-      description:    'Replaced by Najah Local AI',
-      requiresApiKey: false,
+      available:    geminiAI.isAvailable(),
+      model:        'gemini-2.0-flash',
+      description:  'Google Gemini 2.0 Flash — Egyptian curriculum AI',
     },
     internal: {
-      available:      true,
-      name:           'Najah Massive In-House AI',
-      description:    'Fully autonomous, local AI engine powered by Xenova Transformers running in-house',
-      requiresApiKey: false,
-    },
-    deeptutor: {
-      available:      true,
-      name:           'HKUDS DeepTutor Engine',
-      description:    'Advanced Socratic AI framework adapted for 100% Arabic educational interactions.',
-      requiresApiKey: false,
+      available:    true,
+      description:  'Egyptian curriculum pattern engine (offline fallback)',
     },
   });
 }
 
 async function getCapabilities(req, res) {
   res.json({
-    engine:          'Najah Massive In-House AI',
-    geminiAvailable: false,
+    engine:          geminiAI.isAvailable() ? 'gemini-2.0-flash' : 'internal',
+    geminiAvailable: geminiAI.isAvailable(),
     features: {
       chat:         { supported: true },
-      stream:       { supported: false },
-      search:       { supported: false, note: 'External search disabled for privacy' },
+      stream:       { supported: geminiAI.isAvailable() },
+      search:       { supported: geminiAI.isAvailable() },
       summary:      { supported: true },
       quiz:         { supported: true },
       studyPlan:    { supported: true },
@@ -90,36 +82,54 @@ async function saveToConversation(convId, userId, userMsg, replyMsg, language, t
 
 // ── Chat ─────────────────────────────────────────────────────
 async function chat(req, res) {
-  const { message, conversationId, language = 'en', withFollowUps = true } = req.body;
+  const { message, conversationId, language = 'ar', withFollowUps = true } = req.body;
   if (!message?.trim()) return res.status(400).json({ error: 'Message is required' });
 
-  // Load history from DB
   let history = [];
   if (conversationId) {
     try {
       const conv = await AIConversation.findOne({ _id: conversationId, userId: req.user.id });
-      history = conv?.messages?.slice(-20) || [];
+      history = conv?.messages?.slice(-10) || [];
     } catch {}
   }
 
-  // Process via Unified Cognitive Core
-  reply = await cognitiveEngine.processMessage(req.user, message, language, history);
-  usedProvider = 'najah_cognitive_core';
+  let reply = '';
+  let usedProvider = '';
 
-  // Generate follow-up suggestions using internal AI heuristic
-  let suggestions = [
-    language === 'ar' ? 'اشرح لي المزيد عن هذا.' : 'Can you explain more about this?',
-    language === 'ar' ? 'أعطني مثالاً.' : 'Give me an example.',
-  ];
-
-  // Save conversation
-  const conv = await saveToConversation(conversationId, req.user.id, message, reply, language, null);
-
-  // XP
   try {
-    await pool.query('UPDATE users SET xp_points = xp_points + 5 WHERE id = $1', [req.user.id]);
-    await checkAchievements(req.user.id, 'ai_chat');
-  } catch {}
+    if (geminiAI.isAvailable()) {
+      reply = await geminiAI.chat(message, history, language);
+      usedProvider = 'gemini-2.0-flash';
+    } else {
+      reply = internalAI.generateChatResponse(message, history, language);
+      usedProvider = 'internal-fallback';
+    }
+  } catch (err) {
+    logger.error('AI chat error:', err.message);
+    try {
+      reply = internalAI.generateChatResponse(message, history, language);
+      usedProvider = 'internal-fallback';
+    } catch {
+      return res.status(500).json({ error: 'AI service temporarily unavailable' });
+    }
+  }
+
+  // Follow-up suggestions
+  let suggestions = [];
+  if (withFollowUps) {
+    if (geminiAI.isAvailable()) {
+      suggestions = await geminiAI.generateFollowUps(message, reply, language).catch(() => []);
+    }
+    if (!suggestions || suggestions.length === 0) {
+      suggestions = language === 'ar'
+        ? ['اشرح أكثر', 'أعطني مثال', 'كيف أطبق ده؟']
+        : ['Explain more', 'Give me an example', 'How do I apply this?'];
+    }
+  }
+
+  const conv = await saveToConversation(conversationId, req.user.id, message, reply, language, null);
+  pool.query('UPDATE users SET xp_points = xp_points + 5 WHERE id = $1', [req.user.id]).catch(() => {});
+  checkAchievements(req.user.id, 'ai_chat').catch(() => {});
 
   res.json({
     reply,
@@ -133,46 +143,44 @@ async function chat(req, res) {
 
 // ── Streaming Chat ────────────────────────────────────────────
 async function chatStream(req, res) {
-  const { message, conversationId, language = 'en' } = req.body;
+  const { message, conversationId, language = 'ar' } = req.body;
   if (!message?.trim()) return res.status(400).json({ error: 'Message is required' });
 
-  // SSE headers
-  res.setHeader('Content-Type',  'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection',    'keep-alive');
+  res.setHeader('Content-Type',      'text/event-stream');
+  res.setHeader('Cache-Control',     'no-cache');
+  res.setHeader('Connection',        'keep-alive');
   res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders?.();
 
-  // Load history
   let history = [];
   if (conversationId) {
     try {
       const conv = await AIConversation.findOne({ _id: conversationId, userId: req.user.id });
-      history = conv?.messages?.slice(-20) || [];
+      history = conv?.messages?.slice(-10) || [];
     } catch {}
   }
 
-  // Since we rely entirely on in-house AI, we don't stream Transformers output yet,
-  // we just yield the entire generated response directly as a chunk to maintain UI compatibility.
   try {
-    let fullText;
-    if (localAI.isReady && localAI.models.generator) {
-      fullText = await localAI.chat(message, history, language);
+    if (geminiAI.isAvailable() && typeof geminiAI.chatStream === 'function') {
+      // Gemini real streaming — writes SSE chunks directly to res
+      await geminiAI.chatStream(message, history, res);
     } else {
-      fullText = internalAI.generateChatResponse(message, history, language);
+      // Fallback: internal AI as single chunk
+      const fullText = internalAI.generateChatResponse(message, history, language);
+      res.write(`data: ${JSON.stringify({ chunk: fullText })}\n\n`);
+      res.write(`data: ${JSON.stringify({ done: true, fullText, provider: 'internal-fallback' })}\n\n`);
+      res.end();
     }
-    
-    res.write(`data: ${JSON.stringify({ chunk: fullText })}\n\n`);
-    res.write(`data: ${JSON.stringify({ done: true, fullText: fullText, provider: 'najah_inhouse' })}\n\n`);
-    res.end();
-    
-    saveToConversation(conversationId, req.user.id, message, fullText, language, null).catch(() => {});
+    // Background tasks
+    saveToConversation(conversationId, req.user.id, message, '', language, null).catch(() => {});
     pool.query('UPDATE users SET xp_points = xp_points + 5 WHERE id = $1', [req.user.id]).catch(() => {});
   } catch (err) {
-    logger.error('In-house stream error:', err.message);
-    const reply = internalAI.generateChatResponse(message, history, language);
-    res.write(`data: ${JSON.stringify({ chunk: reply })}\n\n`);
-    res.write(`data: ${JSON.stringify({ done: true, fullText: reply, provider: 'najah_heuristics' })}\n\n`);
+    logger.error('Stream error:', err.message);
+    try {
+      const fallback = internalAI.generateChatResponse(message, history, language);
+      res.write(`data: ${JSON.stringify({ chunk: fallback })}\n\n`);
+      res.write(`data: ${JSON.stringify({ done: true, fullText: fallback, provider: 'internal-fallback' })}\n\n`);
+    } catch {} 
     res.end();
   }
 }

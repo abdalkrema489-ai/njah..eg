@@ -8,6 +8,7 @@ const bcrypt   = require('bcryptjs');
 const jwt      = require('jsonwebtoken');
 const fs       = require('fs');
 const path     = require('path');
+const { rateLimit } = require('express-rate-limit');
 const router   = express.Router();
 
 const { pool }    = require('../config/postgres');
@@ -17,10 +18,21 @@ const TopUpCode   = require('../models/TopUpCode');
 const Coupon      = require('../models/Coupon');
 const geminiAI    = require('../services/geminiAI');
 
-const OWNER_EMAIL  = process.env.OWNER_EMAIL    || 'ahmed1abdalkrem1@gmail.com';
-const OWNER_PASS   = process.env.OWNER_PASSWORD || 'Admin@Najah2026!';
-const OWNER_NAME   = process.env.OWNER_NAME     || 'Ahmed AbdEl-Kareem';
-const ADMIN_SECRET = (process.env.JWT_SECRET    || 'secret') + '_ADMIN_OWNER';
+const OWNER_EMAIL  = process.env.OWNER_EMAIL          || 'ahmed1abdalkrem1@gmail.com';
+const OWNER_HASH   = process.env.OWNER_PASSWORD_HASH   || '';
+const OWNER_NAME   = process.env.OWNER_NAME            || 'Ahmed AbdEl-Kareem';
+const ADMIN_SECRET = (process.env.JWT_SECRET           || 'secret') + '_ADMIN_OWNER';
+
+// ── Rate limiter for admin login ──────────────────────────────
+const adminLoginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,   // 15 minutes
+  max: 5,                      // 5 attempts per window
+  skipSuccessfulRequests: true, // successful logins don't count
+  keyGenerator: (req) => req.ip + ':admin_login',
+  message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 function getFee() { return parseFloat(process.env.PLATFORM_FEE_PERCENT || '5'); }
 
@@ -39,7 +51,7 @@ function adminAuth(req, res, next) {
 }
 
 // ── POST /api/admin/login ─────────────────────────────────────
-router.post('/login', async (req, res) => {
+router.post('/login', adminLoginLimiter, async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password)
     return res.status(400).json({ error: 'Email and password required' });
@@ -47,7 +59,12 @@ router.post('/login', async (req, res) => {
   if (email.toLowerCase().trim() !== OWNER_EMAIL.toLowerCase())
     return res.status(401).json({ error: 'Invalid credentials' });
 
-  if (password !== OWNER_PASS)
+  // bcrypt compare — not plain text
+  const isValid = OWNER_HASH
+    ? await bcrypt.compare(password, OWNER_HASH)
+    : password === (process.env.OWNER_PASSWORD || '');  // fallback for dev only
+
+  if (!isValid)
     return res.status(401).json({ error: 'Invalid credentials' });
 
   const token = jwt.sign(
@@ -385,18 +402,43 @@ router.post('/branding', adminAuth, (req, res) => {
 router.get('/users', adminAuth, async (req, res) => {
   try {
     const { page = 1, limit = 20, role, search } = req.query;
-    // Use last_active (which exists) not last_login
-    let q = `SELECT id, name, email, role, created_at, last_active, is_active, xp_points, level
-             FROM users WHERE 1=1`;
-    const params = [];
-    let idx = 1;
-    if (role)   { q += ` AND role=$${idx++}`;                                           params.push(role); }
-    if (search) { q += ` AND (name ILIKE $${idx} OR email ILIKE $${idx++})`;            params.push(`%${search}%`); }
-    q += ` ORDER BY created_at DESC LIMIT $${idx++} OFFSET $${idx++}`;
-    params.push(parseInt(limit), (parseInt(page) - 1) * parseInt(limit));
 
-    const { rows }     = await pool.query(q, params);
-    const { rows: tot} = await pool.query('SELECT COUNT(*)::int AS c FROM users');
+    const params = [];
+    const conds  = ['1=1'];
+
+    if (role) {
+      params.push(role);
+      conds.push(`role=$${params.length}`);
+    }
+    if (search) {
+      params.push(`%${search}%`);
+      conds.push(`(name ILIKE $${params.length} OR email ILIKE $${params.length})`);
+    }
+
+    params.push(parseInt(limit));
+    const limitIdx = params.length;
+
+    params.push((parseInt(page) - 1) * parseInt(limit));
+    const offsetIdx = params.length;
+
+    const q = `
+      SELECT id, name, email, role, created_at, last_active, is_active, xp_points, level
+      FROM users
+      WHERE ${conds.join(' AND ')}
+      ORDER BY created_at DESC
+      LIMIT $${limitIdx} OFFSET $${offsetIdx}
+    `;
+
+    const { rows } = await pool.query(q, params);
+
+    const countParams = params.slice(0, params.length - 2);
+    const countConds  = conds.slice(1);
+    const countWhere  = countConds.length ? `WHERE ${countConds.join(' AND ')}` : '';
+    const { rows: tot } = await pool.query(
+      `SELECT COUNT(*)::int AS c FROM users ${countWhere}`,
+      countParams
+    );
+
     res.json({ users: rows, total: tot[0].c, page: parseInt(page), limit: parseInt(limit) });
   } catch (err) {
     res.status(500).json({ error: 'Users error: ' + err.message });

@@ -3,9 +3,25 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import DOMPurify from 'dompurify';
 import { aiAPI, filesAPI } from '../../api/index';
 import { useUIStore, useAuthStore } from '../../context/store';
 import { Spinner } from '../shared/UI';
+
+// ── DOMPurify config ──────────────────────────────────────
+const SANITIZE_OPTS = {
+  ALLOWED_TAGS: [
+    'h2', 'h3', 'h4', 'p', 'br',
+    'strong', 'em', 'b', 'i',
+    'ul', 'ol', 'li',
+    'pre', 'code',
+    'span', 'div',
+    'table', 'thead', 'tbody', 'tr', 'th', 'td',
+  ],
+  ALLOWED_ATTR: ['class'],
+  FORBID_TAGS:  ['script', 'style', 'iframe', 'form', 'input'],
+  FORBID_ATTR:  ['onerror', 'onload', 'onclick', 'onmouseover'],
+};
 
 // ── Markdown-lite renderer ─────────────────────────────────
 function renderMarkdown(text) {
@@ -25,10 +41,11 @@ function renderMarkdown(text) {
 }
 
 function MsgContent({ text }) {
+  const cleanHtml = DOMPurify.sanitize(renderMarkdown(text || ''), SANITIZE_OPTS);
   return (
     <div
       className="ai-msg-content"
-      dangerouslySetInnerHTML={{ __html: renderMarkdown(text) }}
+      dangerouslySetInnerHTML={{ __html: cleanHtml }}
     />
   );
 }
@@ -813,7 +830,7 @@ function SummarizePanel() {
             </button>
           </div>
           <div className="ai-msg-content" style={{ fontSize: 14, lineHeight: 1.75, color: 'var(--text)' }}
-            dangerouslySetInnerHTML={{ __html: renderMarkdown(summary) }} />
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(renderMarkdown(summary), SANITIZE_OPTS) }} />
         </motion.div>
       )}
     </div>
@@ -964,7 +981,7 @@ function YouTubePanel() {
             </div>
           </div>
           <div className="ai-msg-content" style={{ fontSize:14, lineHeight:1.75, color:'var(--text)' }}
-            dangerouslySetInnerHTML={{ __html:renderMarkdown(summary) }} />
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(renderMarkdown(summary), SANITIZE_OPTS) }} />
         </motion.div>
       )}
     </div>

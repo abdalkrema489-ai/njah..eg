@@ -4,9 +4,11 @@ const mongoose = require('mongoose');
 const submissionSchema = new mongoose.Schema({
   studentId:      { type: String, required: true },
   studentName:    { type: String },
-  content:        { type: String }, // Can be text or base64
-  attachmentData: { type: String }, // Base64 for file
-  attachmentType: { type: String }, // mime type (e.g., image/jpeg, application/pdf)
+  content:        { type: String },
+  attachmentUrl:  { type: String },   // Firebase Storage URL (not base64)
+  attachmentName: { type: String },   // Original filename
+  attachmentType: { type: String },   // mime type (e.g., image/jpeg, application/pdf)
+  attachmentSize: { type: Number },   // size in bytes
   score:          { type: Number, min: 0 },
   feedback:       { type: String, maxlength: 1000 },
   status:         { type: String, enum: ['submitted', 'graded', 'late'], default: 'submitted' },

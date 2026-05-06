@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { paymentAPI, usersAPI, groupsAPI } from '../../api/index';
 import { useTranslation } from '../../i18n/index';
@@ -10,7 +11,9 @@ import { useAuthStore } from '../../context/store';
 export default function PaymentPage() {
   const { t, lang } = useTranslation();
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const { user } = useAuthStore();
+  const isAr = lang === 'ar';
   const [activeTab, setActiveTab] = useState('upcoming');
   const [selectedGateway, setSelectedGateway] = useState('card');
   const [showCheckout, setShowCheckout] = useState(false);
@@ -24,6 +27,8 @@ export default function PaymentPage() {
   const [joining, setJoining] = useState(false);
   const [topUpAmount, setTopUpAmount] = useState('');
   const [checkoutTarget, setCheckoutTarget] = useState(null);
+  const [lastJoinedGroupId, setLastJoinedGroupId] = useState(null);
+  const [paySuccess, setPaySuccess] = useState(null); // { type, groupId, amount }
 
   const { data: profileData } = useQuery({ queryKey: ['profile'], queryFn: usersAPI.getProfile });
   const walletBalance = profileData?.data?.user?.wallet_balance || user?.wallet_balance || 0;
@@ -50,22 +55,28 @@ export default function PaymentPage() {
     if (!joinCode) return;
     setJoining(true);
     try {
-      await groupsAPI.join(joinCode);
-      toast.success(lang === 'ar' ? 'تم الانضمام للمجموعة!' : 'Joined group successfully!');
+      const { data } = await groupsAPI.join(joinCode.toUpperCase());
+      toast.success(isAr ? `🎉 تم الانضمام لمجموعة "${data.group?.name}" بنجاح!` : `🎉 Joined "${data.group?.name}" successfully!`);
       setJoinCode('');
       qc.invalidateQueries(['profile']);
+      qc.invalidateQueries(['groups']);
+      // Navigate directly to the group
+      if (data.group?._id) {
+        setTimeout(() => navigate(`/groups/${data.group._id}`), 800);
+      }
     } catch (err) {
       if (err.response?.status === 402) {
+        const groupId = err.response.data.groupId;
         setCheckoutTarget({
           type: 'group_join',
           amount: err.response.data.price,
-          groupId: err.response.data.groupId,
-          title: `Group Entry: ${joinCode.toUpperCase()}`
+          groupId,
+          title: isAr ? `الانضمام للمجموعة: ${joinCode.toUpperCase()}` : `Group Entry: ${joinCode.toUpperCase()}`
         });
         setShowCheckout(true);
-        toast.success(lang === 'ar' ? 'مطلوب الدفع للانضمام.' : 'Payment required to join.');
+        toast.success(isAr ? '💳 هذه مجموعة مدفوعة — أكمل الدفع للانضمام.' : '💳 This is a paid group — complete payment to join.');
       } else {
-        toast.error(err.response?.data?.error || 'Error joining group');
+        toast.error(err.response?.data?.error || (isAr ? 'خطأ في الانضمام' : 'Error joining group'));
       }
     } finally {
       setJoining(false);
@@ -103,7 +114,6 @@ export default function PaymentPage() {
       const { data } = await paymentAPI.initiate(payload);
 
       if (data.iframeUrl) {
-        // Real or simulated iFrame
         window.open(data.iframeUrl, '_blank');
       } else if (data.redirectUrl) {
         window.open(data.redirectUrl, '_blank');
@@ -111,15 +121,31 @@ export default function PaymentPage() {
         toast.success(`Use Reference: ${data.referenceCode} at Fawry`, { duration: 5000 });
       }
 
-      // Step 2: Since we are in development, trigger the simulate-success webhook automatically
-      // In production, Paymob would hit the backend webhook.
+      // Step 2: Since we are in development, trigger simulate-success automatically
       await paymentAPI.simulateSuccess({ transactionId: data.transactionId });
       
-      toast.success(lang === 'ar' ? 'تم الدفع وحفظ المعاملة بنجاح!' : 'Payment Successful! Genuine Transaction Recorded & SMS triggered.');
+      // Step 3: Invalidate data
       qc.invalidateQueries(['paymentHistory']);
-      setShowCheckout(false);
+      qc.invalidateQueries(['profile']);
+      qc.invalidateQueries(['groups']);
+
+      // Step 4: Show success & redirect if group_join
+      if (checkoutTarget.type === 'group_join' && checkoutTarget.groupId) {
+        toast.success(isAr ? '✅ تم الدفع! أنت الآن عضو في المجموعة.' : '✅ Payment successful! You are now a member of the group.');
+        setShowCheckout(false);
+        setTimeout(() => navigate(`/groups/${checkoutTarget.groupId}`), 1200);
+      } else if (checkoutTarget.type === 'wallet_topup') {
+        toast.success(isAr ? `✅ تم شحن ${finalAmount} ج.م بنجاح!` : `✅ EGP ${finalAmount} added to your wallet!`);
+        setShowCheckout(false);
+      } else {
+        toast.success(isAr ? '✅ تم الدفع بنجاح!' : '✅ Payment Successful!');
+        setShowCheckout(false);
+      }
+      setCheckoutTarget(null);
+      setAppliedCoupon(null);
+      setCouponCode('');
     } catch (err) {
-      toast.error(lang === 'ar' ? 'فشل الدفع.' : 'Payment failed.');
+      toast.error(isAr ? 'فشل الدفع.' : 'Payment failed.');
       console.error(err);
     } finally {
       setProcessing(false);
@@ -190,19 +216,45 @@ export default function PaymentPage() {
           
           {/* Quick Actions (Join Group & Top Up) */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            <form onSubmit={handleJoinGroup} style={{ background: 'var(--surface)', padding: 16, borderRadius: 16, border: '1px solid var(--border)' }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text2)', marginBottom: 8 }}>{lang === 'ar' ? 'الانضمام لمجموعة (كود)' : 'Join Group (Code)'}</div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <input type="text" value={joinCode} onChange={e => setJoinCode(e.target.value)} placeholder="CODE..." style={{ flex: 1, padding: 10, borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface2)', fontSize: 13 }} />
-                <button disabled={joining || !joinCode} style={{ padding: '0 16px', borderRadius: 10, background: 'var(--primary)', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer' }}>{joining ? '⏳' : 'Join'}</button>
+            <form onSubmit={handleJoinGroup} style={{ background: 'var(--surface)', padding: '20px', borderRadius: 20, border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(99,102,241,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🔗</div>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{isAr ? 'الانضمام لمجموعة' : 'Join a Group'}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text3)' }}>{isAr ? 'أدخل كود المجموعة' : 'Enter the group invite code'}</div>
+                </div>
               </div>
+              <input
+                type="text"
+                value={joinCode}
+                onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                placeholder={isAr ? 'مثال: ABC123' : 'e.g. ABC123'}
+                maxLength={6}
+                style={{ padding: '11px 14px', borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--surface2)', fontSize: 15, fontWeight: 800, fontFamily: 'monospace', letterSpacing: 3, color: 'var(--text)', outline: 'none', textAlign: 'center', textTransform: 'uppercase' }}
+              />
+              <button type="submit" disabled={joining || !joinCode} style={{ padding: '11px', borderRadius: 12, background: joining || !joinCode ? 'var(--surface3)' : 'var(--primary)', color: '#fff', border: 'none', fontWeight: 800, cursor: joining || !joinCode ? 'not-allowed' : 'pointer', fontSize: 14, opacity: joining || !joinCode ? 0.7 : 1 }}>
+                {joining ? '⏳' : (isAr ? 'انضم الآن ←' : 'Join Now →')}
+              </button>
             </form>
-            <form onSubmit={handleTopUpReq} style={{ background: 'var(--surface)', padding: 16, borderRadius: 16, border: '1px solid var(--border)' }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text2)', marginBottom: 8 }}>{lang === 'ar' ? 'شحن الرصيد' : 'Top Up Wallet'}</div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <input type="number" min={10} value={topUpAmount} onChange={e => setTopUpAmount(e.target.value)} placeholder="Amount EGP" style={{ flex: 1, padding: 10, borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface2)', fontSize: 13 }} />
-                <button disabled={!topUpAmount} style={{ padding: '0 16px', borderRadius: 10, background: '#10B981', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Top Up</button>
+            <form onSubmit={handleTopUpReq} style={{ background: 'var(--surface)', padding: '20px', borderRadius: 20, border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>💰</div>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{isAr ? 'شحن الرصيد' : 'Top Up Wallet'}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text3)' }}>{isAr ? `رصيدك: ${Number(walletBalance).toFixed(0)} ج.م` : `Balance: EGP ${Number(walletBalance).toFixed(0)}`}</div>
+                </div>
               </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {[50, 100, 200].map(amt => (
+                  <button key={amt} type="button" onClick={() => setTopUpAmount(String(amt))} style={{ flex: 1, padding: '6px 4px', borderRadius: 8, background: topUpAmount === String(amt) ? 'rgba(16,185,129,0.15)' : 'var(--surface2)', border: `1.5px solid ${topUpAmount === String(amt) ? '#10B981' : 'var(--border)'}`, color: topUpAmount === String(amt) ? '#10B981' : 'var(--text3)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                    {amt}
+                  </button>
+                ))}
+              </div>
+              <input type="number" min={10} value={topUpAmount} onChange={e => setTopUpAmount(e.target.value)} placeholder={isAr ? 'أو أدخل مبلغاً...' : 'Or enter amount...'} style={{ padding: '11px 14px', borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--surface2)', fontSize: 14, color: 'var(--text)', outline: 'none' }} />
+              <button type="submit" disabled={!topUpAmount} style={{ padding: '11px', borderRadius: 12, background: !topUpAmount ? 'var(--surface3)' : '#10B981', color: '#fff', border: 'none', fontWeight: 800, cursor: !topUpAmount ? 'not-allowed' : 'pointer', fontSize: 14, opacity: !topUpAmount ? 0.7 : 1 }}>
+                {isAr ? 'شحن الآن ←' : 'Add Balance →'}
+              </button>
             </form>
           </div>
 

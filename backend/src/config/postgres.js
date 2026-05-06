@@ -43,15 +43,18 @@ async function runMigrations(client) {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS dob DATE;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
       ALTER TABLE users ADD COLUMN IF NOT EXISTS social_links JSONB DEFAULT '{}';
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS subjects TEXT[];
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS subjects TEXT;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS xp_points INTEGER DEFAULT 0;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS level INTEGER DEFAULT 1;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS streak_days INTEGER DEFAULT 0;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
       ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
       ALTER TABLE users ADD COLUMN IF NOT EXISTS institution_id UUID;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS institution_type VARCHAR(30) DEFAULT 'school';
       ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet_balance NUMERIC(10,2) DEFAULT 0.00;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_status VARCHAR(20) DEFAULT 'unverified';
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS faculty VARCHAR(150);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS university_name VARCHAR(200);
       ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
       ALTER TABLE users ADD CONSTRAINT users_role_check CHECK(role IN('student','teacher','school_admin','university','university_admin','admin'));
       -- study_sessions

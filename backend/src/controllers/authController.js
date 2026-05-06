@@ -15,6 +15,7 @@ async function register(req, res) {
   const {
     name, email, password, grade, school, language = 'en',
     role = 'student', institutionType = 'school', institution,
+    faculty, universityName,
     subjects,  // for teachers: comma-separated subjects they teach
   } = req.body;
   if (!name || !email || !password)
@@ -29,31 +30,46 @@ async function register(req, res) {
     return res.status(409).json({ error: 'Email already in use' });
 
   // Use the institution field as the "school" column (backwards-compatible)
-  const institutionName = institution || school || null;
+  const institutionName = institution || school || universityName || null;
+  const subjectsStr = subjects || null;
   const hash = await bcrypt.hash(password, ROUNDS);
 
   // Try to set role / institutionType columns if they exist (graceful fallback)
   let rows;
   try {
     const result = await pool.query(`
-      INSERT INTO users (name,email,password_hash,grade,school,language,email_verified,role,institution_type)
-      VALUES ($1,$2,$3,$4,$5,$6,false,$7,$8)
-      RETURNING id,name,email,grade,level,xp_points,language,avatar_url,role,streak_days,email_verified
-    `, [name, email, hash, grade || null, institutionName, language, role, institutionType]);
+      INSERT INTO users (name,email,password_hash,grade,school,language,email_verified,role,institution_type,faculty,university_name,subjects)
+      VALUES ($1,$2,$3,$4,$5,$6,false,$7,$8,$9,$10,$11)
+      RETURNING id,name,email,grade,level,xp_points,language,avatar_url,role,streak_days,email_verified,faculty,university_name,subjects
+    `, [name, email, hash, grade || null, institutionName, language, role, institutionType, faculty || null, universityName || null, subjectsStr]);
     rows = result.rows;
   } catch {
-    // Fallback: columns may not exist yet
-    const result = await pool.query(`
-      INSERT INTO users (name,email,password_hash,grade,school,language,email_verified)
-      VALUES ($1,$2,$3,$4,$5,$6,false)
-      RETURNING id,name,email,grade,level,xp_points,language,avatar_url,role,streak_days,email_verified
-    `, [name, email, hash, grade || null, institutionName, language]);
-    rows = result.rows;
+    // Fallback: extra columns may not exist in older DB schema
+    try {
+      const result = await pool.query(`
+        INSERT INTO users (name,email,password_hash,grade,school,language,email_verified,role,institution_type)
+        VALUES ($1,$2,$3,$4,$5,$6,false,$7,$8)
+        RETURNING id,name,email,grade,level,xp_points,language,avatar_url,role,streak_days,email_verified
+      `, [name, email, hash, grade || null, institutionName, language, role, institutionType]);
+      rows = result.rows;
+    } catch {
+      // Final fallback — minimal columns only
+      const result = await pool.query(`
+        INSERT INTO users (name,email,password_hash,grade,school,language,email_verified)
+        VALUES ($1,$2,$3,$4,$5,$6,false)
+        RETURNING id,name,email,grade,level,xp_points,language,avatar_url,role,streak_days,email_verified
+      `, [name, email, hash, grade || null, institutionName, language]);
+      rows = result.rows;
+    }
   }
 
   const user = rows[0];
   // Attach role from request (may not be in DB yet if column missing)
   if (!user.role) user.role = role;
+  if (!user.faculty && faculty) user.faculty = faculty;
+  if (!user.university_name && universityName) user.universityName = universityName;
+  if (!user.subjects && subjectsStr) user.subjects = subjectsStr;
+
   const verifyToken = uuid();
   await cacheSet(`verify:${verifyToken}`, user.id, 86400);
   await sendEmail({ to: email, template: 'verify', data: { name, verifyToken } }).catch(() => {});

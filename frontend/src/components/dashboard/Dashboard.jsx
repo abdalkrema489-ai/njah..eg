@@ -16,6 +16,7 @@ import { WeatherWidget, WordOfDayWidget } from '../shared/PublicAPIWidgets';
 const TeacherDashboard      = lazy(() => import('../teacher/TeacherDashboard'));
 const SchoolStudentDashboard= lazy(() => import('./SchoolStudentDashboard'));
 const UniversityDashboard   = lazy(() => import('./UniversityStudentDashboard'));
+const AdminOverviewDashboard= lazy(() => import('../admin/AdminOverviewDashboard'));
 
 
 /* ── Data mappings ─────────────────────────────────────── */
@@ -569,6 +570,9 @@ export default function Dashboard() {
   const role = getUserRole(user);
   const loader = <div style={{ display:'flex', justifyContent:'center', padding:60 }}><Spinner /></div>;
 
+  if (role === 'admin') {
+    return <Suspense fallback={loader}><AdminOverviewDashboard /></Suspense>;
+  }
   if (role === 'teacher') {
     return <Suspense fallback={loader}><TeacherDashboard /></Suspense>;
   }
@@ -578,7 +582,7 @@ export default function Dashboard() {
   if (role === 'school_student') {
     return <Suspense fallback={loader}><SchoolStudentDashboard /></Suspense>;
   }
-  // Default: original rich student dashboard (admin / guest fallback)
+  // Default: original rich student dashboard (guest fallback)
   return <StudentDashboard />;
 }
 

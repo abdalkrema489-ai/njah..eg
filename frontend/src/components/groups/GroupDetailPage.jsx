@@ -1,7 +1,7 @@
 // src/components/groups/GroupDetailPage.jsx
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, isPast, formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -145,10 +145,17 @@ function AssignmentCard({ assignment, isOwner, userId, groupId, onGrade, onSubmi
             {isAr ? 'تسليم ←' : 'Submit →'}
           </button>
         )}
-        {isOwner && totalSubs > 0 && (
-          <button onClick={() => onGrade(assignment)} style={{ padding:'6px 14px', borderRadius:9, background:'rgba(16,185,129,0.12)', color:'#34D399', border:'1px solid rgba(16,185,129,0.25)', fontWeight:700, fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
-            {isAr ? `📋 تقييم (${totalSubs})` : `📋 Grade (${totalSubs})`}
-          </button>
+        {isOwner && (
+          <div style={{ display:'flex', gap:8 }}>
+            <button onClick={() => onTrack(assignment)} style={{ padding:'6px 14px', borderRadius:9, background:'rgba(99,102,241,0.12)', color:'#818CF8', border:'1px solid rgba(99,102,241,0.25)', fontWeight:700, fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
+              {isAr ? `👁 متابعة (${totalSubs}/${assignment.groupStudentCount||'?'})` : `👁 Track (${totalSubs})`}
+            </button>
+            {totalSubs > 0 && (
+              <button onClick={() => onGrade(assignment)} style={{ padding:'6px 14px', borderRadius:9, background:'rgba(16,185,129,0.12)', color:'#34D399', border:'1px solid rgba(16,185,129,0.25)', fontWeight:700, fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>
+                {isAr ? `📋 تقييم (${totalSubs})` : `📋 Grade (${totalSubs})`}
+              </button>
+            )}
+          </div>
         )}
         {mySubmission?.feedback && (
           <div style={{ width:'100%', marginTop:8, padding:'8px 12px', borderRadius:9, background:'rgba(16,185,129,0.06)', border:'1px solid rgba(16,185,129,0.15)', fontSize:12, color:'var(--text2)' }}>
@@ -178,6 +185,9 @@ export default function GroupDetailPage() {
   const [submitModal,   setSubmitModal]   = useState(null); // assignment obj
   const [gradeModal,    setGradeModal]    = useState(null); // assignment obj
   const [gradeTarget,   setGradeTarget]   = useState(null); // submission obj
+  const [trackModal,    setTrackModal]    = useState(null); // assignment obj for submission tracking
+  const [trackData,     setTrackData]     = useState(null); // { submitted, notSubmitted }
+  const [trackLoading,  setTrackLoading]  = useState(false);
   const [annForm,       setAnnForm]       = useState({ title:'', body:'', pinned:false });
   const [assignForm,    setAssignForm]    = useState({ title:'', description:'', dueDate:'', maxScore:100 });
   const [submitContent, setSubmitContent] = useState('');
@@ -298,6 +308,20 @@ export default function GroupDetailPage() {
     } catch { }
   };
 
+  const openTrack = async (assignment) => {
+    setTrackModal(assignment);
+    setTrackData(null);
+    setTrackLoading(true);
+    try {
+      const { data } = await groupsAPI.getSubmissionStatus(id, assignment._id);
+      setTrackData(data);
+    } catch {
+      toast.error(isAr ? 'حدث خطأ أثناء تحميل البيانات' : 'Error loading submission data');
+    } finally {
+      setTrackLoading(false);
+    }
+  };
+
   const visibleTabs = getTabs(isAr).filter(t => !t.ownerOnly || isOwner);
 
   const color = group.coverGrad || (group.subject.toLowerCase() === 'mathematics' ? '#6366f1' : '#10B981');
@@ -409,9 +433,12 @@ export default function GroupDetailPage() {
               </div>
             ) : assignments.map(a => (
               <AssignmentCard
-                key={a._id} assignment={a} isOwner={isOwner} userId={userId} groupId={id}
+                key={a._id}
+                assignment={{ ...a, groupStudentCount: group.students?.length || 0 }}
+                isOwner={isOwner} userId={userId} groupId={id}
                 onSubmit={a => setSubmitModal(a)}
                 onGrade={a => setGradeModal(a)}
+                onTrack={openTrack}
                 isAr={isAr}
               />
             ))}
@@ -613,6 +640,87 @@ export default function GroupDetailPage() {
                 {submitBtn(isAr ? 'حفظ التقييم' : 'Save Grade', saving, '#10B981', isAr)}
               </div>
             </form>
+          </Modal>
+        )}
+      </AnimatePresence>
+
+      {/* ── Submission Tracker Modal ── */}
+      <AnimatePresence>
+        {trackModal && (
+          <Modal open={!!trackModal} onClose={() => { setTrackModal(null); setTrackData(null); }} title={isAr ? `👁 متابعة التسليم: ${trackModal.title}` : `👁 Submission Tracker: ${trackModal.title}`}>
+            {trackLoading ? (
+              <div style={{ textAlign: 'center', padding: 40, color: 'var(--text3)' }}>⏳ {isAr ? 'جاري التحميل...' : 'Loading...'}</div>
+            ) : trackData ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {/* Summary Bar */}
+                <div style={{ display: 'flex', gap: 12, marginBottom: 4 }}>
+                  <div style={{ flex: 1, padding: '12px 16px', borderRadius: 12, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', textAlign: 'center' }}>
+                    <div style={{ fontSize: 22, fontWeight: 900, color: '#10B981' }}>{trackData.submitted.length}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 700 }}>{isAr ? 'سلّموا ✅' : 'Submitted ✅'}</div>
+                  </div>
+                  <div style={{ flex: 1, padding: '12px 16px', borderRadius: 12, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', textAlign: 'center' }}>
+                    <div style={{ fontSize: 22, fontWeight: 900, color: '#EF4444' }}>{trackData.notSubmitted.length}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 700 }}>{isAr ? 'لم يسلّموا ❌' : 'Not Submitted ❌'}</div>
+                  </div>
+                  <div style={{ flex: 1, padding: '12px 16px', borderRadius: 12, background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', textAlign: 'center' }}>
+                    <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--primary)' }}>{trackData.totalStudents}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 700 }}>{isAr ? 'إجمالي' : 'Total'}</div>
+                  </div>
+                </div>
+
+                {/* Progress Bar */}
+                <div>
+                  <div style={{ height: 8, borderRadius: 4, background: 'var(--surface3)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${trackData.totalStudents > 0 ? Math.round((trackData.submitted.length / trackData.totalStudents) * 100) : 0}%`, background: 'linear-gradient(90deg, #10B981, #34D399)', borderRadius: 4, transition: 'width 0.5s ease' }} />
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4, textAlign: 'right' }}>
+                    {trackData.totalStudents > 0 ? Math.round((trackData.submitted.length / trackData.totalStudents) * 100) : 0}% {isAr ? 'معدل التسليم' : 'submission rate'}
+                  </div>
+                </div>
+
+                {/* Submitted List */}
+                {trackData.submitted.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: '#10B981', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{isAr ? '✅ سلّموا' : '✅ Submitted'}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 180, overflowY: 'auto' }}>
+                      {trackData.submitted.map(s => (
+                        <div key={s.studentId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(16,185,129,0.06)', borderRadius: 10, border: '1px solid rgba(16,185,129,0.15)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 16 }}>🎓</span>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{s.studentName}</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            {s.hasAttachment && <span style={{ fontSize: 10, color: '#60A5FA', fontWeight: 700, background: 'rgba(59,130,246,0.1)', padding: '2px 6px', borderRadius: 4 }}>📎 {isAr ? 'مرفق' : 'File'}</span>}
+                            <span style={{ fontSize: 10, fontWeight: 800, color: s.status === 'graded' ? '#10B981' : s.status === 'late' ? '#F59E0B' : '#818CF8', background: s.status === 'graded' ? 'rgba(16,185,129,0.1)' : s.status === 'late' ? 'rgba(245,158,11,0.1)' : 'rgba(99,102,241,0.1)', padding: '2px 8px', borderRadius: 6 }}>
+                              {s.status === 'graded' ? (isAr ? `تم التقييم ${s.score}` : `Graded ${s.score}`) : s.status === 'late' ? (isAr ? 'متأخر' : 'Late') : (isAr ? 'قيد الانتظار' : 'Pending')}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Not Submitted List */}
+                {trackData.notSubmitted.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: '#EF4444', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{isAr ? '❌ لم يسلّموا بعد' : '❌ Not Submitted Yet'}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 180, overflowY: 'auto' }}>
+                      {trackData.notSubmitted.map(s => (
+                        <div key={s.studentId} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(239,68,68,0.05)', borderRadius: 10, border: '1px solid rgba(239,68,68,0.15)' }}>
+                          <span style={{ fontSize: 16 }}>😶</span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{s.studentName || (isAr ? 'طالب' : 'Student')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {trackData.submitted.length === 0 && trackData.notSubmitted.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: 20, color: 'var(--text3)', fontSize: 13 }}>{isAr ? 'لا يوجد طلاب في المجموعة بعد' : 'No students in the group yet'}</div>
+                )}
+              </div>
+            ) : null}
           </Modal>
         )}
       </AnimatePresence>

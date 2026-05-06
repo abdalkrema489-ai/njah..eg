@@ -141,17 +141,60 @@ export default function ProfilePage() {
               {profile?.email}
             </div>
 
-            <div style={{ display:'flex', gap:10, justifyContent:'center', flexWrap:'wrap', marginBottom:32 }}>
-              {[
-                { label: profile?.role === 'university' ? (isAr ? 'طالب جامعي' : 'University Student') : profile?.role === 'teacher' ? (isAr ? 'معلم' : 'Teacher') : (isAr ? 'طالب مدرسي' : 'School Student'), color: '#38bdf8', bg: 'rgba(56,189,248,0.1)' },
-                { label: profile?.grade || 'N/A', color: 'var(--primary)', bg: 'rgba(124,58,237,0.1)' },
-                { label: `RANK ${profile?.level}`, color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
-                { label: `🔥 ${profile?.streak_days} DAY STREAK`, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' }
-              ].map(badge => (
-                <div key={badge.label} style={{ padding: '6px 16px', borderRadius: 24, fontSize: 11, fontWeight: 900, color: badge.color, background: badge.bg, border: `1px solid ${badge.color}20`, letterSpacing: '0.04em' }}>
-                  {badge.label}
+            <div style={{ display:'flex', gap:8, justifyContent:'center', flexWrap:'wrap', marginBottom:20 }}>
+              {/* Primary Role Badge */}
+              {(() => {
+                const roleMap = {
+                  teacher: {
+                    label: isAr ? '👨‍🏫 معلم' : '👨‍🏫 Teacher',
+                    color: '#818CF8', bg: 'rgba(99,102,241,0.12)', border: 'rgba(99,102,241,0.3)'
+                  },
+                  university: {
+                    label: isAr ? '🎓 طالب جامعي' : '🎓 University Student',
+                    color: '#10B981', bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.3)'
+                  },
+                  admin: {
+                    label: isAr ? '⚙️ مشرف' : '⚙️ Admin',
+                    color: '#F59E0B', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.3)'
+                  },
+                };
+                const cfg = roleMap[profile?.role] || { label: isAr ? '🎒 طالب' : '🎒 School Student', color: '#38BDF8', bg: 'rgba(56,189,248,0.12)', border: 'rgba(56,189,248,0.3)' };
+                return (
+                  <div style={{ padding: '8px 20px', borderRadius: 24, fontSize: 13, fontWeight: 900, color: cfg.color, background: cfg.bg, border: `1.5px solid ${cfg.border}`, letterSpacing: '0.03em' }}>
+                    {cfg.label}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Role-specific info chips */}
+            <div style={{ display:'flex', gap:8, justifyContent:'center', flexWrap:'wrap', marginBottom:32 }}>
+              {profile?.role === 'university' && profile?.faculty && (
+                <div style={{ padding: '5px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700, color: '#10B981', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                  🏛️ {profile.faculty}
                 </div>
-              ))}
+              )}
+              {profile?.role === 'university' && profile?.universityName && (
+                <div style={{ padding: '5px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700, color: 'var(--text2)', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+                  🎓 {profile.universityName}
+                </div>
+              )}
+              {(profile?.grade) && (
+                <div style={{ padding: '5px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700, color: 'var(--primary)', background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)' }}>
+                  📚 {profile.grade}
+                </div>
+              )}
+              {profile?.role === 'teacher' && profile?.subjects && (
+                <div style={{ padding: '5px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700, color: '#818CF8', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                  📖 {Array.isArray(profile.subjects) ? profile.subjects.join(', ') : profile.subjects}
+                </div>
+              )}
+              <div style={{ padding: '5px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700, color: '#10B981', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                🏅 {isAr ? 'مستوى' : 'Level'} {profile?.level || 1}
+              </div>
+              <div style={{ padding: '5px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700, color: '#F59E0B', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)' }}>
+                🔥 {profile?.streak_days || 0} {isAr ? 'يوم متواصل' : 'day streak'}
+              </div>
             </div>
 
             <div style={{ marginBottom:40, textAlign: 'left' }}>

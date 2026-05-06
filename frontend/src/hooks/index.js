@@ -39,7 +39,6 @@ export function useSocket() {
         reconnectionDelay: 1000,
       });
 
-      socketInstance.on('connect', () => console.log('🔌 Socket connected:', socketInstance.id));
       socketInstance.on('connect_error', (err) => console.warn('🔌 Socket error:', err.message));
     }
 

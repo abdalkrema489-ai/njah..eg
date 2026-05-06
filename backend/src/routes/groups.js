@@ -313,7 +313,7 @@ router.get('/:id/assignments', auth, async (req, res) => {
 
 // POST /api/groups/:id/assignments/:aId/submit  — student submits
 router.post('/:id/assignments/:aId/submit', auth, async (req, res) => {
-  const { content, attachmentData, attachmentType } = req.body;
+  const { content, attachmentUrl, attachmentName, attachmentType, attachmentSize } = req.body;
   const assignment = await Assignment.findById(req.params.aId);
   if (!assignment) return res.status(404).json({ error: 'Assignment not found' });
 
@@ -321,8 +321,10 @@ router.post('/:id/assignments/:aId/submit', auth, async (req, res) => {
   const existing = assignment.submissions.find(s => s.studentId === uid);
   if (existing) {
     existing.content        = content;
-    existing.attachmentData = attachmentData;
-    existing.attachmentType = attachmentType;
+    existing.attachmentUrl  = attachmentUrl  || null;
+    existing.attachmentName = attachmentName || null;
+    existing.attachmentType = attachmentType || null;
+    existing.attachmentSize = attachmentSize || null;
     existing.submittedAt    = new Date();
     existing.status         = assignment.dueDate && new Date() > assignment.dueDate ? 'late' : 'submitted';
   } else {
@@ -330,8 +332,10 @@ router.post('/:id/assignments/:aId/submit', auth, async (req, res) => {
       studentId:      uid,
       studentName:    req.user.name || '',
       content,
-      attachmentData,
-      attachmentType,
+      attachmentUrl:  attachmentUrl  || null,
+      attachmentName: attachmentName || null,
+      attachmentType: attachmentType || null,
+      attachmentSize: attachmentSize || null,
       status: assignment.dueDate && new Date() > assignment.dueDate ? 'late' : 'submitted',
     });
   }
@@ -371,6 +375,38 @@ router.patch('/:id/assignments/:aId/submissions/:sId', auth, ownerOnly, async (r
   }
 
   res.json({ ok: true });
+});
+
+/* ═══════════════════════════════════════════════════════
+   SUBMISSION STATUS (teacher only)
+═══════════════════════════════════════════════════════ */
+
+// GET /api/groups/:id/assignments/:aId/status  — who submitted vs who hasn't
+router.get('/:id/assignments/:aId/status', auth, ownerOnly, async (req, res) => {
+  try {
+    const group = req.group;
+    const assignment = await Assignment.findById(req.params.aId);
+    if (!assignment) return res.status(404).json({ error: 'Assignment not found' });
+
+    const submittedIds = new Set(assignment.submissions.map(s => s.studentId));
+
+    const submitted = assignment.submissions.map(s => ({
+      studentId:   s.studentId,
+      studentName: s.studentName,
+      status:      s.status,
+      score:       s.score,
+      submittedAt: s.submittedAt,
+      hasAttachment: !!s.attachmentUrl,
+    }));
+
+    const notSubmitted = group.students
+      .filter(s => !submittedIds.has(s.userId))
+      .map(s => ({ studentId: s.userId, studentName: s.name, email: s.email }));
+
+    res.json({ submitted, notSubmitted, totalStudents: group.students.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 /* ═══════════════════════════════════════════════════════

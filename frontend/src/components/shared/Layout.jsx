@@ -144,10 +144,33 @@ const UNIVERSITY_SECTIONS_DEF = [
   },
 ];
 
+const ADMIN_SECTIONS_DEF = [
+  {
+    labelKey: 'Overview',
+    items: [
+      { key:'dashboard',    path:'/',            Icon: Icons.dashboard,  tKey:'nav.dashboard' },
+      { key:'analytics',    path:'/analytics',   Icon: Icons.analytics,  tKey:'nav.analytics' },
+      { key:'students',     path:'/students',    Icon: Icons.profile,    tKey:'nav.allStudents' },
+    ],
+  },
+  {
+    labelKey: 'Management',
+    items: [
+      { key:'groups',       path:'/groups',      Icon: Icons.groups,    tKey:'nav.myClasses' },
+      { key:'files',        path:'/files',       Icon: Icons.files,     tKey:'nav.files' },
+      { key:'messages',     path:'/chat',        Icon: Icons.messages,  tKey:'nav.messages', badge: true },
+      { key:'notifications',path:'/notifications',Icon: Icons.notifications, tKey:'nav.notifications', badge: true },
+      { key:'payment',      path:'/payment',     Icon: Icons.payment,   tKey:'nav.payment' },
+      { key:'settings',     path:'/settings',    Icon: Icons.settings,  tKey:'nav.settings' },
+    ],
+  },
+];
+
 const ALL_NAV_KEYS = [
   ...NAV_SECTIONS_DEF.flatMap(s => s.items),
   ...TEACHER_SECTIONS_DEF.flatMap(s => s.items),
   ...UNIVERSITY_SECTIONS_DEF.flatMap(s => s.items),
+  ...ADMIN_SECTIONS_DEF.flatMap(s => s.items),
 ];
 
 /* ── Logo Mark ──────────────────────────────────────────────── */
@@ -338,12 +361,14 @@ export function Sidebar({ open, onToggle }) {
   const { user }        = useAuthStore();
   const { t }           = useTranslation();
   const { institutionMode } = useUIStore();
-  const isTeacher       = user?.role === 'teacher';
-  const isUniversity    = !isTeacher && (
+  const isTeacher    = user?.role === 'teacher';
+  const isAdmin      = ['school_admin', 'university_admin', 'admin'].includes(user?.role) || !!user?.admin_level;
+  const isUniversity = !isTeacher && !isAdmin && (
     user?.institution_type === 'university' || user?.institutionType === 'university' ||
     ['Year 1','Year 2','Year 3','Year 4','Year 5','Year 6','Postgrad'].includes(user?.grade)
   );
-  const sections = isTeacher ? TEACHER_SECTIONS_DEF
+  const sections = isTeacher    ? TEACHER_SECTIONS_DEF
+    : isAdmin      ? ADMIN_SECTIONS_DEF
     : isUniversity ? UNIVERSITY_SECTIONS_DEF
     : NAV_SECTIONS_DEF;
 
@@ -573,9 +598,18 @@ export function Sidebar({ open, onToggle }) {
 function SidebarUserStrip({ open }) {
   const { user } = useAuthStore();
   const navigate = useNavigate();
-  const isTeacher = user?.role === 'teacher';
   const { institutionMode } = useUIStore();
   const { t } = useTranslation();
+  const isAr = useUIStore(s => s.language) === 'ar';
+
+  const userRole = user?.role || 'student';
+  const isTeacher = userRole === 'teacher';
+  const isAdmin   = ['school_admin', 'university_admin', 'admin'].includes(userRole) || !!user?.admin_level;
+
+  const roleBadge = isTeacher    ? { label: isAr ? '👨‍🏫 معلم'      : '👨‍🏫 Teacher',    color: '#0EA5E9' }
+    : isAdmin      ? { label: isAr ? '🛡 مدير'       : '🛡 Admin',      color: '#F59E0B' }
+    : institutionMode === 'university' ? { label: isAr ? '🎓 جامعي'  : '🎓 University', color: '#3B82F6' }
+    :                { label: isAr ? '🏫 طالب'       : '🏫 Student',   color: '#6366F1' };
   return (
     <div style={{
       borderTop: '1px solid var(--border)',

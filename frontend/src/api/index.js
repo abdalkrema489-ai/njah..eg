@@ -205,10 +205,11 @@ export const groupsAPI = {
   deleteAnnouncement:  (gId, aId)      => client.delete(`/groups/${gId}/announcements/${aId}`),
 
   // Assignments
-  getAssignments:     id               => client.get(`/groups/${id}/assignments`),
-  createAssignment:   (id, d)          => client.post(`/groups/${id}/assignments`, d),
-  submitAssignment:   (gId, aId, d)    => client.post(`/groups/${gId}/assignments/${aId}/submit`, d),
-  gradeSubmission:    (gId, aId, sId, d) => client.patch(`/groups/${gId}/assignments/${aId}/submissions/${sId}`, d),
+  getAssignments:      id               => client.get(`/groups/${id}/assignments`),
+  createAssignment:    (id, d)          => client.post(`/groups/${id}/assignments`, d),
+  submitAssignment:    (gId, aId, d)    => client.post(`/groups/${gId}/assignments/${aId}/submit`, d),
+  gradeSubmission:     (gId, aId, sId, d) => client.patch(`/groups/${gId}/assignments/${aId}/submissions/${sId}`, d),
+  getSubmissionStatus: (gId, aId)       => client.get(`/groups/${gId}/assignments/${aId}/status`),
 
   // Insights
   getInsights: id => client.get(`/groups/${id}/insights`),

@@ -12,9 +12,33 @@ import { useTranslation } from '../../i18n/index';
 const STUDENT_GRADES = [
   'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6',
   'Prep 1', 'Prep 2', 'Prep 3', 'Sec 1', 'Sec 2', 'Sec 3',
-  'Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5', 'Year 6',
-  'Postgrad',
 ];
+
+const UNI_YEARS = [
+  { value: 'Year 1', ar: 'الفرقة الأولى',   en: '1st Year' },
+  { value: 'Year 2', ar: 'الفرقة الثانية',  en: '2nd Year' },
+  { value: 'Year 3', ar: 'الفرقة الثالثة', en: '3rd Year' },
+  { value: 'Year 4', ar: 'الفرقة الرابعة',  en: '4th Year' },
+  { value: 'Year 5', ar: 'الفرقة الخامسة', en: '5th Year' },
+  { value: 'Year 6', ar: 'الفرقة السادسة', en: '6th Year' },
+  { value: 'Postgrad', ar: 'دراسات عليا',  en: 'Postgraduate' },
+];
+
+const UNI_FACULTIES = [
+  { ar: 'الطب البشري',       en: 'Medicine' },
+  { ar: 'طب الأسنان',        en: 'Dentistry' },
+  { ar: 'الصيدلة',           en: 'Pharmacy' },
+  { ar: 'الهندسة',           en: 'Engineering' },
+  { ar: 'علوم الحاسب',      en: 'Computer Science' },
+  { ar: 'الاقتصاد والتجارة', en: 'Commerce & Economics' },
+  { ar: 'الحقوق',            en: 'Law' },
+  { ar: 'التربية',           en: 'Education' },
+  { ar: 'الفنون',             en: 'Fine Arts' },
+  { ar: 'العلوم',             en: 'Sciences' },
+  { ar: 'الآداب',            en: 'Arts & Humanities' },
+  { ar: 'أخرى',              en: 'Other' },
+];
+
 
 const TEACHER_SUBJECTS = [
   'Mathematics', 'Science', 'Arabic', 'English', 'Physics',
@@ -403,6 +427,8 @@ export function RegisterPage() {
   const [showPwd, setShowPwd] = useState(false);
   const [role, setRole] = useState('student');
   const [grade, setGrade] = useState('');
+  const [faculty, setFaculty] = useState('');
+  const [uniName, setUniName] = useState('');
   const [instType, setInstType] = useState('school');
   const [subjects, setSubjects] = useState([]);
   const [pwdValue, setPwdValue] = useState('');
@@ -415,21 +441,29 @@ export function RegisterPage() {
   const toggleSubject = s => setSubjects(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
 
   const onSubmit = async d => {
-    if ((role === 'student' || role === 'university') && !grade) { toast.error(isAr ? 'يرجى اختيار المرحلة الدراسية' : 'Please select your grade/year level'); return; }
+    if (role === 'student' && !grade) { toast.error(isAr ? 'يرجى اختيار المرحلة الدراسية' : 'Please select your grade level'); return; }
+    if (role === 'university' && !grade) { toast.error(isAr ? 'يرجى اختيار السنة الدراسية' : 'Please select your year of study'); return; }
     if (role === 'teacher' && subjects.length === 0) { toast.error(isAr ? 'يرجى اختيار مادة واحدة على الأقل' : 'Please select at least one subject'); return; }
     try {
       const payload = {
-        ...d, role, 
+        ...d, role,
         institutionType: role === 'university' ? 'university' : role === 'student' ? 'school' : instType,
         grade: (role === 'student' || role === 'university') ? grade : undefined,
+        faculty: role === 'university' ? (faculty || undefined) : undefined,
+        universityName: role === 'university' ? (uniName || undefined) : undefined,
         subjects: role === 'teacher' ? subjects.join(',') : undefined,
       };
       const { data } = await authAPI.register(payload);
       setAuth(data);
-      toast.success(role === 'teacher' ? (isAr ? 'أهلاً بك يا أستاذ! 🎉' : 'Welcome, Professor! 🎉') : (isAr ? 'رحلة تعلمك تبدأ الآن! 🎓' : 'Your learning journey begins! 🎓'));
+      toast.success(
+        role === 'teacher'    ? (isAr ? 'أهلاً بك يا أستاذ! 🎉' : 'Welcome, Professor! 🎉') :
+        role === 'university' ? (isAr ? 'أهلاً بك في مجتمع الجامعيين! 🎓' : 'Welcome to the university community! 🎓') :
+                                (isAr ? 'رحلة تعلمك تبدأ الآن! 🚀' : 'Your learning journey begins! 🚀')
+      );
       navigate('/');
     } catch (err) { toast.error(err.response?.data?.error || (isAr ? 'تعذر التسجيل' : 'Unable to register')); }
   };
+
 
   return (
     <AuthLayout role={role} setRole={setRole}>
@@ -490,9 +524,38 @@ export function RegisterPage() {
           )}
 
           {role === 'university' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>{isAr ? "السنة الدراسية أو التخصص *" : "Current Year / Major *"}</label>
-              <input value={grade} onChange={e => setGrade(e.target.value)} required placeholder={isAr ? "مثال: الفرقة الثالثة - طب" : "e.g. 3rd Year - Medicine"} style={{ background: 'var(--surface2)', border: '1.5px solid var(--border)', borderRadius: 10, padding: 10, color: 'var(--text)', outline: 'none' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 16, background: 'var(--surface2)', borderRadius: 16, border: '1.5px solid rgba(16,185,129,0.25)' }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: '#10B981', marginBottom: -4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🎓 {isAr ? 'معلومات جامعية' : 'University Details'}</div>
+              
+              {/* Year selector — pill buttons */}
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: 8 }}>{isAr ? 'السنة الدراسية *' : 'Year of Study *'}</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {UNI_YEARS.map(y => (
+                    <button type="button" key={y.value} onClick={() => setGrade(y.value)} style={{
+                      padding: '7px 14px', fontSize: 12, fontWeight: 700, borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s',
+                      background: grade === y.value ? 'rgba(16,185,129,0.18)' : 'var(--surface)',
+                      color: grade === y.value ? '#10B981' : 'var(--text3)',
+                      border: `1.5px solid ${grade === y.value ? '#10B981' : 'var(--border)'}`,
+                    }}>{isAr ? y.ar : y.en}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Faculty selector */}
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: 6 }}>{isAr ? 'الكلية / التخصص' : 'Faculty / Major'}</label>
+                <select value={faculty} onChange={e => setFaculty(e.target.value)} style={{ width: '100%', background: 'var(--surface)', border: '1.5px solid var(--border)', borderRadius: 10, padding: '10px 12px', color: 'var(--text)', outline: 'none', fontSize: 13 }}>
+                  <option value="">{isAr ? 'اختر كليتك...' : 'Select your faculty...'}</option>
+                  {UNI_FACULTIES.map(f => <option key={f.en} value={f.en}>{isAr ? f.ar : f.en}</option>)}
+                </select>
+              </div>
+
+              {/* University Name */}
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: 6 }}>{isAr ? 'اسم الجامعة' : 'University Name'}</label>
+                <input value={uniName} onChange={e => setUniName(e.target.value)} placeholder={isAr ? 'مثال: جامعة القاهرة' : 'e.g. Cairo University'} style={{ width: '100%', background: 'var(--surface)', border: '1.5px solid var(--border)', borderRadius: 10, padding: '10px 12px', color: 'var(--text)', outline: 'none', fontSize: 13, boxSizing: 'border-box' }} />
+              </div>
             </div>
           )}
 

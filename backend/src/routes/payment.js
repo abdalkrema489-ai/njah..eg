@@ -36,7 +36,7 @@ try {
     twilioClient = twilio(TWILIO_SID, TWILIO_AUTH_TOKEN);
   }
 } catch (e) {
-  console.error("Twilio not initialized. Keys missing.");
+  logger.error("Twilio not initialized. Keys missing.");
 }
 
 /**
@@ -44,6 +44,7 @@ try {
  * @route  POST /api/payment/initiate
  */
 router.post('/initiate', authenticate, async (req, res) => {
+  try {
     const { amount, gateway, groupId, title, extraData, type } = req.body;
 
     // 1. Create a 100% genuine accurate Transaction record (pending)
