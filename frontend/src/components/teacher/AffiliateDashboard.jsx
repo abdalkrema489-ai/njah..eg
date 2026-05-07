@@ -20,7 +20,7 @@ export default function AffiliateDashboard() {
     queryFn: affiliateAPI.getLinks 
   });
 
-  const links = data?.data || [];
+  const links = Array.isArray(data?.data?.data) ? data.data.data : [];
 
   const createMutation = useMutation({
     mutationFn: affiliateAPI.createLink,

@@ -785,13 +785,14 @@ function ContactRow({ r, active, onClick, user }) {
   return (
     <motion.div
       onClick={onClick}
-      whileHover={{ x: 4, backgroundColor: 'var(--surface2)' }}
-      animate={{ backgroundColor: active ? 'var(--primary-100)' : 'transparent' }}
+      whileHover={{ x: 4 }}
+      animate={{ backgroundColor: active ? 'rgba(99,102,241,0.08)' : 'rgba(0,0,0,0)' }}
       style={{
         display: 'flex', alignItems: 'center', padding: '10px 16px',
         cursor: 'pointer', borderRadius: 14, margin: '2px 8px',
         transition: 'background 0.15s',
         borderLeft: active ? '3px solid var(--primary)' : '3px solid transparent',
+        background: active ? 'rgba(99,102,241,0.08)' : undefined,
       }}
     >
       <div style={{ position: 'relative', flexShrink: 0 }}>

@@ -63,10 +63,8 @@ router.post('/login', adminLoginLimiter, async (req, res) => {
   const OWNER_PASS = process.env.OWNER_PASSWORD || 'Admin@Najah2026!';
   let isValid = false;
   if (OWNER_HASH && OWNER_HASH.startsWith('$2')) {
-    // Production: bcrypt hash
     isValid = await bcrypt.compare(password, OWNER_HASH);
   } else {
-    // Development fallback: plain text
     isValid = password === OWNER_PASS;
     if (isValid) console.warn('⚠️ SECURITY WARNING: Admin using plain-text password. Set OWNER_PASSWORD_HASH in production!');
   }
