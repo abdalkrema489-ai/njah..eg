@@ -98,7 +98,7 @@ function AnnouncementCard({ ann, isOwner, groupId, onPin, onDelete, isAr }) {
 }
 
 /* ── Assignment Card ─────────────────────────────────────── */
-function AssignmentCard({ assignment, isOwner, userId, groupId, onGrade, onSubmit, isAr }) {
+function AssignmentCard({ assignment, isOwner, userId, groupId, onGrade, onSubmit, onTrack, isAr }) {
   const mySubmission  = assignment.submissions?.find(s => s.studentId === userId);
   const isOverdue     = assignment.dueDate && isPast(new Date(assignment.dueDate)) && !mySubmission;
   const totalSubs     = assignment.submissions?.length || 0;
