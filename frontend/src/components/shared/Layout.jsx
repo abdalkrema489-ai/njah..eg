@@ -167,11 +167,27 @@ const ADMIN_SECTIONS_DEF = [
   },
 ];
 
+const CENTER_SECTIONS_DEF = [
+  {
+    labelKey: 'center.management',
+    items: [
+      { key:'dashboard',     path:'/',             Icon: Icons.dashboard,      tKey:'nav.dashboard' },
+      { key:'groups',        path:'/groups',        Icon: Icons.groups,         tKey:'nav.classes' },
+      { key:'analytics',     path:'/analytics',    Icon: Icons.analytics,      tKey:'nav.analytics' },
+      { key:'payment',       path:'/payment',      Icon: Icons.payment,        tKey:'nav.revenue' },
+      { key:'messages',      path:'/chat',         Icon: Icons.messages,       tKey:'nav.messages', badge: true },
+      { key:'notifications', path:'/notifications',Icon: Icons.notifications,  tKey:'nav.notifications', badge: true },
+      { key:'settings',      path:'/settings',     Icon: Icons.tools,          tKey:'nav.settings' },
+    ],
+  },
+];
+
 const ALL_NAV_KEYS = [
   ...NAV_SECTIONS_DEF.flatMap(s => s.items),
   ...TEACHER_SECTIONS_DEF.flatMap(s => s.items),
   ...UNIVERSITY_SECTIONS_DEF.flatMap(s => s.items),
   ...ADMIN_SECTIONS_DEF.flatMap(s => s.items),
+  ...CENTER_SECTIONS_DEF.flatMap(s => s.items),
 ];
 
 /* ── Logo Mark ──────────────────────────────────────────────── */
@@ -363,14 +379,16 @@ export function Sidebar({ open, onToggle }) {
   const { t }           = useTranslation();
   const { institutionMode } = useUIStore();
   const isTeacher    = user?.role === 'teacher';
-  const isAdmin      = ['school_admin', 'university_admin', 'admin'].includes(user?.role) || !!user?.admin_level;
-  const isUniversity = !isTeacher && !isAdmin && (
+  const isAdmin      = ['school_admin', 'university_admin', 'admin', 'platform_owner'].includes(user?.role) || !!user?.admin_level;
+  const isCenterOwner = user?.role === 'center_owner';
+  const isUniversity = !isTeacher && !isAdmin && !isCenterOwner && (
     user?.institution_type === 'university' || user?.institutionType === 'university' ||
     ['Year 1','Year 2','Year 3','Year 4','Year 5','Year 6','Postgrad'].includes(user?.grade)
   );
-  const sections = isTeacher    ? TEACHER_SECTIONS_DEF
-    : isAdmin      ? ADMIN_SECTIONS_DEF
-    : isUniversity ? UNIVERSITY_SECTIONS_DEF
+  const sections = isTeacher      ? TEACHER_SECTIONS_DEF
+    : isAdmin        ? ADMIN_SECTIONS_DEF
+    : isCenterOwner  ? CENTER_SECTIONS_DEF
+    : isUniversity   ? UNIVERSITY_SECTIONS_DEF
     : NAV_SECTIONS_DEF;
 
   return (

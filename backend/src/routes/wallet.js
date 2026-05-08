@@ -151,4 +151,40 @@ router.post('/withdraw', authenticate, async (req, res) => {
   }
 });
 
+// ── GET /api/wallet/monthly-chart ──
+router.get('/monthly-chart', authenticate, async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT
+        TO_CHAR(earned_at, 'YYYY-MM') AS month,
+        SUM(net_amount)::float         AS earnings,
+        COUNT(*)::int                  AS transactions
+      FROM teacher_earnings
+      WHERE teacher_id = $1
+        AND earned_at >= NOW() - INTERVAL '6 months'
+      GROUP BY month
+      ORDER BY month ASC
+    `, [req.user.id]);
+
+    const result = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      const key   = d.toISOString().slice(0, 7);
+      const found = rows.find(r => r.month === key);
+      result.push({
+        month:        key,
+        labelAr:      d.toLocaleDateString('ar-EG', { month: 'short', year: 'numeric' }),
+        labelEn:      d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        earnings:     found ? parseFloat(found.earnings) : 0,
+        transactions: found ? found.transactions : 0,
+      });
+    }
+    res.json({ chart: result });
+  } catch (err) {
+    logger.error('Monthly chart error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import { chatAPI, filesAPI, usersAPI, groupsAPI } from '../../api/index';
 import { getSocket, useSocket } from '../../hooks/index';
 import { useVoice } from '../../hooks/useVoice';
-import { useAuthStore, useChatStore, playPing } from '../../context/store';
+import { useAuthStore, useChatStore, useUIStore, playPing } from '../../context/store';
 import { Avatar, Spinner, Modal, Button } from '../shared/UI';
 import CreateGroupWizard from '../groups/CreateGroupWizard';
 
@@ -25,6 +25,8 @@ const CHAT_BG = {
 
 export default function ChatPage() {
   const { user } = useAuthStore();
+  const lang = useUIStore(s => s.language);
+  const isAr = lang === 'ar';
   const {
     activePrivateChat, setActivePrivateChat, privateMessages, setPrivateMessages,
     addPrivateMessage, markMessagesRead, recentChats, setRecentChats, updateRecentChat,
@@ -312,7 +314,7 @@ export default function ChatPage() {
     if (!file || !socket || !activePrivateChat) return;
     e.target.value = '';
     try {
-      toast.loading('Sending media...', { id: 'upload' });
+      toast.loading(isAr ? 'جاري إرسال الملف...' : 'Sending media...', { id: 'upload' });
       const { data } = await filesAPI.upload(file, { subject: 'private_chat', is_public: false });
       socket.emit('send_private_message', {
         receiverId: activePrivateChat, content: file.name,
@@ -328,7 +330,7 @@ export default function ChatPage() {
     if (isRecording) {
       const file = await stopRecording();
       if (file && socket && activePrivateChat) {
-        toast.loading('Sending voice note...', { id: 'voice' });
+        toast.loading(isAr ? 'جاري إرسال التسجيل...' : 'Sending voice note...', { id: 'voice' });
         try {
           const { data } = await filesAPI.upload(file, { subject: 'private_chat' });
           socket.emit('send_private_message', {
@@ -421,7 +423,7 @@ export default function ChatPage() {
           }}>
             <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>🔍</span>
             <input
-              placeholder="Search people..."
+              placeholder={isAr ? 'ابحث عن شخص...' : 'Search people...'}
               value={search} onChange={e => setSearch(e.target.value)}
               style={{
                 border: 'none', background: 'transparent', outline: 'none',
@@ -676,7 +678,7 @@ export default function ChatPage() {
                     ref={inputRef}
                     value={input} onChange={handleInputChange}
                     onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendMessage())}
-                    placeholder={editingMsg ? 'Edit your message...' : 'Write a message... (Enter to send)'}
+                    placeholder={editingMsg ? (isAr ? 'عدّل رسالتك...' : 'Edit your message...') : (isAr ? 'اكتب رسالة...' : 'Write a message...')}
                     style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: 14, color: 'var(--text)', fontWeight: 500, padding: '8px 0' }}
                   />
                 )}

@@ -17,6 +17,7 @@ const Group       = require('../models/Group');
 const TopUpCode   = require('../models/TopUpCode');
 const Coupon      = require('../models/Coupon');
 const geminiAI    = require('../services/geminiAI');
+const logger      = require('../utils/logger');
 
 const OWNER_EMAIL  = process.env.OWNER_EMAIL          || 'ahmed1abdalkrem1@gmail.com';
 const OWNER_HASH   = process.env.OWNER_PASSWORD_HASH   || '';
@@ -66,7 +67,7 @@ router.post('/login', adminLoginLimiter, async (req, res) => {
     isValid = await bcrypt.compare(password, OWNER_HASH);
   } else {
     isValid = password === OWNER_PASS;
-    if (isValid) console.warn('⚠️ SECURITY WARNING: Admin using plain-text password. Set OWNER_PASSWORD_HASH in production!');
+    if (isValid) logger.warn('Admin using plain-text password — set OWNER_PASSWORD_HASH in production');
   }
 
   if (!isValid)
@@ -102,7 +103,7 @@ router.get('/stats', adminAuth, async (req, res) => {
       `);
       userStats = rows[0];
     } catch (pgErr) {
-      console.error('[Admin Stats] PG error (users):', pgErr.message);
+      logger.error('Admin stats PG error', { error: pgErr.message });
     }
 
     // Revenue from MongoDB transactions
@@ -201,7 +202,7 @@ router.get('/stats', adminAuth, async (req, res) => {
       recentTransactions: recentTx,
     });
   } catch (err) {
-    console.error('[Admin Stats]', err);
+    logger.error('Admin stats error', { error: err.message });
     res.status(500).json({ error: 'Stats error: ' + err.message });
   }
 });
@@ -358,25 +359,29 @@ router.get('/coupons', adminAuth, async (req, res) => {
     const coupons = await Coupon.find().sort({ createdAt: -1 });
     res.json({ success: true, coupons });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch coupons' });
+    logger.error('Admin coupons fetch error', { error: err.message });
+    res.status(500).json({ error: 'Failed to fetch coupons: ' + err.message });
   }
 });
 
 router.post('/coupons', adminAuth, async (req, res) => {
   try {
     const { code, type, value, maxUses, validUntil } = req.body;
+    if (!code || !type || !value) return res.status(400).json({ error: 'code, type, and value are required' });
     const coupon = new Coupon({
       code: code.toUpperCase(),
       type,
       value: Number(value),
       maxUses: Number(maxUses) || 0,
       validUntil: validUntil ? new Date(validUntil) : null,
-      createdBy: req.user.id
+      createdBy: req.admin?.email || 'admin'
     });
     await coupon.save();
     res.json({ success: true, coupon });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to create coupon' });
+    if (err.code === 11000) return res.status(409).json({ error: `Coupon code "${req.body.code?.toUpperCase()}" already exists` });
+    logger.error('Admin coupon create error', { error: err.message });
+    res.status(500).json({ error: 'Failed to create coupon: ' + err.message });
   }
 });
 

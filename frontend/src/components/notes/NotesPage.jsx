@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { notesAPI } from '../../api/index';
 import { Card, Button, Input, Select, Tag, EmptyState, SectionHeader, Btn, Spinner } from '../shared/UI';
+import { useTranslation } from '../../i18n/index';
 
 const SUBJECTS = ['mathematics','science','arabic','english','social_studies','physics','chemistry','biology'];
 const SUBJECT_COLORS = {
@@ -60,6 +61,8 @@ const TOOLBAR = [
 const transitionBase = { type: 'spring', stiffness: 350, damping: 28 };
 
 export default function NotesPage() {
+  const { lang } = useTranslation();
+  const isAr = lang === 'ar';
 
   const [selectedNote, setSelectedNote] = useState(null);
   const [editTitle, setEditTitle]       = useState('');
@@ -80,11 +83,11 @@ export default function NotesPage() {
   const notes = data?.data?.notes || [];
 
   const { mutate: createNote } = useMutation({
-    mutationFn: () => notesAPI.create({ title: 'Untitled Document', subject: 'mathematics', content: '' }),
+    mutationFn: () => notesAPI.create({ title: isAr ? 'مستند بدون عنوان' : 'Untitled Document', subject: 'mathematics', content: '' }),
     onSuccess: ({ data }) => {
       qc.invalidateQueries(['notes']);
       openNote(data.note);
-      toast.success('Document initialized');
+      toast.success(isAr ? 'تم إنشاء المستند' : 'Document initialized');
     },
   });
 
@@ -128,13 +131,13 @@ export default function NotesPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
         <SectionHeader 
           icon={<NotebookIcon />} 
-          title="Personal Workspace" 
-          subtitle="Capture your learning insights, organize complex thoughts, and synthesize your knowledge." 
+          title={isAr ? 'ملاحظاتي' : 'My Notes'} 
+          subtitle={isAr ? 'نظّم أفكارك وملاحظاتك الدراسية' : 'Organize your study notes and ideas'} 
           noMargin
           gradient
         />
         <Btn variant="primary" onClick={() => createNote()} icon={<span style={{fontSize: 20}}>+</span>}>
-          New Document
+          {isAr ? 'ملاحظة جديدة' : 'New Note'}
         </Btn>
       </div>
 
@@ -145,7 +148,7 @@ export default function NotesPage() {
           {/* Filters */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <Input 
-              placeholder="Search documents..." 
+              placeholder={isAr ? 'ابحث في مستنداتك...' : 'Search documents...'} 
               value={searchQ} 
               onChange={e => setSearchQ(e.target.value)}
               icon={<SearchIcon />}
@@ -154,7 +157,7 @@ export default function NotesPage() {
               value={filterSubject} 
               onChange={e => setFilterSubject(e.target.value)}
             >
-              <option value="">All Subjects</option>
+              <option value="">{isAr ? 'كل المواد' : 'All Subjects'}</option>
               {SUBJECTS.map(s => <option key={s} value={s}>{s.replace('_',' ').toUpperCase()}</option>)}
             </Select>
           </div>
@@ -166,8 +169,8 @@ export default function NotesPage() {
             ) : notes.length === 0 ? (
               <EmptyState 
                 icon={<FileEditIcon />} 
-                title="No documents found" 
-                subtitle="Try adjusting your filters or initialize a new blank document." 
+                title={isAr ? 'لا توجد ملاحظات بعد' : 'No notes yet'} 
+                subtitle={isAr ? 'حاول تغيير الفلاتر أو أنشئ ملاحظة جديدة.' : 'Try adjusting your filters or create a new note.'} 
               />
             ) : (
               notes.map(note => {
@@ -187,7 +190,7 @@ export default function NotesPage() {
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                       <div style={{ fontSize: 14.5, fontWeight: 800, flex: 1, color: isSelected ? 'var(--primary-light)' : 'var(--text)', fontFamily: 'var(--font-head)' }} className="truncate">
-                        {note.title || 'Untitled Document'}
+                        {note.title || (isAr ? 'مستند بدون عنوان' : 'Untitled Document')}
                       </div>
                     </div>
                     <div style={{ fontSize: 12.5, color: 'var(--text3)', lineHeight: 1.5, marginBottom: 14, minHeight: 38 }}>
@@ -295,9 +298,9 @@ export default function NotesPage() {
                 <div style={{ padding: '14px 32px', background: 'var(--surface2)', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text4)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <div style={{ width: 6, height: 6, borderRadius: '50%', background: isDirty ? 'var(--warning)' : '#10b981', boxShadow: isDirty ? '0 0 8px var(--warning)' : '0 0 8px #10b981' }} />
-                    {isDirty ? 'Unsaved Modifications' : 'Cloud Synchronized'}
+                    {isDirty ? (isAr ? 'تعديلات غير محفوظة' : 'Unsaved Modifications') : (isAr ? 'محفوظ تلقائياً ☁️' : 'Cloud Synchronized')}
                   </span>
-                  <span>Session Length: {format(new Date(selectedNote.updated_at), 'hh:mm a')}</span>
+                  <span>{isAr ? 'آخر تحديث:' : 'Last saved:'} {format(new Date(selectedNote.updated_at), 'hh:mm a')}</span>
                 </div>
               </div>
             </motion.div>
@@ -309,9 +312,9 @@ export default function NotesPage() {
             >
               <EmptyState 
                 icon={<div style={{fontSize: 48, color: 'var(--primary)'}}><NotebookIcon /></div>} 
-                title="Select a document" 
-                subtitle="Choose an existing document from the panel or initialize a new digital workspace." 
-                action={<Btn variant="aurora" onClick={() => createNote()} size="lg" icon={<span style={{fontSize:20}}>+</span>}>New Document</Btn>} 
+                title={isAr ? 'اختر ملاحظة' : 'Select a note'} 
+                subtitle={isAr ? 'اختر ملاحظة من القائمة أو أنشئ ملاحظة جديدة.' : 'Choose an existing note or create a new one.'} 
+                action={<Btn variant="aurora" onClick={() => createNote()} size="lg" icon={<span style={{fontSize:20}}>+</span>}>{isAr ? 'ملاحظة جديدة' : 'New Note'}</Btn>} 
               />
             </motion.div>
           )}

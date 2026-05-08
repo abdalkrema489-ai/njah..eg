@@ -115,6 +115,16 @@ const QUESTION_BANKS = {
       { question: 'What is ½ of 40?', options: ['A) 10', 'B) 15', 'C) 20', 'D) 25'], correct: 2, explanation: '40 ÷ 2 = 20.' },
       { question: 'Perimeter of square with side 6?', options: ['A) 12', 'B) 18', 'C) 24', 'D) 36'], correct: 2, explanation: '4 × 6 = 24.' },
       { question: 'Which is prime?', options: ['A) 4', 'B) 6', 'C) 9', 'D) 7'], correct: 3, explanation: '7 is only divisible by 1 and 7.' },
+      { question: 'ما ناتج 144 ÷ 12؟', options: ['أ) 10', 'ب) 11', 'ج) 12', 'د) 13'], correct: 2, explanation: '144 ÷ 12 = 12.' },
+      { question: 'What is 3³?', options: ['A) 6', 'B) 9', 'C) 18', 'D) 27'], correct: 3, explanation: '3³ = 3×3×3 = 27.' },
+      { question: 'What is 20% of 150?', options: ['A) 20', 'B) 25', 'C) 30', 'D) 35'], correct: 2, explanation: '0.20 × 150 = 30.' },
+      { question: 'Which is NOT a prime number?', options: ['A) 2', 'B) 11', 'C) 15', 'D) 17'], correct: 2, explanation: '15 = 3 × 5, not prime.' },
+      { question: 'ما قيمة س في: 2س = 14؟', options: ['أ) 5', 'ب) 6', 'ج) 7', 'د) 8'], correct: 2, explanation: 'س = 14 ÷ 2 = 7.' },
+      { question: 'مساحة مثلث قاعدته 8 وارتفاعه 5؟', options: ['أ) 13', 'ب) 20', 'ج) 40', 'د) 80'], correct: 1, explanation: '½ × 8 × 5 = 20.' },
+      { question: 'What is √81?', options: ['A) 7', 'B) 8', 'C) 9', 'D) 10'], correct: 2, explanation: '9 × 9 = 81.' },
+      { question: 'Angles of a triangle sum to?', options: ['A) 90°', 'B) 180°', 'C) 270°', 'D) 360°'], correct: 1, explanation: 'Triangle angles always sum to 180°.' },
+      { question: 'ما نوع المثلث الذي زواياه 60°، 60°، 60°؟', options: ['أ) قائم', 'ب) متساوي الساقين', 'ج) متساوي الأضلاع', 'د) منفرج'], correct: 2, explanation: 'الزوايا الثلاثة متساوية → متساوي الأضلاع.' },
+      { question: 'ما مقلوب العدد 4؟', options: ['أ) 0.4', 'ب) ¼', 'ج) 4', 'د) -4'], correct: 1, explanation: 'مقلوب 4 هو 1/4.' },
     ],
     medium: [
       { question: 'Solve: 3x + 6 = 18', options: ['A) x=2', 'B) x=3', 'C) x=4', 'D) x=6'], correct: 2, explanation: '3x=12, x=4.' },
@@ -122,11 +132,103 @@ const QUESTION_BANKS = {
       { question: '15% of 80?', options: ['A) 8', 'B) 10', 'C) 12', 'D) 15'], correct: 2, explanation: '0.15×80=12.' },
       { question: 'Simplify 24/36', options: ['A) 1/2', 'B) 2/3', 'C) 3/4', 'D) 4/5'], correct: 1, explanation: 'GCF=12, 24÷12=2, 36÷12=3.' },
       { question: 'Rectangle 12×8 area?', options: ['A) 40', 'B) 80', 'C) 96', 'D) 104'], correct: 2, explanation: '12×8=96.' },
+      { question: 'حل: 2س² = 32', options: ['أ) س=2', 'ب) س=4', 'ج) س=8', 'د) س=±4'], correct: 3, explanation: 'س² = 16، س = ±4.' },
+      { question: 'Find the slope of y = 3x - 7', options: ['A) -7', 'B) 3', 'C) -3', 'D) 7'], correct: 1, explanation: 'In y=mx+b, m is the slope = 3.' },
+      { question: 'log₁₀(1000) = ?', options: ['A) 2', 'B) 3', 'C) 4', 'D) 100'], correct: 1, explanation: '10³ = 1000, so log₁₀(1000) = 3.' },
+      { question: 'cos(0°) = ?', options: ['A) 0', 'B) 0.5', 'C) 1', 'D) -1'], correct: 2, explanation: 'cos(0°) = 1.' },
+      { question: 'Probability of rolling a 6 on a dice?', options: ['A) 1/3', 'B) 1/4', 'C) 1/6', 'D) 1/2'], correct: 2, explanation: 'One outcome out of six: 1/6.' },
+      { question: 'What is 7! (7 factorial)?', options: ['A) 49', 'B) 720', 'C) 2520', 'D) 5040'], correct: 3, explanation: '7! = 7×6×5×4×3×2×1 = 5040.' },
+      { question: 'ما قيمة تمييز المعادلة x²-4x+4=0؟', options: ['أ) 0', 'ب) 8', 'ج) 16', 'د) -8'], correct: 0, explanation: 'Δ = 16-16 = 0، جذر واحد.' },
+      { question: 'مصفوفة 2×2 محددها: [[1,2],[3,4]]؟', options: ['أ) -2', 'ب) 2', 'ج) 10', 'د) -10'], correct: 0, explanation: 'det = (1×4)-(2×3) = 4-6 = -2.' },
+      { question: 'مجموع متتالية حسابية أولها 1 وآخرها 99 وعدد حدودها 50؟', options: ['أ) 2000', 'ب) 2450', 'ج) 2500', 'د) 4950'], correct: 2, explanation: 'المجموع = (50/2)(1+99) = 2500.' },
+      { question: 'ما نهاية: lim(x→∞) 1/x؟', options: ['أ) 1', 'ب) ∞', 'ج) 0', 'د) غير معرفة'], correct: 2, explanation: 'كلما كبر x، صغرت 1/x وتقترب من 0.' },
     ],
     hard: [
       { question: 'Roots of x²-5x+6=0?', options: ['A) 1,3', 'B) 2,3', 'C) 2,4', 'D) 3,4'], correct: 1, explanation: '(x-2)(x-3)=0.' },
       { question: 'sin(30°)=?', options: ['A) 0', 'B) 0.5', 'C) √2/2', 'D) 1'], correct: 1, explanation: 'sin(30°)=1/2=0.5.' },
       { question: 'f(x)=2x²-3x+1, f(3)=?', options: ['A) 8', 'B) 10', 'C) 12', 'D) 16'], correct: 1, explanation: '2(9)-3(3)+1=10.' },
+      { question: '∫2x dx = ?', options: ['A) x', 'B) 2', 'C) x²+C', 'D) 2x²+C'], correct: 2, explanation: '∫2x dx = x² + C.' },
+      { question: 'مشتقة f(x) = sin(3x)؟', options: ['أ) cos(3x)', 'ب) 3cos(3x)', 'ج) -3cos(3x)', 'د) sin(3x)'], correct: 1, explanation: 'd/dx[sin(ax)] = a·cos(ax).' },
+      { question: 'sin²θ + cos²θ = ?', options: ['A) 0', 'B) 1', 'C) 2', 'D) sin(2θ)'], correct: 1, explanation: 'Pythagorean identity: always equals 1.' },
+      { question: 'مجموع متسلسلة هندسية لا نهائية: a=8, r=½؟', options: ['أ) 8', 'ب) 12', 'ج) 16', 'د) 24'], correct: 2, explanation: 'S∞ = a/(1-r) = 8/(½) = 16.' },
+    ],
+  },
+  physics: {
+    easy: [
+      { question: 'وحدة قياس القوة في النظام الدولي؟', options: ['أ) جول', 'ب) واط', 'ج) نيوتن', 'د) باسكال'], correct: 2, explanation: 'القوة تقاس بالنيوتن (N).' },
+      { question: 'أي منهم عازل للكهرباء؟', options: ['أ) نحاس', 'ب) فضة', 'ج) بلاستيك', 'د) حديد'], correct: 2, explanation: 'البلاستيك مادة عازلة.' },
+      { question: 'سرعة الضوء في الفراغ تقريباً؟', options: ['أ) 3×10⁶ م/ث', 'ب) 3×10⁸ م/ث', 'ج) 3×10¹⁰ م/ث', 'د) 3×10¹² م/ث'], correct: 1, explanation: 'c = 3×10⁸ م/ث.' },
+      { question: 'Which quantity is a vector?', options: ['A) Speed', 'B) Mass', 'C) Temperature', 'D) Force'], correct: 3, explanation: 'Force has magnitude AND direction.' },
+      { question: 'قانون أوم يربط بين؟', options: ['أ) الجهد والمقاومة والتيار', 'ب) القوة والكتلة والتسارع', 'ج) الطاقة والشغل والزمن', 'د) الضغط والحجم والحرارة'], correct: 0, explanation: 'V = I × R.' },
+      { question: 'ما وحدة الضغط؟', options: ['أ) نيوتن', 'ب) باسكال', 'ج) جول', 'د) واط'], correct: 1, explanation: 'الضغط = القوة ÷ المساحة، وحدته الباسكال (Pa).' },
+      { question: 'أي نوع من الطاقة تمتلكها كرة متحركة؟', options: ['أ) طاقة وضع', 'ب) طاقة حركية', 'ج) طاقة كيميائية', 'د) طاقة نووية'], correct: 1, explanation: 'KE = ½mv².' },
+      { question: 'What happens to resistance when temperature increases in a conductor?', options: ['A) Decreases', 'B) Stays same', 'C) Increases', 'D) Becomes zero'], correct: 2, explanation: 'Resistance increases with temperature.' },
+    ],
+    medium: [
+      { question: 'جسم كتلته 10kg تسارعه 3m/s² — القوة المؤثرة؟', options: ['أ) 13N', 'ب) 30N', 'ج) 300N', 'د) 3N'], correct: 1, explanation: 'F = ma = 10 × 3 = 30N.' },
+      { question: 'شغل قوة 50N تحرّك جسم 4m في اتجاهها؟', options: ['أ) 12.5J', 'ب) 54J', 'ج) 200J', 'د) 400J'], correct: 2, explanation: 'W = F×d = 50×4 = 200J.' },
+      { question: 'تردد موجة طولها 2m وسرعتها 340m/s؟', options: ['أ) 68Hz', 'ب) 170Hz', 'ج) 340Hz', 'د) 680Hz'], correct: 1, explanation: 'f = v/λ = 340/2 = 170Hz.' },
+      { question: 'قانون نيوتن الثالث يعني؟', options: ['أ) F=ma', 'ب) لكل فعل رد فعل مساوٍ ومضاد', 'ج) الجسم يستمر في حركته', 'د) الطاقة تتحول ولا تفنى'], correct: 1, explanation: 'لكل فعل رد فعل مساوٍ ومضاد.' },
+      { question: 'زخم جسم 5kg يتحرك 10m/s؟', options: ['أ) 2 kg.m/s', 'ب) 15 kg.m/s', 'ج) 50 kg.m/s', 'د) 500 kg.m/s'], correct: 2, explanation: 'p = mv = 5×10 = 50 kg.m/s.' },
+      { question: 'Kinetic energy of 4kg at 10m/s?', options: ['A) 40J', 'B) 200J', 'C) 400J', 'D) 800J'], correct: 1, explanation: 'KE = ½mv² = ½×4×100 = 200J.' },
+      { question: 'ارتفاع جسم 2kg بـ 5m — طاقة الوضع؟ (g=10)', options: ['أ) 10J', 'ب) 25J', 'ج) 70J', 'د) 100J'], correct: 3, explanation: 'PE = mgh = 2×10×5 = 100J.' },
+      { question: 'At what angle does maximum range occur in projectile?', options: ['A) 30°', 'B) 45°', 'C) 60°', 'D) 90°'], correct: 1, explanation: 'Maximum range at 45°.' },
+    ],
+    hard: [
+      { question: 'جسم في دائرة قطرها 4m سرعته 6m/s — تسارعه المركزي؟', options: ['أ) 9m/s²', 'ب) 18m/s²', 'ج) 36m/s²', 'د) 3m/s²'], correct: 0, explanation: 'a = v²/r = 36/4 = 9 m/s².' },
+      { question: 'Charge on electron?', options: ['A) +1.6×10⁻¹⁹C', 'B) -1.6×10⁻¹⁹C', 'C) 9.1×10⁻³¹C', 'D) 0'], correct: 1, explanation: 'Electron charge = -1.6×10⁻¹⁹ C.' },
+      { question: 'مبدأ عدم اليقين لهايزنبرغ يقول يستحيل قياس؟', options: ['أ) الطاقة والزمن', 'ب) الموضع والزخم', 'ج) الجهد والتيار', 'د) القوة والإزاحة'], correct: 1, explanation: 'Δx·Δp ≥ ℏ/2.' },
+      { question: 'مقاومتان 3Ω و6Ω على التوازي — المقاومة الكلية؟', options: ['أ) 2Ω', 'ب) 4.5Ω', 'ج) 9Ω', 'د) 18Ω'], correct: 0, explanation: '1/R = 1/3+1/6 = 1/2، R=2Ω.' },
+    ],
+  },
+  chemistry: {
+    easy: [
+      { question: 'الصيغة الكيميائية لثاني أكسيد الكربون؟', options: ['أ) CO', 'ب) CO₂', 'ج) C₂O', 'د) C₂O₃'], correct: 1, explanation: 'CO₂ = ذرة كربون + ذرتا أكسجين.' },
+      { question: 'الرمز الكيميائي للذهب؟', options: ['أ) Go', 'ب) Gd', 'ج) Au', 'د) Ag'], correct: 2, explanation: 'Au من اللاتينية Aurum.' },
+      { question: 'What is the pH of pure water?', options: ['A) 5', 'B) 6', 'C) 7', 'D) 8'], correct: 2, explanation: 'Pure water is neutral: pH = 7.' },
+      { question: 'أي الآتي حمض؟', options: ['أ) NaOH', 'ب) Ca(OH)₂', 'ج) HCl', 'د) NH₃'], correct: 2, explanation: 'HCl يعطي H⁺ في المحلول.' },
+      { question: 'Chemical formula for table salt?', options: ['A) NaOH', 'B) NaCl', 'C) KCl', 'D) CaCl₂'], correct: 1, explanation: 'Table salt = Sodium Chloride = NaCl.' },
+      { question: 'كم عدد إلكترونات ذرة الأكسجين (عددها الذري 8)؟', options: ['أ) 6', 'ب) 8', 'ج) 10', 'د) 16'], correct: 1, explanation: 'عدد الإلكترونات = العدد الذري = 8.' },
+      { question: 'ما نوع التفاعل: A + B → AB؟', options: ['أ) تحليل', 'ب) تكاثف', 'ج) تركيب', 'د) إحلال'], correct: 2, explanation: 'عنصران يتحدان → تفاعل تركيب.' },
+      { question: 'درجة انصهار الجليد عند ضغط جوي؟', options: ['أ) -10°C', 'ب) 0°C', 'ج) 4°C', 'د) 100°C'], correct: 1, explanation: 'الجليد ينصهر عند 0°C.' },
+    ],
+    medium: [
+      { question: 'كتلة مولية CO₂؟', options: ['أ) 28 g/mol', 'ب) 32 g/mol', 'ج) 44 g/mol', 'د) 48 g/mol'], correct: 2, explanation: 'C=12، O₂=32، المجموع=44 g/mol.' },
+      { question: 'In a redox reaction, the reducing agent?', options: ['A) Gains electrons', 'B) Loses electrons', 'C) Gains protons', 'D) Loses protons'], correct: 1, explanation: 'Reducing agent LOSES electrons (gets oxidized).' },
+      { question: 'أيون Na⁺ يختلف عن ذرة Na في؟', options: ['أ) عدد البروتونات', 'ب) عدد النيوترونات', 'ج) عدد الإلكترونات', 'د) العدد الكتلي'], correct: 2, explanation: 'Na⁺ فقد إلكتروناً واحداً.' },
+      { question: 'موازنة: H₂ + O₂ → H₂O الصحيحة؟', options: ['أ) H₂+O₂→H₂O', 'ب) H₂+O→H₂O', 'ج) 2H₂+O₂→2H₂O', 'د) H₄+O₂→2H₂O'], correct: 2, explanation: '2H₂ + O₂ → 2H₂O متوازنة.' },
+      { question: 'Electrolysis of water produces?', options: ['A) H₂ only', 'B) O₂ only', 'C) H₂ at cathode, O₂ at anode', 'D) H₂ at anode, O₂ at cathode'], correct: 2, explanation: 'Cathode (−): H₂, Anode (+): O₂.' },
+      { question: 'وصف الرابطة الأيونية؟', options: ['أ) مشاركة إلكترونات', 'ب) انتقال إلكترونات من فلز لأمفلز', 'ج) تجاذب بين جزيئات', 'د) تشارك أزواج إلكترونية'], correct: 1, explanation: 'انتقال إلكترون من الفلز للأمفلز.' },
+      { question: 'تفاعل CaCO₃ → CaO + CO₂ نوعه؟', options: ['أ) تركيب', 'ب) تحليل حراري', 'ج) إحلال', 'د) إحلال مزدوج'], correct: 1, explanation: 'مركب واحد ينتج مادتين → تحليل.' },
+    ],
+    hard: [
+      { question: 'ترتيب الإلكترونات في ذرة الحديد (Z=26)؟', options: ['أ) [Ar] 3d⁶ 4s²', 'ب) [Ar] 3d⁸', 'ج) [Ar] 4s² 3d⁴', 'د) [Ne] 3d⁶ 4s²'], correct: 0, explanation: 'Fe: [Ar] 3d⁶ 4s².' },
+      { question: 'في التفاعل A→products، تضاعف تركيز A وتضاعف المعدل 4 مرات — رتبة التفاعل؟', options: ['أ) صفر', 'ب) 1', 'ج) 2', 'د) 3'], correct: 2, explanation: '4=2ⁿ → n=2.' },
+      { question: 'معادلة فانت هوف لضغط التناضح؟', options: ['أ) π=nRT', 'ب) π=MRT', 'ج) π=cRT', 'د) π=PV/n'], correct: 1, explanation: 'π = MRT حيث M = المولارية.' },
+    ],
+  },
+  biology: {
+    easy: [
+      { question: 'عضية الخلية المسؤولة عن إنتاج الطاقة؟', options: ['أ) النواة', 'ب) الريبوسوم', 'ج) الميتوكوندريا', 'د) الفجوة العصارية'], correct: 2, explanation: 'الميتوكوندريا تنتج ATP.' },
+      { question: 'التمثيل الضوئي يحدث في؟', options: ['أ) الميتوكوندريا', 'ب) البلاستيدة الخضراء', 'ج) النواة', 'د) الجدار الخلوي'], correct: 1, explanation: 'البلاستيدة الخضراء تحتوي الكلوروفيل.' },
+      { question: 'ما وظيفة الكريات الحمراء؟', options: ['أ) مقاومة الأمراض', 'ب) التخثر', 'ج) نقل الأكسجين', 'د) إنتاج الهرمونات'], correct: 2, explanation: 'الهيموجلوبين ينقل O₂.' },
+      { question: 'What carries genetic information from DNA to ribosomes?', options: ['A) tRNA', 'B) rRNA', 'C) mRNA', 'D) DNA polymerase'], correct: 2, explanation: 'mRNA carries the genetic code to ribosomes.' },
+      { question: 'كم عدد كروموسومات الإنسان الطبيعية؟', options: ['أ) 23', 'ب) 46', 'ج) 48', 'د) 92'], correct: 1, explanation: '46 كروموسوماً (23 زوجاً).' },
+      { question: 'The process of meiosis produces?', options: ['A) 2 diploid cells', 'B) 4 haploid cells', 'C) 2 haploid cells', 'D) 4 diploid cells'], correct: 1, explanation: 'Meiosis produces 4 genetically unique haploid cells.' },
+      { question: 'أي الآتي لا يحتوي نواة خلوية؟', options: ['أ) خلية نباتية', 'ب) بكتيريا', 'ج) خلية حيوانية', 'د) فطريات'], correct: 1, explanation: 'البكتيريا بدائية النواة.' },
+      { question: 'أطول مرحلة في الانقسام المتساوي؟', options: ['أ) الطور التمهيدي', 'ب) الطور الاستوائي', 'ج) الطور الانفصالي', 'د) الطور النهائي'], correct: 0, explanation: 'Prophase هو الأطول.' },
+    ],
+    medium: [
+      { question: 'ما الفرق بين الطفرة الجينية وطفرة الكروموسوم؟', options: ['أ) لا فرق', 'ب) الجينية تغيير في قاعدة، الكروموسومية تغيير في عدد/بنية', 'ج) الجينية أخطر دائماً', 'د) الكروموسومية أندر دائماً'], correct: 1, explanation: 'الجينية: تغيير في DNA. الكروموسومية: هيكلي أو عددي.' },
+      { question: 'What is the role of tRNA in translation?', options: ['A) Carries DNA', 'B) Reads mRNA codons', 'C) Brings amino acids to the ribosome', 'D) Unwinds the double helix'], correct: 2, explanation: 'tRNA carries amino acids to the ribosome.' },
+      { question: 'متلازمة داون سببها؟', options: ['أ) فقدان كروموسوم 21', 'ب) زيادة كروموسوم 21', 'ج) طفرة جينية', 'د) تغيير بنية الكروموسوم'], correct: 1, explanation: 'Trisomy 21 — ثلاث نسخ من الكروموسوم 21.' },
+      { question: 'إنزيمات الهضم تُفرَز أساساً من؟', options: ['أ) الكبد والكلى', 'ب) البنكرياس والأمعاء الدقيقة', 'ج) المعدة والقولون', 'د) الغدة الدرقية'], correct: 1, explanation: 'البنكرياس والأمعاء الدقيقة المصدر الرئيسي.' },
+      { question: 'الصمامات في القلب وظيفتها؟', options: ['أ) ضخ الدم', 'ب) تبادل الغازات', 'ج) منع ارتداد الدم', 'د) تصفية الدم'], correct: 2, explanation: 'صمامات القلب تمنع الدم من التدفق للخلف.' },
+    ],
+    hard: [
+      { question: 'مرحلة G1 في دورة الخلية تتميز بـ؟', options: ['أ) تضاعف DNA', 'ب) النمو وتخليق البروتينات', 'ج) انقسام النواة', 'د) انفصال الكروماتيدات'], correct: 1, explanation: 'G1: نمو الخلية وتحضيرها.' },
+      { question: 'The allosteric inhibition of enzymes means?', options: ['A) Substrate binds active site', 'B) Inhibitor binds non-active site', 'C) Temperature denatures enzyme', 'D) pH destroys enzyme'], correct: 1, explanation: 'Allosteric inhibitors bind non-active sites changing enzyme shape.' },
+      { question: 'ما المقصود بالطيف الانبعاثي للذرة؟', options: ['أ) الضوء الممتص', 'ب) الضوء المنبعث عند انتقال إلكترونات لمستويات أعلى', 'ج) الضوء المنبعث عند انتقال إلكترونات لمستويات أدنى', 'د) الضوء الكلي الصادر'], correct: 2, explanation: 'انتقال الإلكترون لمستوى أقل → انبعاث فوتون.' },
     ],
   },
   science: {
@@ -240,6 +342,40 @@ function detectTopic(message, subject) {
     if (/trig|sin|cos|tan|مثلثات/.test(m)) return 'trigonometry';
     if (/statistic|إحصاء|mean|median|mode/.test(m)) return 'statistics';
     if (/probability|احتمال/.test(m)) return 'probability';
+    if (/متتالية|sequence|series|حسابية|هندسية/.test(m)) return 'sequences';
+    if (/لوغاريتم|logarithm|\blog\b/.test(m)) return 'logarithms';
+    if (/مصفوفة|matrix|matrices/.test(m)) return 'matrices';
+    if (/متجه|vector/.test(m)) return 'vectors';
+    if (/نهاية|limit|lim\b/.test(m)) return 'limits';
+    if (/عدد مركب|complex number/.test(m)) return 'complex';
+    if (/ثنائي|binomial|باسكال|pascal/.test(m)) return 'binomial';
+  }
+  if (subject === 'physics') {
+    if (/نيوتن|newton|قانون الحركة/.test(m)) return 'newton';
+    if (/ضوء|انعكاس|انكسار|optics|reflection|refraction/.test(m)) return 'optics';
+    if (/كهرباء|electric|تيار|voltage|مقاومة|ohm|volt/.test(m)) return 'electricity';
+    if (/مغناطيس|magnetic|electro/.test(m)) return 'magnetism';
+    if (/زخم|momentum|كمية تحرك/.test(m)) return 'momentum';
+    if (/ضغط|pressure|باسكال/.test(m)) return 'pressure';
+    if (/موجة|wave|frequency|sound|light/.test(m)) return 'waves';
+    if (/حرارة|thermodynamics|temperature/.test(m)) return 'thermodynamics';
+  }
+  if (subject === 'chemistry') {
+    if (/جدول دوري|periodic|عنصر|element/.test(m)) return 'periodic';
+    if (/حمض|acid|قاعدة|base|pH/.test(m)) return 'acids';
+    if (/عضوي|organic|ألكان|alkane|ألكين|alkene/.test(m)) return 'organic';
+    if (/رابطة|bond|ionic|covalent|تساهمي|أيوني/.test(m)) return 'bonding';
+    if (/تفاعل|reaction|معادلة كيميائية/.test(m)) return 'reactions';
+    if (/تأكسد|oxidation|اختزال|reduction|redox/.test(m)) return 'redox';
+  }
+  if (subject === 'biology') {
+    if (/خلية|cell|غشاء|membrane/.test(m)) return 'cells';
+    if (/وراثة|genetics|DNA|جين|gene|كروموسوم/.test(m)) return 'genetics';
+    if (/هضم|digest|إنزيم|enzyme/.test(m)) return 'digestion';
+    if (/دورة دموية|blood|قلب|heart|circulation/.test(m)) return 'circulation';
+    if (/تنفس|respiration|رئة|lung/.test(m)) return 'respiration';
+    if (/عصبي|nervous|مخ|brain|neuron/.test(m)) return 'nervous';
+    if (/تكاثر|reproduction|جنسي|بذرة/.test(m)) return 'reproduction';
   }
   if (subject === 'science') {
     if (/photosynthesis|بناء ضوئي/.test(m)) return 'photosynthesis';
@@ -255,13 +391,76 @@ function detectTopic(message, subject) {
     if (/فعل|ماضي|مضارع|أمر/.test(m)) return 'verb_types';
     if (/بلاغة|تشبيه|استعارة|كناية/.test(m)) return 'rhetorical';
     if (/اسم|معرفة|نكرة|جمع/.test(m)) return 'nouns';
+    if (/ضمير|pronoun/.test(m)) return 'pronouns';
+    if (/أدوات|particle|حرف جر|حروف/.test(m)) return 'particles';
+    if (/مفعول|object|تمييز|حال/.test(m)) return 'objects';
   }
   if (subject === 'english') {
     if (/tense|past|present|future/.test(m)) return 'tenses';
-    if (/passive|active voice/.test(m)) return 'passive_voice';
-    if (/conditional|if clause/.test(m)) return 'conditionals';
+    if (/passive|مبني.*مجهول/.test(m)) return 'passive_voice';
+    if (/conditional|if.clause/.test(m)) return 'conditionals';
     if (/noun|verb|adjective|adverb|part of speech/.test(m)) return 'parts_of_speech';
+    if (/reported|indirect.*speech/.test(m)) return 'reported_speech';
+    if (/article|\ba\b|\ban\b|\bthe\b/.test(m)) return 'articles';
+    if (/preposition|\bin\b|\bon\b|\bat\b|\bfor\b/.test(m)) return 'prepositions';
   }
+  return null;
+}
+
+// ── Complex Question Handler ─────────────────────────────
+function handleComplexQuestion(message, language) {
+  const isAr = language === 'ar';
+  const m = message.toLowerCase();
+
+  // "الفرق بين X وY" / "compare X and Y"
+  const cmpAr = m.match(/(?:ما\s+)?(?:هو\s+)?الفرق\s+بين\s+(.+?)\s+و(?:ال)?(.+)/);
+  const cmpEn = m.match(/(?:compare|difference\s+between)\s+(.+?)\s+(?:and|vs\.?)\s+(.+)/i);
+  if (cmpAr || cmpEn) {
+    const [, a, b] = cmpAr || cmpEn;
+    const sA = detectSubject(a), tA = detectTopic(a, sA);
+    const sB = detectSubject(b), tB = detectTopic(b, sB);
+    const infoA = getCurriculumInfo(sA, tA, language);
+    const infoB = getCurriculumInfo(sB, tB, language);
+    if (infoA || infoB) {
+      return isAr
+        ? `📊 **مقارنة: ${a.trim()} مقابل ${b.trim()}**\n\n**${a.trim()}:**\n${infoA || 'لا توجد معلومات كافية'}\n\n---\n\n**${b.trim()}:**\n${infoB || 'لا توجد معلومات كافية'}\n\n🧠 **تحدي:** ما أهم فرق لاحظته بين المفهومين؟`
+        : `📊 **Comparison: ${a.trim()} vs ${b.trim()}**\n\n**${a.trim()}:**\n${infoA || 'Insufficient info'}\n\n---\n\n**${b.trim()}:**\n${infoB || 'Insufficient info'}\n\n🧠 **Challenge:** What is the most important difference you noticed?`;
+    }
+  }
+
+  // "احسب / solve / calculate"
+  if (/احسب|حوّل|أوجد|solve|calculate|find the|evaluate/i.test(m)) {
+    return isAr
+      ? `🔢 **أسلوب حل المسائل — خطوة بخطوة:**\n\n**1️⃣ المعطيات:** ما الأرقام والبيانات المذكورة؟\n**2️⃣ المطلوب:** ماذا يُطلب إيجاده بالضبط؟\n**3️⃣ القانون:** ما القانون أو القاعدة المناسبة؟\n**4️⃣ التعويض:** عوّض القيم في القانون\n**5️⃣ التحقق:** هل الإجابة منطقية؟\n\n✏️ **الآن:** اكتب لي المسألة كاملة وسأرشدك خطوة بخطوة.`
+      : `🔢 **Problem-Solving Method — Step by Step:**\n\n**1️⃣ Given:** What numbers/data are provided?\n**2️⃣ Required:** What exactly needs to be found?\n**3️⃣ Formula:** Which law or formula applies?\n**4️⃣ Substitute:** Plug the values in\n**5️⃣ Verify:** Does the answer make sense?\n\n✏️ **Now:** Write the full problem and I'll guide you step by step.`;
+  }
+
+  // "اشرح ... واعطني مثال"
+  if (/اشرح\s+(.+)|explain\s+(.+)/i.test(m) && /مثال|example/i.test(m)) {
+    const match = m.match(/اشرح\s+(.+)|explain\s+(.+)/i);
+    const term = match ? (match[1] || match[2]).split(/و|and|with/)[0].trim() : '';
+    const subj = detectSubject(term);
+    const top  = detectTopic(term, subj);
+    const info = getCurriculumInfo(subj, top, language);
+    if (info) {
+      return info + (isAr
+        ? '\n\n📝 **مثال تطبيقي:** حاول الآن صياغة مثال من عندك على هذا المفهوم وأرسله لي لأراجعه معك.'
+        : '\n\n📝 **Your Turn:** Try creating your own example of this concept and send it — I\'ll review it with you.');
+    }
+  }
+
+  // "ما هو / what is"
+  if (/ما\s+(?:هو|هي|معنى|تعريف)\s+(.+)|what\s+is\s+(.+)|define\s+(.+)/i.test(m)) {
+    const match = m.match(/ما\s+(?:هو|هي|معنى|تعريف)\s+(.+)|what\s+is\s+(.+)|define\s+(.+)/i);
+    const term  = (match[1] || match[2] || match[3] || '').trim();
+    if (term.length > 2) {
+      const subj = detectSubject(term);
+      const top  = detectTopic(term, subj);
+      const info = getCurriculumInfo(subj, top, language);
+      if (info) return info;
+    }
+  }
+
   return null;
 }
 
@@ -308,8 +507,6 @@ function getCurriculumInfo(subject, topic, language) {
 function generateChatResponse(message, history = [], language = 'en') {
   const m = message.toLowerCase().trim();
   const isAr = language === 'ar';
-  const subject = detectSubject(m);
-  const topic = detectTopic(m, subject);
 
   // Greetings
   if (/^(hi|hello|hey|good|مرحبا|السلام|أهلا|صباح|مساء)\b/.test(m)) {
@@ -323,6 +520,13 @@ function generateChatResponse(message, history = [], language = 'en') {
   if (/\b(bye|goodbye|مع السلامة|وداعاً|إلى اللقاء)\b/.test(m)) {
     return isAr ? '👋 مع السلامة! استمر في التعلم.' : '👋 Goodbye! Keep studying! You\'ve got this! 🎓';
   }
+
+  // Complex question handler — runs before simple topic detection
+  const complexResponse = handleComplexQuestion(message, language);
+  if (complexResponse) return complexResponse;
+
+  const subject = detectSubject(m);
+  const topic = detectTopic(m, subject);
 
   // Curriculum-specific Socratic Scaffolding
   const info = getCurriculumInfo(subject, topic, language);
@@ -401,12 +605,21 @@ function generateQuiz({ subject = 'mathematics', difficulty = 'medium', count = 
     || QUESTION_BANKS[subj]?.medium
     || QUESTION_BANKS.mathematics.medium;
 
+  // Shuffle once — no repetition
   const shuffled = [...bank].sort(() => Math.random() - 0.5);
-  const questions = [];
-  while (questions.length < Math.min(count, 20)) {
-    questions.push(...shuffled.slice(0, Math.min(count - questions.length, shuffled.length)));
-  }
-  return { subject: subj, difficulty, language, count: questions.slice(0, count).length, questions: questions.slice(0, count) };
+  const finalCount = Math.min(count, shuffled.length);
+  const questions  = shuffled.slice(0, finalCount);
+
+  return {
+    subject: subj, difficulty, language,
+    count: questions.length,
+    questions,
+    warning: count > shuffled.length
+      ? (language === 'ar'
+        ? `عرض ${questions.length} سؤال فقط — البنك لا يحتوي على ${count} أسئلة مختلفة في هذه المادة.`
+        : `Showing ${questions.length} questions — bank has fewer than ${count} unique questions for this subject.`)
+      : null,
+  };
 }
 
 // ── PDF Summarizer ──────────────────────────────────────

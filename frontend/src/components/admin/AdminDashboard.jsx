@@ -122,8 +122,8 @@ function EarningsCard({ revenue }) {
             <span>📈 MONTHLY REVENUE COMPARISON</span>
             <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>Platform vs Gross</span>
           </div>
-          <div style={{ height: 250, width: '100%' }}>
-            <ResponsiveContainer width="100%" height="100%">
+          <div style={{ width: '100%', minWidth: 0 }}>
+            <ResponsiveContainer width="100%" height={250}>
               <AreaChart data={computeForecast(monthly)}>
                 <defs>
                   <linearGradient id="colorGross" x1="0" y1="0" x2="0" y2="1">
@@ -397,7 +397,7 @@ export default function AdminDashboard() {
       toast.success('Coupon created successfully!');
       fetchStats();
       e.target.reset();
-    } catch { toast.error('Failed to create coupon'); }
+    } catch (err) { toast.error(err.response?.data?.error || 'Failed to create coupon'); }
   };
 
   const bgStyle = {
@@ -494,8 +494,8 @@ export default function AdminDashboard() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                   <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 24, padding: 24 }}>
                     <h3 style={{ color: '#fff', marginTop: 0, fontSize: 16, fontWeight: 800 }}>💳 Payment Gateways Used</h3>
-                    <div style={{ height: 300, width: '100%', marginTop: 20 }}>
-                      <ResponsiveContainer width="100%" height="100%">
+                    <div style={{ width: '100%', minWidth: 0, marginTop: 20 }}>
+                      <ResponsiveContainer width="100%" height={300}>
                         <PieChart>
                           <Pie data={stats.gatewayBreakdown || []} dataKey="total" nameKey="gateway" cx="50%" cy="50%" innerRadius={70} outerRadius={100} paddingAngle={5} label={false}>
                             {stats.gatewayBreakdown?.map((entry, index) => {

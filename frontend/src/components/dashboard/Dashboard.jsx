@@ -17,6 +17,7 @@ const TeacherDashboard      = lazy(() => import('../teacher/TeacherDashboard'));
 const SchoolStudentDashboard= lazy(() => import('./SchoolStudentDashboard'));
 const UniversityDashboard   = lazy(() => import('./UniversityStudentDashboard'));
 const AdminOverviewDashboard= lazy(() => import('../admin/AdminOverviewDashboard'));
+const CenterDashboard       = lazy(() => import('../center/CenterDashboard'));
 
 
 /* ── Data mappings ─────────────────────────────────────── */
@@ -572,6 +573,9 @@ export default function Dashboard() {
 
   if (role === 'admin') {
     return <Suspense fallback={loader}><AdminOverviewDashboard /></Suspense>;
+  }
+  if (role === 'center_owner') {
+    return <Suspense fallback={loader}><CenterDashboard /></Suspense>;
   }
   if (role === 'teacher') {
     return <Suspense fallback={loader}><TeacherDashboard /></Suspense>;

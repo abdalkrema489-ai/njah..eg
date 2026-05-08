@@ -4,22 +4,42 @@ import { motion } from 'framer-motion';
 import { usersAPI } from '../../api/index';
 import { Card, Btn, Select, SectionHeader } from '../shared/UI';
 import toast from 'react-hot-toast';
-
-const MODES = {
-  focus: { label:'Focus',      min:25, color:'var(--primary)' },
-  short: { label:'Short Break',min:5,  color:'var(--accent2)' },
-  long:  { label:'Long Break', min:15, color:'var(--accent)'  },
-};
-const SUBJECTS = ['mathematics','science','arabic','english','social_studies'];
-const S_ICONS  = { mathematics:'📐',science:'🔬',arabic:'📚',english:'🌐',social_studies:'🌍' };
+import { useTranslation } from '../../i18n/index';
 
 export default function FocusPage() {
+  const { lang } = useTranslation();
+  const isAr = lang === 'ar';
+
+  const MODES = {
+    focus: { label: isAr ? 'تركيز'         : 'Focus',       min: 25, color: 'var(--primary)' },
+    short: { label: isAr ? 'استراحة قصيرة' : 'Short Break', min: 5,  color: 'var(--accent2)' },
+    long:  { label: isAr ? 'استراحة طويلة' : 'Long Break',  min: 15, color: 'var(--accent)'  },
+  };
+
+  const TIPS = isAr ? [
+    'اعمل متركز 25 دقيقة، ثم استرح 5 دقائق',
+    'بعد 4 جلسات، خد استراحة طويلة 15-30 دقيقة',
+    'بعّد كل المشتتات قبل ما تبدأ',
+    'احتفظ بورقة لكتابة الأفكار التي بتيجي وسط المذاكرة',
+    'اشرب مية في وقت الاستراحة',
+  ] : [
+    'Work focused for 25 min, then rest 5 min',
+    'After 4 pomodoros, take a 15–30 min break',
+    'Remove all distractions before starting',
+    'Keep a notepad for interrupting thoughts',
+    'Drink water during your breaks',
+  ];
+
   const [mode,    setMode]   = useState('focus');
   const [secs,    setSecs]   = useState(25*60);
   const [running, setRunning]= useState(false);
   const [subject, setSubject]= useState('mathematics');
   const [done,    setDone]   = useState(0);
   const intv = useRef(null);
+const SUBJECTS = ['mathematics','science','arabic','english','social_studies'];
+const S_ICONS  = { mathematics:'📐',science:'🔬',arabic:'📚',english:'🌐',social_studies:'🌍' };
+
+
 
   const maxSecs = MODES[mode].min * 60;
   const pct     = secs / maxSecs;
@@ -39,10 +59,10 @@ export default function FocusPage() {
           if (mode === 'focus') {
             setDone(d => d+1);
             usersAPI.recordPomodoro({ type:'focus', duration:25, subject, completed:true }).catch(()=>{});
-            toast.success('🍅 Pomodoro complete! Take a break!');
-            if (Notification.permission==='granted') new Notification('Najah',{body:'Pomodoro done! Take a break.'});
+            toast.success(isAr ? '🍅 بومودورو مكتمل! خذ استراحة!' : '🍅 Pomodoro complete! Take a break!');
+            if (Notification.permission==='granted') new Notification('Najah',{body: isAr ? 'انتهت البومودورو! خذ استراحة.' : 'Pomodoro done! Take a break.'});
           } else {
-            toast.success('☕ Break over! Time to focus!');
+            toast.success(isAr ? '☕ انتهت الاستراحة! وقت التركيز!' : '☕ Break over! Time to focus!');
           }
           return 0;
         }
@@ -57,17 +77,11 @@ export default function FocusPage() {
   const ss = String(secs%60).padStart(2,'0');
   const modeColor = MODES[mode].color;
 
-  const TIPS = [
-    'Work focused for 25 min, then rest 5 min',
-    'After 4 pomodoros, take a 15–30 min break',
-    'Remove all distractions before starting',
-    'Keep a notepad for interrupting thoughts',
-    'Drink water during your breaks',
-  ];
+  // (bilingual TIPS defined above)
 
   return (
     <div>
-      <SectionHeader icon="⏱️" title="Focus Mode" subtitle="Pomodoro timer for deep, distraction-free study" />
+      <SectionHeader icon="⏱️" title={isAr ? 'وضع التركيز' : 'Focus Mode'} subtitle={isAr ? 'مؤقت بومودورو للمذاكرة العميقة بدون تشتت' : 'Pomodoro timer for deep, distraction-free study'} />
 
       <div className="grid-2" style={{ gap:24 }}>
         <div className="floating-panel" style={{ textAlign:'center', padding:'48px 32px' }}>
@@ -117,9 +131,9 @@ export default function FocusPage() {
           <div style={{ display:'flex', gap:12, justifyContent:'center', marginBottom:32 }}>
             <Btn variant="primary" size="lg" onClick={toggle}
               style={{ background:modeColor, borderColor: 'transparent', minWidth:160, height: 56, fontSize: 16, fontWeight: 900, boxShadow: `0 12px 32px ${modeColor}40` }}>
-              {running ? '⏸ PAUSE PROTOCOL' : '▶ START FOCUS'}
+              {running ? (isAr ? '⏸ إيقاف مؤقت' : '⏸ PAUSE') : (isAr ? '▶ ابدأ التركيز' : '▶ START FOCUS')}
             </Btn>
-            <Btn size="lg" variant="glass" onClick={()=>reset()} style={{ height: 56, fontWeight: 900 }}>↺ RESET</Btn>
+            <Btn size="lg" variant="glass" onClick={()=>reset()} style={{ height: 56, fontWeight: 900 }}>{isAr ? '↺ إعادة' : '↺ RESET'}</Btn>
           </div>
 
           {/* Pomodoro dots */}
@@ -133,18 +147,18 @@ export default function FocusPage() {
                 }} />
             ))}
             <span style={{ fontSize:12, color:'var(--text4)', fontWeight: 800, marginLeft:12, letterSpacing: '0.05em' }}>
-              {done} COMPLETED TODAY
+              {isAr ? `${done} جلسة مكتملة` : `${done} COMPLETED TODAY`}
             </span>
           </div>
         </div>
 
         <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
           <div className="floating-panel" style={{ padding: 24 }}>
-            <div style={{ fontWeight:900, marginBottom:20, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text)' }}>📊 Neural Performance</div>
+            <div style={{ fontWeight:900, marginBottom:20, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text)' }}>{isAr ? '📊 الأداء' : '📊 Neural Performance'}</div>
             <div className="grid-2" style={{ gap:12 }}>
               {[
-                { label:'Pomodoros', value:done, icon:'🍅', color: 'var(--primary)' },
-                { label:'Focus Time', value:`${done*25}m`, icon:'⏱️', color: 'var(--brand-400)' },
+                { label: isAr ? 'بومودورو' : 'Pomodoros', value:done, icon:'🍅', color: 'var(--primary)' },
+                { label: isAr ? 'وقت التركيز' : 'Focus Time', value:`${done*25}m`, icon:'⏱️', color: 'var(--brand-400)' },
               ].map(s=>(
                 <div key={s.label} className="floating-card" style={{ padding:16, textAlign:'center', borderRadius: 16 }}>
                   <div style={{ fontSize:32, fontWeight:950, fontFamily:'var(--font-head)', color: s.color }}>{s.value}</div>
@@ -155,14 +169,14 @@ export default function FocusPage() {
           </div>
 
           <div className="floating-panel" style={{ padding: 24 }}>
-            <div style={{ fontWeight:900, marginBottom:16, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text)' }}>🎯 Session Core</div>
-            <Select label="Focus Subject" value={subject} onChange={e=>setSubject(e.target.value)}>
+            <div style={{ fontWeight:900, marginBottom:16, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text)' }}>{isAr ? '🎯 المادة' : '🎯 Session Core'}</div>
+            <Select label={isAr ? 'المادة' : 'Focus Subject'} value={subject} onChange={e=>setSubject(e.target.value)}>
               {SUBJECTS.map(s=><option key={s} value={s}>{S_ICONS[s]} {s.replace('_',' ').toUpperCase()}</option>)}
             </Select>
           </div>
 
           <div className="floating-panel" style={{ padding: 24 }}>
-            <div style={{ fontWeight:900, marginBottom:16, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text)' }}>💡 Focus Protocol</div>
+            <div style={{ fontWeight:900, marginBottom:16, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text)' }}>{isAr ? '💡 بروتوكول التركيز' : '💡 Focus Protocol'}</div>
             {TIPS.map((tip,i)=>(
               <div key={i} style={{ fontSize:13, color:'var(--text2)', padding:'10px 0', fontWeight: 500,
                 borderBottom: i<TIPS.length-1?'1px solid var(--border)':'' }}>
