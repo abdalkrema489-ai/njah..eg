@@ -17,8 +17,8 @@ ar.delete('/conversations/:id', c.deleteConversation);
 
 // AI Features
 ar.post('/chat', aiLimiter, c.chat);
-ar.post('/chat/stream', aiLimiter, c.chatStream);   // NEW: streaming SSE
-ar.post('/search', aiLimiter, c.webSearch);    // NEW: web search
+ar.post('/chat/stream', aiLimiter, c.chatStream);   // streaming SSE
+ar.post('/search', aiLimiter, c.webSearch);
 ar.post('/summarize', aiLimiter, c.summarizePdf);
 ar.post('/quiz', aiLimiter, c.generateQuiz);
 ar.post('/quiz/submit', c.submitQuizResult);
@@ -27,9 +27,16 @@ ar.post('/ask-file', aiLimiter, c.answerFromFile);
 ar.post('/image-analyze', aiLimiter, c.analyzeImage);
 ar.post('/youtube-summarize', aiLimiter, c.youtubeSummarize);
 
+// Memory management (Mem0)
+ar.post('/clear-memory', c.clearMemory);
+
 // Teacher-only AI features
 ar.post('/lesson-plan', aiLimiter, c.generateLessonPlan);
 ar.post('/exam-questions', aiLimiter, c.generateExamQuestions);
 ar.post('/grade-essay', aiLimiter, c.gradeEssay);
 
+// AI Vision
+ar.post('/correct-homework', aiLimiter, c.correctHomework);
+
 module.exports = ar;
+

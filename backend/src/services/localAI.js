@@ -19,18 +19,18 @@ class LocalAIEngine {
       logger.info('Initializing Najah Massive In-House AI System...');
 
       // Load feature extraction for RAG/Embeddings
-      this.models.extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', {
-        progress_callback: (x) => { if (x.status === 'downloading') logger.info(`Downloading model: ${x.name}`) }
-      });
+      // this.models.extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', {
+      //   progress_callback: (x) => { if (x.status === 'downloading') logger.info(`Downloading model: ${x.name}`) }
+      // });
 
       // Load text classification (e.g., grading essays, sentiment)
-      this.models.classifier = await pipeline('text-classification', 'Xenova/distilbert-base-uncased-finetuned-sst-2-english');
+      // this.models.classifier = await pipeline('text-classification', 'Xenova/distilbert-base-uncased-finetuned-sst-2-english');
 
       // Load summarizer
-      this.models.summarizer = await pipeline('summarization', 'Xenova/distilbart-cnn-6-6');
+      // this.models.summarizer = await pipeline('summarization', 'Xenova/distilbart-cnn-6-6');
 
       // Load tiny text generator for chat
-      this.models.generator = await pipeline('text-generation', 'Xenova/TinyLlama-1.1B-Chat-v1.0');
+      // this.models.generator = await pipeline('text-generation', 'Xenova/TinyLlama-1.1B-Chat-v1.0');
 
       this.isReady = true;
       logger.info('Najah Local AI Engine is completely initialized and ready.');

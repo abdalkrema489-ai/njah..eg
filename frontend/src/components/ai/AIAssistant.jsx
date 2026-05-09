@@ -7,6 +7,7 @@ import DOMPurify from 'dompurify';
 import { aiAPI, filesAPI } from '../../api/index';
 import { useUIStore, useAuthStore } from '../../context/store';
 import { Spinner } from '../shared/UI';
+import HomeworkCorrector from './HomeworkCorrector';
 
 // ── DOMPurify config ──────────────────────────────────────
 const SANITIZE_OPTS = {
@@ -507,7 +508,35 @@ function AIChat() {
             🔍 {isAr ? 'بحث' : 'Search'}
             {searchMode && <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.25)', padding: '1px 6px', borderRadius: 10 }}>ON</span>}
           </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
+            onClick={async () => {
+              try {
+                const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+                const token = localStorage.getItem('token');
+                await fetch(`${API}/ai/clear-memory`, {
+                  method: 'POST',
+                  headers: { 'Authorization': `Bearer ${token}` },
+                });
+                toast.success(isAr ? '🗑️ تم مسح ذاكرة AI بنجاح' : '🗑️ AI memory cleared');
+              } catch {
+                toast.error(isAr ? 'فشل مسح الذاكرة' : 'Failed to clear memory');
+              }
+            }}
+            title={isAr ? 'امسح ما يتذكره AI عنك من محادثات سابقة' : 'Clear what AI remembers about you across sessions'}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '8px 14px', borderRadius: 20,
+              background: 'var(--glass)', border: '1px solid var(--border)',
+              color: 'var(--text3)', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+            }}
+          >
+            🗑️ {isAr ? 'مسح الذاكرة' : 'Clear Memory'}
+          </motion.button>
         </div>
+
 
         {/* Messages area */}
         <div className="scroll-y" style={{
@@ -995,6 +1024,7 @@ const TABS = [
   { id:'summarize', label:'📄 Summarize' },
   { id:'plan',      label:'📅 Study Plan' },
   { id:'youtube',   label:'🎥 YouTube' },
+  { id:'homework',  label:'📸 Homework' },
 ];
 
 export default function AIAssistant() {
@@ -1013,6 +1043,7 @@ export default function AIAssistant() {
         {tab==='summarize' && <SummarizePanel />}
         {tab==='plan'      && <StudyPlanPanel />}
         {tab==='youtube'   && <YouTubePanel />}
+        {tab==='homework'  && <HomeworkCorrector isAr={useUIStore().language === 'ar'} />}
       </div>
     </div>
   );

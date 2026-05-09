@@ -10,7 +10,9 @@ const { checkAchievements } = require('../services/achievementService');
 const localAI = require('../services/localAI');
 const internalAI = require('../services/internalAI');
 const deepTutor = require('../services/deepTutorService');
-const geminiAI = require('../services/geminiAI');
+const geminiAI  = require('../services/geminiAI');
+const ollamaAI  = require('../services/ollamaAI');
+const { clearUserMemory } = require('../services/mem0Service');
 const CognitiveEngine = require('../ai/core/CognitiveEngine');
 const logger = require('../utils/logger');
 
@@ -22,18 +24,34 @@ async function fetchPdfText(fileUrl, maxChars = 10000) {
   const resp = await fetch(fileUrl);
   if (!resp.ok) throw new Error('Failed to fetch file');
   const buf = Buffer.from(await resp.arrayBuffer());
-  const data = await pdfParse(buf);
-  return { text: data.text.slice(0, maxChars), pages: data.numpages };
+  const originalWarn = console.warn;
+  console.warn = (...args) => {
+    if (typeof args[0] === 'string' && args[0].includes('Warning: TT: undefined function:')) return;
+    originalWarn.apply(console, args);
+  };
+  try {
+    const data = await pdfParse(buf);
+    return { text: data.text.slice(0, maxChars), pages: data.numpages };
+  } finally {
+    console.warn = originalWarn;
+  }
 }
 
 // ── Provider Info ────────────────────────────────────────────
 async function getProvider(req, res) {
+  const ollamaAvail = await ollamaAI.isAvailable();
   res.json({
-    primary: geminiAI.isAvailable() ? 'gemini-2.0-flash' : 'internal',
+    primary: geminiAI.isAvailable() ? 'gemini-2.0-flash' : ollamaAvail ? 'ollama' : 'internal',
+    chain: ['gemini-2.0-flash', 'ollama-' + ollamaAI.OLLAMA_MODEL, 'internal'],
     gemini: {
       available: geminiAI.isAvailable(),
       model: 'gemini-2.0-flash',
       description: 'Google Gemini 2.0 Flash — Egyptian curriculum AI',
+    },
+    ollama: {
+      available: ollamaAvail,
+      model: ollamaAI.OLLAMA_MODEL,
+      description: 'Local AI fallback (free, no API key needed)',
     },
     internal: {
       available: true,
@@ -96,16 +114,31 @@ async function chat(req, res) {
   let reply = '';
   let usedProvider = '';
 
-  try {
-    if (geminiAI.isAvailable()) {
-      reply = await geminiAI.chat(message, history, language);
+  // 1️⃣ Primary: Gemini (with mem0 memory via userId)
+  if (geminiAI.isAvailable()) {
+    try {
+      reply = await geminiAI.chat(message, history, language, req.user.id);
       usedProvider = 'gemini-2.0-flash';
-    } else {
-      reply = internalAI.generateChatResponse(message, history, language);
-      usedProvider = 'internal-fallback';
+    } catch (geminiErr) {
+      logger.warn('Gemini failed, trying ollama:', geminiErr.message);
     }
-  } catch (err) {
-    logger.error('AI chat error:', err.message);
+  }
+
+  // 2️⃣ Secondary: Ollama (local AI, no API key)
+  if (!reply) {
+    try {
+      const ollamaAvail = await ollamaAI.isAvailable();
+      if (ollamaAvail) {
+        reply = await ollamaAI.chat(message, history, language);
+        usedProvider = 'ollama-' + ollamaAI.OLLAMA_MODEL;
+      }
+    } catch (ollamaErr) {
+      logger.warn('Ollama failed, using internal AI:', ollamaErr.message);
+    }
+  }
+
+  // 3️⃣ Last resort: internal pattern engine
+  if (!reply) {
     try {
       reply = internalAI.generateChatResponse(message, history, language);
       usedProvider = 'internal-fallback';
@@ -141,6 +174,7 @@ async function chat(req, res) {
   });
 }
 
+
 // ── Streaming Chat ────────────────────────────────────────────
 async function chatStream(req, res) {
   const { message, conversationId, language = 'ar' } = req.body;
@@ -161,27 +195,50 @@ async function chatStream(req, res) {
   }
 
   try {
+    // 1️⃣ Primary: Gemini streaming (with mem0 userId)
     if (geminiAI.isAvailable() && typeof geminiAI.chatStream === 'function') {
-      // Gemini real streaming — writes SSE chunks directly to res
-      await geminiAI.chatStream(message, history, res);
-    } else {
-      // Fallback: internal AI as single chunk
-      const fullText = internalAI.generateChatResponse(message, history, language);
-      res.write(`data: ${JSON.stringify({ chunk: fullText })}\n\n`);
-      res.write(`data: ${JSON.stringify({ done: true, fullText, provider: 'internal-fallback' })}\n\n`);
-      res.end();
+      try {
+        await geminiAI.chatStream(message, history, res, req.user.id);
+        saveToConversation(conversationId, req.user.id, message, '', language, null).catch(() => {});
+        pool.query('UPDATE users SET xp_points = xp_points + 5 WHERE id = $1', [req.user.id]).catch(() => {});
+        return;
+      } catch (geminiErr) {
+        logger.warn('Gemini stream failed, trying ollama:', geminiErr.message);
+        // If res already started streaming, we can't switch — just end
+        if (res.writableEnded) return;
+      }
     }
-    // Background tasks
-    saveToConversation(conversationId, req.user.id, message, '', language, null).catch(() => { });
-    pool.query('UPDATE users SET xp_points = xp_points + 5 WHERE id = $1', [req.user.id]).catch(() => { });
+
+    // 2️⃣ Secondary: Ollama streaming
+    const ollamaAvail = await ollamaAI.isAvailable();
+    if (ollamaAvail) {
+      try {
+        await ollamaAI.chatStream(message, history, res);
+        saveToConversation(conversationId, req.user.id, message, '', language, null).catch(() => {});
+        pool.query('UPDATE users SET xp_points = xp_points + 5 WHERE id = $1', [req.user.id]).catch(() => {});
+        return;
+      } catch (ollamaErr) {
+        logger.warn('Ollama stream failed, using internal AI:', ollamaErr.message);
+        if (res.writableEnded) return;
+      }
+    }
+
+    // 3️⃣ Last resort: internal AI as single chunk
+    const fallback = internalAI.generateChatResponse(message, history, language);
+    res.write(`data: ${JSON.stringify({ chunk: fallback })}\n\n`);
+    res.write(`data: ${JSON.stringify({ done: true, fullText: fallback, provider: 'internal-fallback' })}\n\n`);
+    res.end();
+    pool.query('UPDATE users SET xp_points = xp_points + 5 WHERE id = $1', [req.user.id]).catch(() => {});
   } catch (err) {
     logger.error('Stream error:', err.message);
-    try {
-      const fallback = internalAI.generateChatResponse(message, history, language);
-      res.write(`data: ${JSON.stringify({ chunk: fallback })}\n\n`);
-      res.write(`data: ${JSON.stringify({ done: true, fullText: fallback, provider: 'internal-fallback' })}\n\n`);
-    } catch { }
-    res.end();
+    if (!res.writableEnded) {
+      try {
+        const fallback = internalAI.generateChatResponse(message, history, language);
+        res.write(`data: ${JSON.stringify({ chunk: fallback })}\n\n`);
+        res.write(`data: ${JSON.stringify({ done: true, fullText: fallback, provider: 'internal-fallback' })}\n\n`);
+      } catch { }
+      res.end();
+    }
   }
 }
 
@@ -190,18 +247,36 @@ async function webSearch(req, res) {
   const { query, language = 'en' } = req.body;
   if (!query) return res.status(400).json({ error: 'Query is required' });
 
+  let answer = '';
+
   if (geminiAI.isAvailable()) {
     try {
-      const answer = await geminiAI.searchAndAnswer(query, language);
+      answer = await geminiAI.searchAndAnswer(query, language);
       return res.json({ answer, provider: 'gemini-2.0-flash' });
     } catch (err) {
       logger.error('Gemini Web Search failed:', err.message);
-      return res.status(500).json({ error: 'Search engine encountered an error' });
+      // Fallback to Ollama or internal AI below
     }
   }
 
-  // Fallback if Gemini is not available
-  return res.status(503).json({ error: 'Web Search is currently offline. Please configure the Cloud AI.' });
+  // Fallback 1: Ollama
+  try {
+    const ollamaAvail = await ollamaAI.isAvailable();
+    if (ollamaAvail) {
+      answer = await ollamaAI.chat(`Answer this search query based on your knowledge: ${query}`, [], language);
+      return res.json({ answer, provider: 'ollama-' + ollamaAI.OLLAMA_MODEL });
+    }
+  } catch (err) {
+    logger.error('Ollama search fallback failed:', err.message);
+  }
+
+  // Fallback 2: Internal AI
+  try {
+    answer = internalAI.generateChatResponse(query, [], language);
+    return res.json({ answer, provider: 'internal-fallback' });
+  } catch (err) {
+    return res.status(500).json({ error: 'Search engine encountered an error' });
+  }
 }
 
 // ── Conversations ─────────────────────────────────────────────
@@ -453,10 +528,67 @@ async function gradeEssay(req, res) {
   }
 }
 
+// ── Clear AI Memory (Mem0) ────────────────────────────────────
+async function clearMemory(req, res) {
+  try {
+    await clearUserMemory(req.user.id);
+    res.json({ success: true, message: 'تم مسح ذاكرة AI الخاصة بك' });
+  } catch (err) {
+    logger.error('clearMemory error:', err.message);
+    res.status(500).json({ error: 'Failed to clear memory' });
+  }
+}
+
+// ── Correct Homework (Vision AI) ──────────────────────────────
+async function correctHomework(req, res) {
+  try {
+    const { imageBase64, subject, grade, language = 'ar' } = req.body;
+    if (!imageBase64) return res.status(400).json({ error:'Image required' });
+
+    const prompt = language === 'ar'
+      ? `أنت معلم مصري متخصص في ${subject||'عام'} للصف ${grade||'الثانوي'}.
+صحّح هذا الواجب المصور بدقة وأعطِ:
+
+**الدرجة**: X من 10
+**الإيجابيات**: ما تم صح (نقطتان على الأقل)
+**الأخطاء**: كل خطأ مع شرح الصواب
+**نصيحة**: نصيحة واحدة للتحسين
+
+كن مشجعاً دائماً حتى لو الإجابة غلط. استخدم لغة مناسبة لسن الطالب.`
+      : `You are an Egyptian teacher specializing in ${subject||'general'} for grade ${grade||'secondary'}.
+Correct this homework image and provide:
+**Score**: X/10
+**Strengths**: What was done correctly
+**Errors**: Each mistake with correct explanation
+**Tip**: One improvement tip
+Always be encouraging.`;
+
+    if (!geminiAI.isAvailable()) return res.status(503).json({ error:'AI Vision unavailable' });
+
+    const { GoogleGenerativeAI } = require('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const vision = genAI.getGenerativeModel({ model:'gemini-2.0-flash' });
+
+    const imgData = imageBase64.replace(/^data:image\/\w+;base64,/, '');
+    const result  = await vision.generateContent([
+      prompt,
+      { inlineData: { mimeType:'image/jpeg', data: imgData } },
+    ]);
+    const text = result.response.text();
+
+    pool.query('UPDATE users SET xp_points=xp_points+10 WHERE id=$1', [req.user.id]).catch(()=>{});
+    res.json({ correction: text, subject, grade });
+  } catch (e) {
+    logger.error('Homework correction error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+}
+
 module.exports = {
   chat, chatStream, webSearch,
   getConversations, getConversation, deleteConversation,
   summarizePdf, generateQuiz, submitQuizResult, generateStudyPlan,
   answerFromFile, getProvider, getCapabilities, youtubeSummarize, analyzeImage,
   generateLessonPlan, generateExamQuestions, gradeEssay,
+  clearMemory, correctHomework
 };

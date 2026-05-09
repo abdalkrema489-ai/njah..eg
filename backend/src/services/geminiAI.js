@@ -4,56 +4,12 @@
 // ══════════════════════════════════════════════════════════════
 const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require('@google/generative-ai');
 const logger = require('../utils/logger');
+const mem0   = require('./mem0Service');
 
 // ── Init ─────────────────────────────────────────────────────
 let genAI = null;
 let model  = null;
 let modelStream = null;
-
-if (process.env.GEMINI_API_KEY) {
-  try {
-    genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-    const safetySettings = [
-      { category: HarmCategory.HARM_CATEGORY_HARASSMENT,        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-      { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,       threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-      { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-      { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-    ];
-
-    model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
-      systemInstruction: SYSTEM_PROMPT,
-      safetySettings,
-      generationConfig: {
-        temperature:     0.72,
-        topK:            50,
-        topP:            0.93,
-        maxOutputTokens: 4096,
-        candidateCount:  1,
-      },
-    });
-
-    modelStream = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
-      systemInstruction: SYSTEM_PROMPT,
-      safetySettings,
-      generationConfig: {
-        temperature:     0.72,
-        topK:            50,
-        topP:            0.93,
-        maxOutputTokens: 4096,
-        candidateCount:  1,
-      },
-    });
-
-    logger.info('✅ Gemini 2.0 Flash initialized');
-  } catch (err) {
-    logger.error('❌ Gemini init error:', err.message);
-  }
-} else {
-  logger.warn('⚠️  GEMINI_API_KEY not set — Gemini AI unavailable');
-}
 
 // ── System Prompt (v7 — Full Professional Educator Persona) ──
 const SYSTEM_PROMPT = `
@@ -127,6 +83,53 @@ const SYSTEM_PROMPT = `
 - لا تكتب محتوى مسيء أو خارج إطار التعليم
 `;
 
+if (process.env.GEMINI_API_KEY) {
+  try {
+    genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+    const safetySettings = [
+      { category: HarmCategory.HARM_CATEGORY_HARASSMENT,        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+      { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,       threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+      { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+      { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+    ];
+
+    model = genAI.getGenerativeModel({
+      model: 'gemini-2.0-flash',
+      systemInstruction: SYSTEM_PROMPT,
+      safetySettings,
+      generationConfig: {
+        temperature:     0.72,
+        topK:            50,
+        topP:            0.93,
+        maxOutputTokens: 4096,
+        candidateCount:  1,
+      },
+    });
+
+    modelStream = genAI.getGenerativeModel({
+      model: 'gemini-2.0-flash',
+      systemInstruction: SYSTEM_PROMPT,
+      safetySettings,
+      generationConfig: {
+        temperature:     0.72,
+        topK:            50,
+        topP:            0.93,
+        maxOutputTokens: 4096,
+        candidateCount:  1,
+      },
+    });
+
+    logger.info('✅ Gemini 2.0 Flash initialized');
+  } catch (err) {
+    logger.error('❌ Gemini init error:', err.message);
+  }
+} else {
+  logger.warn('⚠️  GEMINI_API_KEY not set — Gemini AI unavailable');
+}
+
+
+
 // ── Build contextual user prefix ─────────────────────────────
 function buildContextualPrompt(user, extras = {}) {
   if (!user) return '';
@@ -163,34 +166,66 @@ function buildHistory(messages = []) {
 }
 
 // ── Chat (non-streaming) ──────────────────────────────────────
-async function chat(message, history = [], language = 'en') {
+async function chat(message, history = [], language = 'en', userId = null) {
   if (!model) throw new Error('GEMINI_NOT_AVAILABLE');
 
+  // 1. Retrieve student memories relevant to this message
+  const memoryContext = await mem0.getRelevantMemories(userId, message);
+
+  // 2. Build a dynamic model with memory injected into system instruction
+  const dynamicModel = memoryContext
+    ? genAI.getGenerativeModel({
+        model: 'gemini-2.0-flash',
+        systemInstruction: SYSTEM_PROMPT + memoryContext,
+        safetySettings: [
+          { category: HarmCategory.HARM_CATEGORY_HARASSMENT,        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+          { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,       threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+          { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+          { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+        ],
+        generationConfig: { temperature: 0.72, topK: 50, topP: 0.93, maxOutputTokens: 4096, candidateCount: 1 },
+      })
+    : model;
+
   const hist = buildHistory(history);
-
-  const chat = model.startChat({
-    history: hist,
-  });
-
-  const result = await chat.sendMessage(message);
+  const chatSession = dynamicModel.startChat({ history: hist });
+  const result = await chatSession.sendMessage(message);
   const text   = result.response.text();
+
+  // 3. Save to memory in background (non-blocking)
+  mem0.saveMemory(userId, message, text).catch(() => {});
+
   return text;
 }
 
 // ── Chat (streaming) ──────────────────────────────────────────
-async function chatStream(message, history = [], res) {
+async function chatStream(message, history = [], res, userId = null) {
   if (!modelStream) {
     res.write(`data: ${JSON.stringify({ error: 'GEMINI_NOT_AVAILABLE' })}\n\n`);
     res.end();
     return;
   }
 
+  // 1. Retrieve student memories
+  const memoryContext = await mem0.getRelevantMemories(userId, message);
+
+  // 2. Build dynamic model with memory context
+  const dynamicModelStream = memoryContext
+    ? genAI.getGenerativeModel({
+        model: 'gemini-2.0-flash',
+        systemInstruction: SYSTEM_PROMPT + memoryContext,
+        safetySettings: [
+          { category: HarmCategory.HARM_CATEGORY_HARASSMENT,        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+          { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,       threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+          { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+          { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+        ],
+        generationConfig: { temperature: 0.72, topK: 50, topP: 0.93, maxOutputTokens: 4096, candidateCount: 1 },
+      })
+    : modelStream;
+
   const hist = buildHistory(history);
-
-  const chatSession = modelStream.startChat({
-    history: hist,
-  });
-
+  const chatSession = dynamicModelStream.startChat({ history: hist });
   const result = await chatSession.sendMessageStream(message);
 
   let fullText = '';
@@ -200,8 +235,12 @@ async function chatStream(message, history = [], res) {
     res.write(`data: ${JSON.stringify({ chunk: chunkText })}\n\n`);
   }
 
-  res.write(`data: ${JSON.stringify({ done: true, fullText })}\n\n`);
+  res.write(`data: ${JSON.stringify({ done: true, fullText, provider: 'gemini-2.0-flash' })}\n\n`);
   res.end();
+
+  // 3. Save conversation to memory after stream completes
+  mem0.saveMemory(userId, message, fullText).catch(() => {});
+
   return fullText;
 }
 

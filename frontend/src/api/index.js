@@ -214,6 +214,10 @@ export const groupsAPI = {
 
   // Insights
   getInsights: id => client.get(`/groups/${id}/insights`),
+
+  // Broadcast & Leaderboard
+  broadcast:      (id, d) => client.post(`/groups/${id}/broadcast`, d),
+  getLeaderboard: id      => client.get(`/groups/${id}/leaderboard`),
 };
 
 export const toolsAPI = {

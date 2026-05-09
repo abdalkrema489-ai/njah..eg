@@ -10,6 +10,7 @@ const { pool }                          = require('../config/postgres');
 const logger                          = require('../utils/logger');
 const { uploadToFirebase, deleteFromFirebase } = require('../config/firebase');
 const { checkAchievements }             = require('../services/achievementService');
+const markitdown                        = require('../services/markitdownService');
 
 // ── Upload ──────────────────────────────────────────────
 async function uploadFile(req, res) {
@@ -124,27 +125,71 @@ async function deleteFile(req, res) {
   res.json({ message: 'File deleted' });
 }
 
-// ── Extract PDF text ────────────────────────────────────
-async function extractPdfText(req, res) {
+// ── Extract file text (PDF + Word + PPT via markitdown) ──────
+async function extractFileText(req, res) {
   const { rows } = await pool.query(
     `SELECT * FROM files WHERE id = $1
-     AND (user_id = $2 OR is_public = true)
-     AND mime_type = 'application/pdf'`,
+     AND (user_id = $2 OR is_public = true)`,
     [req.params.id, req.user.id]
   );
-  if (!rows[0]) return res.status(404).json({ error: 'PDF not found' });
+  if (!rows[0]) return res.status(404).json({ error: 'File not found' });
 
-  const resp = await fetch(rows[0].file_url);
+  const file = rows[0];
+
+  const resp = await fetch(file.file_url);
   if (!resp.ok) return res.status(502).json({ error: 'Failed to fetch file' });
   const buf  = Buffer.from(await resp.arrayBuffer());
-  const data = await pdfParse(buf);
+
+  let text   = '';
+  let pages  = 1;
+  let source = 'pdf-parse';
+
+  // 1️⃣ Try markitdown first (handles PDF, Word, PPT, scanned docs)
+  const mdAvail = await markitdown.isAvailable();
+  if (mdAvail) {
+    const result = await markitdown.convertToText(buf, file.original_name, file.mime_type);
+    if (result.success && result.text?.length > 50) {
+      text   = result.text;
+      source = 'markitdown';
+      logger.info(`Markitdown extracted ${result.length} chars from ${file.original_name}`);
+    }
+  }
+
+  // 2️⃣ Fallback: pdf-parse for regular PDFs
+  if (!text && file.mime_type === 'application/pdf') {
+      const originalWarn = console.warn;
+      console.warn = (...args) => {
+        if (typeof args[0] === 'string' && args[0].includes('Warning: TT: undefined function:')) return;
+        originalWarn.apply(console, args);
+      };
+      try {
+        const data = await pdfParse(buf);
+        text  = data.text;
+        pages = data.numpages;
+        source = 'pdf-parse';
+      } catch (pdfErr) {
+        logger.warn('pdf-parse failed:', pdfErr.message);
+      } finally {
+        console.warn = originalWarn;
+      }
+  }
+
+  if (!text) {
+    return res.status(422).json({ error: 'Could not extract text from this file type' });
+  }
 
   res.json({
-    fileId:   rows[0].id,
-    fileName: rows[0].original_name,
-    text:     data.text,
-    pages:    data.numpages,
+    fileId:   file.id,
+    fileName: file.original_name,
+    text,
+    pages,
+    length: text.length,
+    source,
   });
 }
 
-module.exports = { uploadFile, listFiles, getFile, updateFile, deleteFile, extractPdfText };
+// Backward-compatible alias
+const extractPdfText = extractFileText;
+
+module.exports = { uploadFile, listFiles, getFile, updateFile, deleteFile, extractFileText, extractPdfText };
+

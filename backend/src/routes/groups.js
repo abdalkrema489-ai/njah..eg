@@ -449,4 +449,79 @@ router.get('/:id/insights', auth, ownerOnly, async (req, res) => {
   });
 });
 
+// POST /api/groups/:id/broadcast
+router.post('/:id/broadcast', auth, ownerOnly, async (req, res) => {
+  try {
+    const { message, type = 'announcement' } = req.body;
+    if (!message?.trim()) return res.status(400).json({ error:'Message required' });
+    if (message.length > 500) return res.status(400).json({ error:'Max 500 characters' });
+
+    const group = await Group.findById(req.params.id);
+    if (!group) return res.status(404).json({ error:'Group not found' });
+
+    const students = group.students || [];
+    if (!students.length) return res.json({ success:true, sent:0 });
+
+    const typeIcon = { announcement:'📢', reminder:'🔔', important:'⚠️' };
+    const icon     = typeIcon[type] || '📢';
+    const title    = `${icon} ${group.name}`;
+
+    const { pool } = require('../config/postgres');
+    const { pushNotification } = require('../config/socket');
+    const logger = require('../utils/logger');
+
+    // Batch insert notifications + push
+    const values  = students.map(s => `('${s.userId}','broadcast',$$${title}$$,$$${message}$$)`).join(',');
+    await pool.query(`INSERT INTO notifications (user_id,type,title,body) VALUES ${values}`);
+
+    let sent = 0;
+    for (const s of students) {
+      try {
+        await pushNotification(s.userId, { type:'broadcast', title, body: message, groupId: group._id });
+        sent++;
+      } catch {}
+    }
+
+    logger.info(`Broadcast sent to ${sent} students in group ${group._id}`);
+    res.json({ success:true, sent, total: students.length });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/groups/:id/leaderboard
+router.get('/:id/leaderboard', auth, async (req, res) => {
+  try {
+    const group = await Group.findById(req.params.id);
+    if (!group) return res.status(404).json({ error:'Not found' });
+
+    const studentIds = (group.students || []).map(s => s.userId);
+    if (!studentIds.length) return res.json({ leaderboard:[] });
+
+    const { pool } = require('../config/postgres');
+    // XP هذا الأسبوع من quiz_attempts
+    const { rows } = await pool.query(`
+      SELECT
+        u.id::text   AS user_id,
+        u.name,
+        u.level,
+        COUNT(qa.id)::int                                    AS quizzes_this_week,
+        COALESCE(SUM(qa.score),0)::int                       AS weekly_xp,
+        COALESCE(AVG(qa.score::float/NULLIF(qa.max_score,0)*100),0)::int AS avg_score
+      FROM users u
+      LEFT JOIN quiz_attempts qa ON qa.user_id=u.id::text
+        AND qa.created_at >= NOW()-INTERVAL '7 days'
+      WHERE u.id = ANY($1::uuid[])
+      GROUP BY u.id, u.name, u.level
+      ORDER BY weekly_xp DESC, avg_score DESC
+      LIMIT 10
+    `, [studentIds]);
+
+    const leaderboard = rows.map((r, i) => ({ ...r, rank: i+1 }));
+    res.json({ leaderboard, period:'weekly', updatedAt: new Date() });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = router;

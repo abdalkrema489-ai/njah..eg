@@ -7,6 +7,8 @@ import { format, isPast, formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
 import { groupsAPI } from '../../api/index';
 import { useAuthStore, useUIStore } from '../../context/store';
+import BroadcastModal from './BroadcastModal';
+import LeaderboardWidget from './LeaderboardWidget';
 
 /* ── helpers ──────────────────────────────────────────────── */
 const getTabs = (isAr) => [
@@ -180,6 +182,7 @@ export default function GroupDetailPage() {
   const userId    = user?.id;
 
   const [tab,           setTab]           = useState('feed');
+  const [broadcastModal,setBroadcastModal]= useState(false);
   const [annModal,      setAnnModal]      = useState(false);
   const [assignModal,   setAssignModal]   = useState(false);
   const [submitModal,   setSubmitModal]   = useState(null); // assignment obj
@@ -366,10 +369,18 @@ export default function GroupDetailPage() {
             
             <div style={{ display: 'flex', gap: 10, paddingBottom: 8 }}>
               {isOwner && (
-                <div style={{ padding:'8px 16px', borderRadius:10, background:'var(--surface2)', border:'1px solid var(--border)', fontFamily:'var(--font-mono)', fontWeight:800, fontSize:16, color:'var(--primary)', display:'flex', alignItems:'center', gap:8 }}>
-                  <span style={{ fontSize:10, fontWeight:700, color:'var(--text3)', fontFamily:'var(--font-body)', letterSpacing:0 }}>{isAr ? 'كود' : 'CODE'}</span>
-                  {group.code}
-                </div>
+                <>
+                  <div style={{ padding:'8px 16px', borderRadius:10, background:'var(--surface2)', border:'1px solid var(--border)', fontFamily:'var(--font-mono)', fontWeight:800, fontSize:16, color:'var(--primary)', display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={{ fontSize:10, fontWeight:700, color:'var(--text3)', fontFamily:'var(--font-body)', letterSpacing:0 }}>{isAr ? 'كود' : 'CODE'}</span>
+                    {group.code}
+                  </div>
+                  <button 
+                    onClick={() => setBroadcastModal(true)}
+                    style={{ padding: '10px 24px', borderRadius: 12, background: 'linear-gradient(135deg,#F59E0B,#D97706)', color: '#fff', fontWeight: 800, cursor: 'pointer', border: 'none', display: 'flex', alignItems: 'center', gap: 8 }}
+                  >
+                    📢 {isAr ? 'رسالة للكل' : 'Broadcast'}
+                  </button>
+                </>
               )}
               <button 
                 onClick={() => navigate('/chat')}
@@ -404,11 +415,13 @@ export default function GroupDetailPage() {
 
       <div style={{ flex: 1 }}>
         {tab === 'feed' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: 6 }}>
-               <h2 style={{ fontSize:15, fontWeight:800, color: 'var(--text)' }}>{isAr ? 'الإعلانات' : 'Announcements'}</h2>
-               {isOwner && <button onClick={() => setAnnModal(true)} style={{ padding:'8px 16px', borderRadius:10, background:'var(--surface2)', border:'1px solid var(--border)', fontSize:12, fontWeight:700, cursor:'pointer' }}>+ {isAr ? 'جديد' : 'New'}</button>}
-            </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 24, alignItems: 'start' }}>
+            {/* Main Feed */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: 6 }}>
+                 <h2 style={{ fontSize:15, fontWeight:800, color: 'var(--text)' }}>{isAr ? 'الإعلانات' : 'Announcements'}</h2>
+                 {isOwner && <button onClick={() => setAnnModal(true)} style={{ padding:'8px 16px', borderRadius:10, background:'var(--surface2)', border:'1px solid var(--border)', fontSize:12, fontWeight:700, cursor:'pointer' }}>+ {isAr ? 'جديد' : 'New'}</button>}
+              </div>
             {anns.length === 0 ? (
               <div style={{ textAlign:'center', padding:'60px 20px', color:'var(--text3)' }}>
                 <div style={{ fontSize:40, marginBottom:12 }}>📢</div>
@@ -417,6 +430,12 @@ export default function GroupDetailPage() {
             ) : anns.map(a => (
               <AnnouncementCard key={a._id} ann={a} isOwner={isOwner} groupId={id} onPin={pinAnn} onDelete={deleteAnn} isAr={isAr} />
             ))}
+            </div>
+            
+            {/* Sidebar Leaderboard */}
+            <div style={{ background: 'var(--surface)', borderRadius: 16, border: '1px solid var(--border)', padding: '16px' }}>
+              <LeaderboardWidget groupId={id} currentUserId={userId} isAr={isAr} />
+            </div>
           </div>
         )}
 
@@ -722,6 +741,17 @@ export default function GroupDetailPage() {
               </div>
             ) : null}
           </Modal>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {broadcastModal && (
+          <BroadcastModal 
+            groupId={id} 
+            studentsCount={group.students?.length || 0} 
+            isAr={isAr} 
+            onClose={() => setBroadcastModal(false)} 
+          />
         )}
       </AnimatePresence>
     </div>

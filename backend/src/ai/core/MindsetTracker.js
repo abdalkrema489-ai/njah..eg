@@ -1,24 +1,17 @@
 'use strict';
-const { pipeline } = require('@xenova/transformers');
 const logger = require('../../utils/logger');
 
 class MindsetTracker {
   constructor() {
-    this.emotionClassifier = null;
     this.isReady = false;
     // In-memory store of user mindsets
     this.userStates = new Map(); 
   }
 
   async init() {
-    try {
-      logger.info('Initializing Cognitive Core: Mindset Tracker...');
-      this.emotionClassifier = await pipeline('text-classification', 'Xenova/distilbert-base-uncased-finetuned-sst-2-english');
-      this.isReady = true;
-      logger.info('✅ Mindset Tracker ready.');
-    } catch (err) {
-      logger.error('Failed to init Mindset Tracker:', err.message);
-    }
+    logger.info('Initializing Cognitive Core: Mindset Tracker...');
+    this.isReady = true;
+    logger.info('✅ Mindset Tracker ready (using fast heuristics).');
   }
 
   async evaluate(userId, message) {
@@ -31,18 +24,19 @@ class MindsetTracker {
 
     state.messageCount += 1;
 
-    // Detect sentiment
     let sentimentLabel = 'NEUTRAL';
     let sentimentScore = 0.5;
-    
-    if (this.isReady && this.emotionClassifier) {
-      try {
-        const result = await this.emotionClassifier(message);
-        sentimentLabel = result[0].label;
-        sentimentScore = result[0].score;
-      } catch (err) {
-        logger.warn('Emotion detection failed:', err.message);
-      }
+
+    // Simple heuristic sentiment detection to replace heavy ML model
+    const positiveWords = /good|great|awesome|excellent|happy|thanks|thank you|got it|understand|clear|easy|ممتاز|رائع|جيد|شكرا|فهمت|سهل/i;
+    const negativeWords = /bad|terrible|awful|sad|hate|confused|hard|difficult|don't understand|frustrated|سيء|صعب|معقد|لا أفهم|محبط/i;
+
+    if (negativeWords.test(message)) {
+      sentimentLabel = 'NEGATIVE';
+      sentimentScore = 0.8;
+    } else if (positiveWords.test(message)) {
+      sentimentLabel = 'POSITIVE';
+      sentimentScore = 0.8;
     }
 
     // Heuristic adjustments based on message content & sentiment

@@ -98,6 +98,42 @@ function startCronJobs() {
     } catch (err) { logger.error('Weekly summary cron:', err); }
   }, { timezone: 'Africa/Cairo' });
 
+  // ── Weekly XP & Leaderboard Report (Fridays 8 PM Cairo) ──
+  cron.schedule('0 20 * * 5', async () => {
+    try {
+      const { rows } = await pool.query(`
+        SELECT
+          u.id::text AS user_id,
+          u.name,
+          SUM(qa.score)::int AS weekly_xp,
+          COUNT(qa.id)::int  AS quizzes_count
+        FROM users u
+        JOIN quiz_attempts qa ON qa.user_id = u.id::text
+        WHERE u.role = 'student'
+          AND qa.created_at >= NOW() - INTERVAL '7 days'
+        GROUP BY u.id, u.name
+        HAVING SUM(qa.score) > 0
+      `);
+
+      let count = 0;
+      for (const row of rows) {
+        const title = '🏆 تقرير الأسبوع';
+        const body  = `عاش يا ${row.name}! جمعت ${row.weekly_xp} نقطة XP من ${row.quizzes_count} اختبار هذا الأسبوع. استمر!`;
+
+        await pool.query(
+          `INSERT INTO notifications (user_id, type, title, body) VALUES ($1, 'system', $2, $3)`,
+          [row.user_id, title, body]
+        );
+
+        try {
+          pushNotification(row.user_id, { type: 'system', title, body });
+          count++;
+        } catch {}
+      }
+      logger.info(`✅ Weekly XP report sent to ${count} students`);
+    } catch (err) { logger.error('Weekly XP cron:', err); }
+  }, { timezone: 'Africa/Cairo' });
+
   logger.info('✅ Cron jobs started');
 }
 
