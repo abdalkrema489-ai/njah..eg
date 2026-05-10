@@ -565,12 +565,13 @@ Always be encouraging.`;
 
     if (!geminiAI.isAvailable()) return res.status(503).json({ error:'AI Vision unavailable' });
 
-    const { GoogleGenerativeAI } = require('@google/generative-ai');
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const vision = genAI.getGenerativeModel({ model:'gemini-2.0-flash' });
+    const visionModel = geminiAI.getVisionModel?.() || (() => {
+      const { GoogleGenerativeAI } = require('@google/generative-ai');
+      return new GoogleGenerativeAI(process.env.GEMINI_API_KEY).getGenerativeModel({ model:'gemini-2.0-flash' });
+    })();
 
     const imgData = imageBase64.replace(/^data:image\/\w+;base64,/, '');
-    const result  = await vision.generateContent([
+    const result  = await visionModel.generateContent([
       prompt,
       { inlineData: { mimeType:'image/jpeg', data: imgData } },
     ]);

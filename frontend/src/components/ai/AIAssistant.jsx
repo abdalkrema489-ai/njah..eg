@@ -1024,7 +1024,7 @@ const TABS = [
   { id:'summarize', label:'📄 Summarize' },
   { id:'plan',      label:'📅 Study Plan' },
   { id:'youtube',   label:'🎥 YouTube' },
-  { id:'homework',  label:'📸 Homework' },
+  { id:'homework', label: isAr ? '📸 صحح واجبك' : '📸 Homework' },
 ];
 
 export default function AIAssistant() {

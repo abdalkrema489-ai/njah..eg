@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # 🎓 Najah Platform — Complete Production System
 
 **The complete full-stack Egyptian school educational platform.**
@@ -390,10 +389,3 @@ PostgreSQL  MongoDB   Redis      Firebase
 | Proxy | Nginx (SSL, WebSocket, rate limiting, SPA routing) |
 | Container | Docker + Docker Compose |
 | CI/CD | GitHub Actions (test → build → push → SSH deploy) |
-=======
-# New-njah1
-your-github-pat-here
->>>>>>> dcccd644fbeadd1f5a15f4d8ff3c7435fc0de5a7
-#   N e w - n j a h 
- 
- 

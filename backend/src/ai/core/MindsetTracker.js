@@ -1,5 +1,6 @@
 'use strict';
 const logger = require('../../utils/logger');
+const { cacheGet, cacheSet } = require('../../config/redis');
 
 class MindsetTracker {
   constructor() {
@@ -15,12 +16,22 @@ class MindsetTracker {
   }
 
   async evaluate(userId, message) {
-    let state = this.userStates.get(userId) || {
-      confusionLevel: 0.0,
-      confidenceLevel: 0.5,
-      fatigueLevel: 0.0,
-      messageCount: 0
-    };
+    const redisKey = `mindset:${userId}`;
+    let state;
+    try {
+      state = await cacheGet(redisKey);
+    } catch (err) {
+      logger.warn('Redis error in MindsetTracker cacheGet:', err.message);
+    }
+    
+    if (!state) {
+      state = this.userStates.get(userId) || {
+        confusionLevel: 0.0,
+        confidenceLevel: 0.5,
+        fatigueLevel: 0.0,
+        messageCount: 0
+      };
+    }
 
     state.messageCount += 1;
 
@@ -72,6 +83,13 @@ class MindsetTracker {
     state.confusionLevel = Math.max(0.0, state.confusionLevel - 0.05);
 
     this.userStates.set(userId, state);
+
+    try {
+      // TTL = 7 days = 7 * 24 * 60 * 60 seconds
+      await cacheSet(redisKey, state, 7 * 24 * 60 * 60);
+    } catch (err) {
+      logger.warn('Redis error in MindsetTracker cacheSet:', err.message);
+    }
 
     return {
       ...state,

@@ -470,9 +470,13 @@ router.post('/:id/broadcast', auth, ownerOnly, async (req, res) => {
     const { pushNotification } = require('../config/socket');
     const logger = require('../utils/logger');
 
-    // Batch insert notifications + push
-    const values  = students.map(s => `('${s.userId}','broadcast',$$${title}$$,$$${message}$$)`).join(',');
-    await pool.query(`INSERT INTO notifications (user_id,type,title,body) VALUES ${values}`);
+    // Insert notifications safely using parameterized queries
+    for (const s of students) {
+      await pool.query(
+        `INSERT INTO notifications (user_id,type,title,body) VALUES ($1,'broadcast',$2,$3)`,
+        [s.userId, title, message]
+      ).catch(() => {});
+    }
 
     let sent = 0;
     for (const s of students) {
@@ -511,7 +515,7 @@ router.get('/:id/leaderboard', auth, async (req, res) => {
       FROM users u
       LEFT JOIN quiz_attempts qa ON qa.user_id=u.id::text
         AND qa.created_at >= NOW()-INTERVAL '7 days'
-      WHERE u.id = ANY($1::uuid[])
+      WHERE u.id::text = ANY($1::text[])
       GROUP BY u.id, u.name, u.level
       ORDER BY weekly_xp DESC, avg_score DESC
       LIMIT 10
