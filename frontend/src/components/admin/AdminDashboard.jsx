@@ -177,7 +177,7 @@ function UsersTable({ users = [], onToggle }) {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
-              {['Name', 'Email', 'Role', 'Joined', 'Status', 'Action'].map(h => (
+              {['Name', 'Email', 'Role', 'Joined', 'Type', 'Status', 'Action'].map(h => (
                 <th key={h} style={{
                   padding: '12px 16px', textAlign: 'left',
                   color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 700,
@@ -199,6 +199,9 @@ function UsersTable({ users = [], onToggle }) {
                 </td>
                 <td style={{ padding: '12px 16px', color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>
                   {new Date(u.created_at).toLocaleDateString()}
+                </td>
+                <td style={{ padding: '12px 16px', fontSize: 12 }}>
+                  {u.is_google_user ? '🔵 Google' : '📧 Email'}
                 </td>
                 <td style={{ padding: '12px 16px' }}>
                   <span style={{
@@ -228,6 +231,7 @@ const TABS = [
   { id: 'earnings',  label: '💰 Earnings & Reports' },
   { id: 'wallets',   label: '💳 Wallets & Codes' },
   { id: 'coupons',   label: '🎟️ Coupons' },
+  { id: 'support',   label: '🎧 Support' },
   { id: 'advisor',   label: '🤖 AI Advisor' },
   { id: 'users',     label: '👥 Users' },
   { id: 'groups',    label: '🎓 Groups & Analytics' },
@@ -237,6 +241,7 @@ const TABS = [
 export default function AdminDashboard() {
   const nav = useNavigate();
   const { darkMode, toggleDark, language, setLanguage } = useUIStore();
+  const isAr = language === 'ar';
   const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats]         = useState(null);
   const [earnings, setEarnings]   = useState(null);
@@ -244,6 +249,7 @@ export default function AdminDashboard() {
   const [groups, setGroups]       = useState([]);
   const [codes, setCodes]         = useState([]);
   const [coupons, setCoupons]     = useState([]);
+  const [tickets, setTickets]     = useState([]);
   const [loading, setLoading]     = useState(true);
   const [feeInput, setFeeInput]   = useState('');
   const [branding, setBranding]   = useState({ platformName: 'Najah', primaryColor: '#6366F1', logoEmoji: '🎓' });
@@ -264,22 +270,30 @@ export default function AdminDashboard() {
   const fetchStats = useCallback(async () => {
     const c = adminClient();
     try {
-      const [s, e, u, g, cData, bData, coupData] = await Promise.allSettled([
+      const [s, sDetailed, e, u, g, cData, bData, coupData, tickData] = await Promise.allSettled([
         c.get('/admin/stats'),
+        c.get('/admin/stats/detailed'),
         c.get('/admin/earnings'),
         c.get('/admin/users'),
         c.get('/admin/groups'),
         c.get('/admin/codes'),
         c.get('/admin/branding'),
         c.get('/admin/coupons'),
+        c.get('/admin/support-tickets?status=all')
       ]);
-      if (s.status === 'fulfilled') setStats(s.value.data);
+      if (s.status === 'fulfilled' || sDetailed.status === 'fulfilled') {
+        setStats({
+          ...(s.status === 'fulfilled' ? s.value.data : {}),
+          ...(sDetailed.status === 'fulfilled' ? sDetailed.value.data : {})
+        });
+      }
       if (e.status === 'fulfilled') { setEarnings(e.value.data); setFeeInput(String(e.value.data.summary?.feePercent || 10)); }
       if (u.status === 'fulfilled') setUsers(u.value.data.users || []);
       if (g.status === 'fulfilled') setGroups(g.value.data.groups || []);
       if (cData.status === 'fulfilled') setCodes(cData.value.data.codes || []);
       if (bData.status === 'fulfilled') setBranding(bData.value.data);
       if (coupData.status === 'fulfilled') setCoupons(coupData.value.data.coupons || []);
+      if (tickData.status === 'fulfilled') setTickets(tickData.value.data.tickets || []);
     } catch {
       toast.error('Session expired'); logout();
     } finally {
@@ -400,6 +414,16 @@ export default function AdminDashboard() {
     } catch (err) { toast.error(err.response?.data?.error || 'Failed to create coupon'); }
   };
 
+  const replyToTicket = async (e, id) => {
+    e.preventDefault();
+    const reply = e.target.reply.value;
+    try {
+      await adminClient().patch(`/admin/support-tickets/${id}`, { reply, status: 'resolved' });
+      toast.success('Reply sent successfully');
+      fetchStats();
+    } catch (err) { toast.error('Failed to reply'); }
+  };
+
   const bgStyle = {
     minHeight: '100vh',
     background: 'linear-gradient(135deg, #0f0c29, #302b63, #24243e)',
@@ -469,9 +493,14 @@ export default function AdminDashboard() {
               padding: '10px 18px', borderRadius: 10, border: 'none', cursor: 'pointer',
               background: activeTab === t.id ? 'rgba(99,102,241,0.25)' : 'rgba(255,255,255,0.06)',
               color: activeTab === t.id ? '#A78BFA' : 'rgba(255,255,255,0.5)',
-              fontWeight: 700, fontSize: 13,
+              fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6,
               border: activeTab === t.id ? '1px solid rgba(99,102,241,0.4)' : '1px solid transparent',
-            }}>{t.label}</button>
+            }}>
+              {isAr ? (t.id === 'overview' ? 'نظرة عامة' : t.id === 'earnings' ? 'الأرباح والتقارير' : t.id === 'wallets' ? 'المحافظ والأكواد' : t.id === 'coupons' ? 'الكوبونات' : t.id === 'support' ? 'الدعم الفني' : t.id === 'advisor' ? 'المستشار الذكي' : t.id === 'users' ? 'المستخدمون' : t.id === 'groups' ? 'المجموعات والتحليلات' : 'الإعدادات') : t.label}
+              {t.id === 'support' && stats?.open_tickets > 0 && (
+                <span style={{ background: '#EF4444', color: '#fff', borderRadius: '50%', padding: '2px 6px', fontSize: 10 }}>{stats.open_tickets}</span>
+              )}
+            </button>
           ))}
         </div>
 
@@ -482,10 +511,12 @@ export default function AdminDashboard() {
             {activeTab === 'overview' && stats && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-                  <StatCard icon="👥" label="Total Users" value={parseInt(stats.users?.total_users || 0).toLocaleString()} sub={`${stats.users?.new_this_month || 0} new this month`} color={COLORS.blue} />
-                  <StatCard icon="🎓" label="Students" value={parseInt(stats.users?.students || 0).toLocaleString()} color={COLORS.indigo} />
-                  <StatCard icon="👨‍🏫" label="Teachers" value={parseInt(stats.users?.teachers || 0).toLocaleString()} color={COLORS.purple} />
-                  <StatCard icon="⚡" label="Active (7d)" value={parseInt(stats.users?.active_this_week || 0).toLocaleString()} color={COLORS.green} />
+                  <StatCard icon="👥" label="Total Users" value={parseInt(stats.total_users || 0).toLocaleString()} sub={`${stats.new_this_week || 0} new this week`} color={COLORS.blue} />
+                  <StatCard icon="🎓" label="Students" value={parseInt(stats.students || 0).toLocaleString()} color={COLORS.indigo} />
+                  <StatCard icon="👨‍🏫" label="Teachers" value={parseInt(stats.teachers || 0).toLocaleString()} color={COLORS.purple} />
+                  <StatCard icon="⚡" label="Active (24h)" value={parseInt(stats.active_today || 0).toLocaleString()} color={COLORS.green} />
+                  <StatCard icon="🔵" label="Google Users" value={parseInt(stats.google_users || 0).toLocaleString()} color={COLORS.blue} />
+                  <StatCard icon="🎧" label="Open Tickets" value={stats.open_tickets || 0} color={COLORS.red} />
                   <StatCard icon="🏫" label="Groups" value={stats.groups?.total || 0} sub={`${stats.groups?.paid || 0} paid`} color={COLORS.amber} />
                   <StatCard icon="💰" label="Your Earnings" value={`EGP ${(stats.revenue?.platformEarnings || 0).toFixed(0)}`} sub={`${stats.revenue?.feePercent || 10}% platform fee`} color={COLORS.green} />
                 </div>
@@ -773,6 +804,57 @@ export default function AdminDashboard() {
                       </tbody>
                     </table>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── SUPPORT TICKETS ── */}
+            {activeTab === 'support' && (
+              <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 24, padding: 24 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <h3 style={{ color: '#fff', margin: 0, fontSize: 18, fontWeight: 800 }}>🎧 Support Tickets</h3>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
+                        <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>User</th>
+                        <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>Subject & Message</th>
+                        <th style={{ padding: '12px', textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>Status</th>
+                        <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>Reply</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tickets.map(t => (
+                        <tr key={t.id} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                          <td style={{ padding: '12px', color: '#fff', fontSize: 13 }}>
+                            <div>{t.user_name}</div>
+                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{t.user_email}</div>
+                          </td>
+                          <td style={{ padding: '12px', color: '#fff', fontSize: 13, maxWidth: 300 }}>
+                            <div style={{ fontWeight: 700 }}>{t.category.toUpperCase()}: {t.subject}</div>
+                            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.message}</div>
+                          </td>
+                          <td style={{ padding: '12px', textAlign: 'center' }}>
+                            <span style={{ padding: '4px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700, background: t.status === 'open' ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.2)', color: t.status === 'open' ? '#F87171' : '#34D399' }}>
+                              {t.status}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px' }}>
+                            {t.status === 'open' ? (
+                              <form onSubmit={(e) => replyToTicket(e, t.id)} style={{ display: 'flex', gap: 8 }}>
+                                <input name="reply" placeholder="Type reply..." required style={{ flex: 1, padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.2)', color: '#fff', fontSize: 12 }} />
+                                <button type="submit" style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: '#6366F1', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 12 }}>Send</button>
+                              </form>
+                            ) : (
+                              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Replied</div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                      {tickets.length === 0 && <tr><td colSpan="4" style={{ textAlign: 'center', padding: 20, color: 'rgba(255,255,255,0.4)' }}>No tickets found</td></tr>}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}

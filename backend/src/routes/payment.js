@@ -255,6 +255,9 @@ router.post('/initiate', authenticate, async (req, res) => {
 
     // If API key is missing, simulate
     if (PAYMOB_API_KEY === 'MISSING_PAYMOB_KEY') {
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(500).json({ error: 'Payment gateway is not configured for production.' });
+      }
       console.log('Using simulated Paymob gateway due to missing API key.');
       transaction.orderId = 'SIM_' + Math.floor(Math.random() * 1000000);
 
@@ -292,7 +295,11 @@ router.post('/initiate', authenticate, async (req, res) => {
     transaction.orderId = paymobOrderId;
     await transaction.save();
 
-    const integrationId = process.env[`PAYMOB_${gateway.toUpperCase()}_INTEGRATION_ID`] || '000000';
+    const integrationId = process.env[`PAYMOB_${gateway.toUpperCase()}_INTEGRATION_ID`];
+    if (!integrationId && process.env.NODE_ENV === 'production') {
+      return res.status(500).json({ error: `Integration ID for ${gateway} is not configured in production.` });
+    }
+    const finalIntegrationId = integrationId || '000000';
     const keyRes = await axios.post('https://accept.paymob.com/api/acceptance/payment_keys', {
       auth_token: token,
       amount_cents: amount * 100,
@@ -305,15 +312,19 @@ router.post('/initiate', authenticate, async (req, res) => {
         state: "NA"
       },
       currency: "EGP",
-      integration_id: integrationId
+      integration_id: finalIntegrationId
     });
 
     const paymentKey = keyRes.data.token;
     let responsePayload = { success: true, transactionId: transaction._id };
 
     if (gateway === 'card') {
-      const iframeId = process.env.PAYMOB_IFRAME_ID || '123456';
-      responsePayload.iframeUrl = `https://accept.paymob.com/api/acceptance/iframes/${iframeId}?payment_token=${paymentKey}`;
+      const iframeId = process.env.PAYMOB_IFRAME_ID;
+      if (!iframeId && process.env.NODE_ENV === 'production') {
+        return res.status(500).json({ error: 'Paymob Iframe ID is not configured in production.' });
+      }
+      const finalIframeId = iframeId || '123456';
+      responsePayload.iframeUrl = `https://accept.paymob.com/api/acceptance/iframes/${finalIframeId}?payment_token=${paymentKey}`;
     } else if (gateway === 'wallet') {
       const walletRes = await axios.post('https://accept.paymob.com/api/acceptance/payments/pay', {
         source: { identifier: extraData.phone, subtype: "WALLET" },

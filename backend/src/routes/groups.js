@@ -237,7 +237,7 @@ router.patch('/:id', auth, ownerOnly, async (req, res) => {
   if (String(group.teacherId) !== String(req.user.id || req.user.userId))
     return res.status(403).json({ error: 'Forbidden' });
 
-  const allowed = ['name', 'description', 'subject', 'maxStudents', 'color', 'emoji'];
+  const allowed = ['name', 'description', 'subject', 'maxStudents', 'color', 'emoji', 'coverImage'];
   allowed.forEach(k => { if (req.body[k] != null) group[k] = req.body[k]; });
   await group.save();
   res.json({ group });
@@ -510,10 +510,10 @@ router.get('/:id/leaderboard', auth, async (req, res) => {
         u.name,
         u.level,
         COUNT(qa.id)::int                                    AS quizzes_this_week,
-        COALESCE(SUM(qa.score),0)::int                       AS weekly_xp,
-        COALESCE(AVG(qa.score::float/NULLIF(qa.max_score,0)*100),0)::int AS avg_score
+        COALESCE(SUM(qa.score_pct),0)::int                   AS weekly_xp,
+        COALESCE(AVG(qa.score_pct),0)::int                   AS avg_score
       FROM users u
-      LEFT JOIN quiz_attempts qa ON qa.user_id=u.id::text
+      LEFT JOIN quiz_attempts qa ON qa.user_id=u.id
         AND qa.created_at >= NOW()-INTERVAL '7 days'
       WHERE u.id::text = ANY($1::text[])
       GROUP BY u.id, u.name, u.level

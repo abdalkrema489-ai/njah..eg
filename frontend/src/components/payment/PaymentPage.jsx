@@ -31,7 +31,7 @@ export default function PaymentPage() {
   const [paySuccess, setPaySuccess] = useState(null); // { type, groupId, amount }
 
   const { data: profileData } = useQuery({ queryKey: ['profile'], queryFn: usersAPI.getProfile });
-  const walletBalance = profileData?.data?.user?.wallet_balance || user?.wallet_balance || 0;
+  const walletBalance = profileData?.data?.profile?.wallet_balance || user?.wallet_balance || 0;
 
   const { data: historyData, isLoading } = useQuery({
     queryKey: ['paymentHistory'],
@@ -121,8 +121,14 @@ export default function PaymentPage() {
         toast.success(`Use Reference: ${data.referenceCode} at Fawry`, { duration: 5000 });
       }
 
-      // Step 2: Since we are in development, trigger simulate-success automatically
-      await paymentAPI.simulateSuccess({ transactionId: data.transactionId });
+      // Step 2: Trigger simulate-success automatically ONLY in DEV or if it's a simulated transaction
+      if (data.transactionId && (!data.iframeUrl || data.iframeUrl.includes('SIMULATED'))) {
+        try {
+          await paymentAPI.simulateSuccess({ transactionId: data.transactionId });
+        } catch (simErr) {
+          console.warn('Simulation skipped or failed:', simErr);
+        }
+      }
       
       // Step 3: Invalidate data
       qc.invalidateQueries(['paymentHistory']);
@@ -131,14 +137,13 @@ export default function PaymentPage() {
 
       // Step 4: Show success & redirect if group_join
       if (checkoutTarget.type === 'group_join' && checkoutTarget.groupId) {
-        toast.success(isAr ? '✅ تم الدفع! أنت الآن عضو في المجموعة.' : '✅ Payment successful! You are now a member of the group.');
+        toast.success(isAr ? 'تم بدء عملية الدفع! بعد إتمام الدفع، ستتم إضافتك للمجموعة.' : 'Payment initiated! Complete the payment to join.');
         setShowCheckout(false);
-        setTimeout(() => navigate(`/groups/${checkoutTarget.groupId}`), 1200);
       } else if (checkoutTarget.type === 'wallet_topup') {
-        toast.success(isAr ? `✅ تم شحن ${finalAmount} ج.م بنجاح!` : `✅ EGP ${finalAmount} added to your wallet!`);
+        toast.success(isAr ? 'تم بدء عملية الدفع! سيتم شحن المحفظة بعد الإتمام.' : 'Payment initiated! Wallet will be topped up upon completion.');
         setShowCheckout(false);
       } else {
-        toast.success(isAr ? '✅ تم الدفع بنجاح!' : '✅ Payment Successful!');
+        toast.success(isAr ? 'تم بدء عملية الدفع!' : 'Payment initiated!');
         setShowCheckout(false);
       }
       setCheckoutTarget(null);

@@ -207,6 +207,27 @@ router.get('/stats', adminAuth, async (req, res) => {
   }
 });
 
+// ── GET /api/admin/stats/detailed ──────────────────────────────
+router.get('/stats/detailed', adminAuth, async (req, res) => {
+  try {
+    const [pg, tickets] = await Promise.all([
+      pool.query(`
+        SELECT
+          COUNT(*)::int AS total_users,
+          COUNT(*) FILTER (WHERE role='student' OR role IS NULL)::int AS students,
+          COUNT(*) FILTER (WHERE role='teacher')::int AS teachers,
+          COUNT(*) FILTER (WHERE created_at > NOW()-INTERVAL '7 days')::int AS new_this_week,
+          COUNT(*) FILTER (WHERE last_active > NOW()-INTERVAL '24 hours')::int AS active_today,
+          COUNT(*) FILTER (WHERE google_id IS NOT NULL)::int AS google_users,
+          COALESCE(SUM(wallet_balance),0)::float AS total_wallet_balance
+        FROM users WHERE is_active=true
+      `),
+      pool.query(`SELECT COUNT(*)::int AS open FROM support_tickets WHERE status='open'`),
+    ]);
+    res.json({ ...pg.rows[0], open_tickets: tickets.rows[0].open });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── GET /api/admin/earnings ───────────────────────────────────
 router.get('/earnings', adminAuth, async (req, res) => {
   try {
@@ -386,25 +407,72 @@ router.post('/coupons', adminAuth, async (req, res) => {
 });
 
 // ── GET /api/admin/branding ──────────────────────────────────
-const BRANDING_PATH = path.join(__dirname, '../config/branding.json');
-router.get('/branding', (req, res) => {
+router.get('/branding', async (req, res) => {
   try {
-    const data = fs.readFileSync(BRANDING_PATH, 'utf8');
-    res.json(JSON.parse(data));
-  } catch (err) {
-    res.json({ platformName: 'Najah', primaryColor: '#6366F1', logoEmoji: '🎓' });
-  }
+    const { rows } = await pool.query(`SELECT value FROM platform_settings WHERE key='branding'`);
+    res.json(rows[0]?.value || { platformName:'Najah', primaryColor:'#6366F1', logoEmoji:'🎓' });
+  } catch { res.json({ platformName:'Najah', primaryColor:'#6366F1', logoEmoji:'🎓' }); }
 });
 
 // ── POST /api/admin/branding ─────────────────────────────────
-router.post('/branding', adminAuth, (req, res) => {
+router.post('/branding', adminAuth, async (req, res) => {
   try {
-    const { platformName, primaryColor, logoEmoji } = req.body;
-    const newBranding = { platformName: platformName || 'Najah', primaryColor: primaryColor || '#6366F1', logoEmoji: logoEmoji || '🎓' };
-    fs.writeFileSync(BRANDING_PATH, JSON.stringify(newBranding, null, 2));
-    res.json({ success: true, branding: newBranding });
+    const b = { platformName: req.body.platformName||'Najah', primaryColor: req.body.primaryColor||'#6366F1', logoEmoji: req.body.logoEmoji||'🎓' };
+    await pool.query(`INSERT INTO platform_settings(key,value) VALUES('branding',$1) ON CONFLICT(key) DO UPDATE SET value=$1,updated_at=NOW()`, [b]);
+    res.json({ success:true, branding:b });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update branding' });
+  }
+});
+
+// ── GET /api/admin/support-tickets ───────────────────────────
+router.get('/support-tickets', adminAuth, async (req, res) => {
+  try {
+    const { status = 'open', page = 1, limit = 20 } = req.query;
+    const offset = (page-1)*limit;
+    const { rows } = await pool.query(`
+      SELECT id, user_name, user_email, category, subject, message, status, admin_reply, created_at
+      FROM support_tickets
+      WHERE ($1::text = 'all' OR status=$1)
+      ORDER BY created_at DESC LIMIT $2 OFFSET $3
+    `, [status, limit, offset]);
+    const tot = await pool.query(`SELECT COUNT(*)::int AS c FROM support_tickets WHERE ($1='all' OR status=$1)`, [status]);
+    res.json({ tickets: rows, total: tot.rows[0].c });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── PATCH /api/admin/support-tickets/:id ─────────────────────
+router.patch('/support-tickets/:id', adminAuth, async (req, res) => {
+  try {
+    const { reply, status = 'resolved' } = req.body;
+    if (!reply) return res.status(400).json({ error: 'Reply required' });
+
+    const { rows } = await pool.query(`
+      UPDATE support_tickets
+      SET admin_reply=$1, status=$2, updated_at=NOW()
+      WHERE id=$3 RETURNING user_email, user_name, subject
+    `, [reply, status, req.params.id]);
+
+    if (!rows[0]) return res.status(404).json({ error: 'Ticket not found' });
+
+    const emailService = require('../services/emailService');
+    emailService.sendEmail({
+      to: rows[0].user_email,
+      subject: `رد على شكواك: ${rows[0].subject}`,
+      html: `<div style="font-family:Arial;max-width:500px;margin:0 auto;padding:20px">
+        <h2 style="color:#6366F1">📬 رد من فريق نجاح</h2>
+        <p>مرحباً <strong>${rows[0].user_name}</strong>،</p>
+        <p>تم الرد على شكواك بخصوص: <strong>${rows[0].subject}</strong></p>
+        <div style="background:#f0f0ff;padding:16px;border-radius:8px;margin:16px 0">${reply}</div>
+        <p style="font-size:12px;color:#999">منصة نجاح التعليمية</p>
+      </div>`,
+    }).catch(()=>{});
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -417,8 +485,13 @@ router.get('/users', adminAuth, async (req, res) => {
     const conds  = ['1=1'];
 
     if (role) {
-      params.push(role);
-      conds.push(`role=$${params.length}`);
+      if (role === 'student') {
+        params.push(role);
+        conds.push(`(role=$${params.length} OR role IS NULL)`);
+      } else {
+        params.push(role);
+        conds.push(`role=$${params.length}`);
+      }
     }
     if (search) {
       params.push(`%${search}%`);
@@ -432,7 +505,8 @@ router.get('/users', adminAuth, async (req, res) => {
     const offsetIdx = params.length;
 
     const q = `
-      SELECT id, name, email, role, created_at, last_active, is_active, xp_points, level
+      SELECT id, name, email, COALESCE(role, 'student') AS role, created_at, last_active, is_active, xp_points, level,
+             google_id IS NOT NULL AS is_google_user, avatar_url
       FROM users
       WHERE ${conds.join(' AND ')}
       ORDER BY created_at DESC

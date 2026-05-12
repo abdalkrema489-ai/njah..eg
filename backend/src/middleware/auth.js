@@ -17,7 +17,7 @@ async function authenticate(req, res, next) {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const { rows } = await pool.query(
-      `SELECT id,name,email,role,grade,xp_points,level,language,avatar_url,streak_days,subjects
+      `SELECT id,name,email,role,grade,xp_points,level,language,avatar_url,streak_days,subjects,preferred_ai_provider
   FROM users WHERE id=$1 AND is_active=true`,
       [decoded.id]
     );

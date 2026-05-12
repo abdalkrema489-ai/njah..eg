@@ -23,12 +23,13 @@ function setupPassport() {
       if (!email) return done(new Error('Google account has no email')); 
       const avatar = profile?.photos?.[0]?.value;
       const { rows } = await pool.query(`
-        INSERT INTO users (name, email, google_id, avatar_url, email_verified)
-        VALUES ($1,$2,$3,$4,true)
+        INSERT INTO users (name, email, google_id, avatar_url, email_verified, role)
+        VALUES ($1, $2, $3, $4, true, 'student')
         ON CONFLICT (email) DO UPDATE SET
-          google_id   = EXCLUDED.google_id,
-          avatar_url  = COALESCE(users.avatar_url, EXCLUDED.avatar_url),
-          last_active = NOW()
+          google_id    = EXCLUDED.google_id,
+          avatar_url   = COALESCE(users.avatar_url, EXCLUDED.avatar_url),
+          role         = COALESCE(users.role, 'student'),
+          last_active  = NOW()
         RETURNING *
       `, [profile.displayName, email, profile.id, avatar]);
       done(null, rows[0]);

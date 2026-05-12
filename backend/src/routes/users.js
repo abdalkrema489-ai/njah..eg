@@ -47,7 +47,7 @@ router.get('/profile', async (req, res) => {
 });
 
 router.patch('/profile', async (req, res) => {
-  const { name, grade, school, language, bio, subjects, dob, phone, social_links } = req.body;
+  const { name, grade, school, language, bio, subjects, dob, phone, social_links, preferred_ai_provider } = req.body;
   const { rows } = await pool.query(`
     UPDATE users SET
       name         = COALESCE($1, name),
@@ -59,11 +59,12 @@ router.patch('/profile', async (req, res) => {
       dob          = COALESCE($7, dob),
       phone        = COALESCE($8, phone),
       social_links = COALESCE($9, social_links),
+      preferred_ai_provider = COALESCE($10, preferred_ai_provider),
       updated_at   = NOW()
-    WHERE id = $10
+    WHERE id = $11
     RETURNING id, name, email, grade, school, language, bio, subjects, dob, phone, social_links,
-              avatar_url, xp_points, level, streak_days
-  `, [name, grade, school, language, bio, subjects || null, dob || null, phone || null, social_links || null, req.user.id]);
+              avatar_url, xp_points, level, streak_days, preferred_ai_provider
+  `, [name, grade, school, language, bio, subjects || null, dob || null, phone || null, social_links || null, preferred_ai_provider, req.user.id]);
   res.json({ user: rows[0] });
 });
 

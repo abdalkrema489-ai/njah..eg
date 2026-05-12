@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { toolsAPI } from '../../api/index';
-import { useUIStore } from '../../context/store';
+import { useUIStore, useAuthStore } from '../../context/store';
 import { useTextToSpeech } from '../../hooks/useTextToSpeech';
 
 // ── Shared UI primitives ─────────────────────────────────────
@@ -576,6 +576,10 @@ const TABS = [
 
 export default function StudyTools() {
   const [activeTab, setActiveTab] = useState('dictionary');
+  const { user } = useAuthStore();
+  const isUniversity = user?.role === 'university_student' || user?.grade?.toLowerCase().includes('university');
+
+  const visibleTabs = TABS.filter(t => t.key !== 'gpa' || isUniversity);
 
   return (
     <div className="animate-fade-up">
@@ -595,7 +599,7 @@ export default function StudyTools() {
         width: 'fit-content', marginBottom: 32,
         boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
       }}>
-        {TABS.map(t => (
+        {visibleTabs.map(t => (
           <motion.button key={t.key} onClick={() => setActiveTab(t.key)}
             whileHover={{ scale: 1.04, y: -1 }} whileTap={{ scale: 0.96 }}
             style={{

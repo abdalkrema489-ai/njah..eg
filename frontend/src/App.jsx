@@ -55,6 +55,7 @@ const LessonPlanner        = lazy(() => import('./components/teacher/LessonPlann
 const ExamBuilder          = lazy(() => import('./components/teacher/ExamBuilder'));
 const EssayGrader          = lazy(() => import('./components/teacher/EssayGrader'));
 const TeacherWallet        = lazy(() => import('./components/teacher/TeacherWallet'));
+const SupportPage          = lazy(() => import('./components/help/SupportPage'));
 
 // ── QueryClient ─────────────────────────────────────────────
 const qc = new QueryClient({
@@ -298,6 +299,7 @@ export default function App() {
             <Route path="/tools"           element={<Protected><StudyTools /></Protected>} />
             <Route path="/payment"        element={<Protected><PaymentPage /></Protected>} />
             <Route path="/help"           element={<Protected><HelpCenter /></Protected>} />
+            <Route path="/support"        element={<Protected><SupportPage /></Protected>} />
             <Route path="/ai-search"      element={<Protected><NajahAI /></Protected>} />
 
             {/* ── Teacher AI Tools ── */}

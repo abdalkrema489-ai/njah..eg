@@ -1,11 +1,11 @@
 // src/components/settings/SettingsPage.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usersAPI } from '../../api/index';
-import { useUIStore } from '../../context/store';
+import { useUIStore, useAuthStore } from '../../context/store';
 import { Card, Btn, Input, SectionHeader, Divider } from '../shared/UI';
 import { useTranslation } from '../../i18n/index';
 
@@ -39,6 +39,13 @@ const EyeOffIcon = () => (
     <line x1="1" y1="1" x2="23" y2="23"/>
   </svg>
 );
+const BrainIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/>
+    <path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/>
+    <path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4 4.5 4.5 0 0 1-3-4"/>
+  </svg>
+);
 
 const stagger = {
   hidden: {},
@@ -59,6 +66,15 @@ export default function SettingsPage() {
   const [showNew, setShowNew] = useState(false);
   const [showCfm, setShowCfm] = useState(false);
 
+  // Preferred AI State
+  const { user, setUser } = useAuthStore();
+  const [aiProvider, setAiProvider] = useState('auto');
+  
+  // Wait for user to load
+  useEffect(() => {
+    if (user?.preferred_ai_provider) setAiProvider(user.preferred_ai_provider);
+  }, [user]);
+
   const { mutate: changePwd, isSuccess: saved } = useMutation({
     mutationFn: usersAPI.changePassword,
     onSuccess: () => { toast.success('Password updated successfully!'); reset(); },
@@ -68,6 +84,18 @@ export default function SettingsPage() {
   const onPwdSubmit = d => {
     if (d.newPassword !== d.confirmPassword) { toast.error('Passwords do not match'); return; }
     changePwd({ currentPassword: d.currentPassword, newPassword: d.newPassword });
+  };
+
+  const updateAI = async (e) => {
+    const val = e.target.value;
+    setAiProvider(val);
+    try {
+      await usersAPI.updateProfile({ preferred_ai_provider: val });
+      if (setUser) setUser({ ...user, preferred_ai_provider: val });
+      toast.success(isAr ? 'تم تحديث مزود الذكاء الاصطناعي' : 'AI Provider updated');
+    } catch {
+      toast.error(isAr ? 'فشل التحديث' : 'Update failed');
+    }
   };
 
   const newPwd = watch('newPassword', '');
@@ -111,6 +139,38 @@ export default function SettingsPage() {
                   <div style={{ fontSize: 13, color: 'var(--text4)', marginTop: 4, fontWeight: 500 }}>{isAr ? 'تحويل الواجهة إلى اتجاه من اليمين لليسار' : 'Switch the interface to right-to-left layout'}</div>
                 </div>
                 <Toggle checked={language === 'ar'} onChange={() => setLanguage(language === 'ar' ? 'en' : 'ar')} />
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* AI Preferences */}
+        <motion.div variants={itemAnim}>
+          <div className="floating-panel" style={{ padding: 28 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 14, background: 'rgba(236,72,153,0.12)', color: '#EC4899', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
+                <BrainIcon />
+              </div>
+              <h3 style={{ fontSize: 20, fontWeight: 950, fontFamily: 'var(--font-head)', letterSpacing: '-0.02em', color: 'var(--text)', textTransform: 'uppercase' }}>
+                {isAr ? 'إعدادات الذكاء الاصطناعي' : 'AI Preferences'}
+              </h3>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 0' }}>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)', fontFamily: 'var(--font-head)' }}>{isAr ? 'محرك الذكاء المفضل' : 'Preferred AI Engine'}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text4)', marginTop: 4, fontWeight: 500 }}>{isAr ? 'اختر المحرك الذي تفضله للاستفسارات العامة' : 'Choose your preferred engine for general queries'}</div>
+                </div>
+                <select value={aiProvider} onChange={updateAI} style={{
+                  padding: '10px 16px', borderRadius: 12, background: 'var(--surface3)', border: '1px solid var(--border)',
+                  color: 'var(--text)', fontSize: 14, fontWeight: 700, outline: 'none', cursor: 'pointer'
+                }}>
+                  <option value="auto">✨ Auto (Gemini)</option>
+                  <option value="gemini">♊ Google Gemini (Pro/Flash)</option>
+                  <option value="claude">🤖 Anthropic Claude</option>
+                  <option value="ollama">⚡ Local AI (Ollama)</option>
+                </select>
               </div>
             </div>
           </div>

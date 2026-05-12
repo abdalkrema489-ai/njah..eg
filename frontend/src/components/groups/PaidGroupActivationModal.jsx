@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { groupsAPI } from '../../api/index';
+import { groupsAPI, paymentAPI } from '../../api/index';
 import { useTranslation } from '../../i18n/index';
 
 const GATEWAYS = [
@@ -32,11 +32,33 @@ export default function PaidGroupActivationModal({ group, listingFee, platformFe
   const handleActivate = async () => {
     setLoading(true);
     try {
-      const { data } = await groupsAPI.activateGroup(group._id, { gateway, phone });
+      const payload = {
+        amount: listingFee,
+        gateway,
+        groupId: group._id,
+        type: 'listing_fee',
+        title: `Listing fee - ${group.name}`,
+        extraData: { phone: phone || '+201000000000' }
+      };
+      const { data } = await paymentAPI.initiate(payload);
+
+      if (data.iframeUrl) {
+        window.open(data.iframeUrl, '_blank');
+      } else if (data.redirectUrl) {
+        window.open(data.redirectUrl, '_blank');
+      } else if (data.referenceCode) {
+        toast.success(`Fawry Reference: ${data.referenceCode}`, { duration: 5000 });
+      }
+
+      // Automatically simulate success in development
+      if (data.transactionId && import.meta.env.DEV) {
+        await paymentAPI.simulateSuccess({ transactionId: data.transactionId });
+      }
+
       setStep('success');
-      if (onActivated) onActivated(data.group);
+      if (onActivated) onActivated({ ...group, status: 'active', listingFeePaid: true });
     } catch (err) {
-      toast.error(err.response?.data?.error || (isAr ? 'فشل تفعيل المجموعة' : 'Failed to activate group'));
+      toast.error(err.response?.data?.error || (isAr ? 'فشل إتمام عملية الدفع' : 'Payment failed'));
     } finally {
       setLoading(false);
     }

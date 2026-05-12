@@ -270,3 +270,8 @@ export const affiliateAPI = {
   getStats:   () => client.get('/affiliates/stats'),
 };
 
+export const supportAPI = {
+  submitTicket: d => client.post('/support/ticket', d),
+  getMyTickets: () => client.get('/support/my-tickets'),
+};
+

@@ -114,30 +114,39 @@ async function chat(req, res) {
   let reply = '';
   let usedProvider = '';
 
-  // 1️⃣ Primary: Gemini (with mem0 memory via userId)
-  if (geminiAI.isAvailable()) {
+  const pref = req.user?.preferred_ai_provider || 'auto';
+
+  // 1️⃣ Try Gemini if preferred or auto
+  if ((pref === 'auto' || pref === 'gemini') && geminiAI.isAvailable()) {
     try {
       reply = await geminiAI.chat(message, history, language, req.user.id);
       usedProvider = 'gemini-2.0-flash';
     } catch (geminiErr) {
-      logger.warn('Gemini failed, trying ollama:', geminiErr.message);
+      logger.warn('Gemini failed, fallback triggered:', geminiErr.message);
     }
   }
 
-  // 2️⃣ Secondary: Ollama (local AI, no API key)
-  if (!reply) {
+  // 2️⃣ Try Ollama if preferred, or if Gemini failed (in auto mode)
+  if (!reply && (pref === 'ollama' || pref === 'auto' || pref === 'gemini')) {
     try {
       const ollamaAvail = await ollamaAI.isAvailable();
       if (ollamaAvail) {
         reply = await ollamaAI.chat(message, history, language);
         usedProvider = 'ollama-' + ollamaAI.OLLAMA_MODEL;
+      } else if (pref === 'ollama') {
+        logger.warn('User prefers Ollama but it is unavailable.');
       }
     } catch (ollamaErr) {
       logger.warn('Ollama failed, using internal AI:', ollamaErr.message);
     }
   }
 
-  // 3️⃣ Last resort: internal pattern engine
+  // 3️⃣ Try Claude (Stub for future)
+  if (!reply && pref === 'claude') {
+    logger.warn('Claude selected but not fully implemented, falling back to internal.');
+  }
+
+  // 4️⃣ Last resort: internal pattern engine
   if (!reply) {
     try {
       reply = internalAI.generateChatResponse(message, history, language);
@@ -195,40 +204,48 @@ async function chatStream(req, res) {
   }
 
   try {
-    // 1️⃣ Primary: Gemini streaming (with mem0 userId)
-    if (geminiAI.isAvailable() && typeof geminiAI.chatStream === 'function') {
+    const pref = req.user?.preferred_ai_provider || 'auto';
+    let streamed = false;
+
+    // 1️⃣ Primary: Gemini streaming
+    if ((pref === 'auto' || pref === 'gemini') && geminiAI.isAvailable() && typeof geminiAI.chatStream === 'function') {
       try {
         await geminiAI.chatStream(message, history, res, req.user.id);
         saveToConversation(conversationId, req.user.id, message, '', language, null).catch(() => {});
         pool.query('UPDATE users SET xp_points = xp_points + 5 WHERE id = $1', [req.user.id]).catch(() => {});
+        streamed = true;
         return;
       } catch (geminiErr) {
-        logger.warn('Gemini stream failed, trying ollama:', geminiErr.message);
-        // If res already started streaming, we can't switch — just end
+        logger.warn('Gemini stream failed:', geminiErr.message);
         if (res.writableEnded) return;
       }
     }
 
     // 2️⃣ Secondary: Ollama streaming
-    const ollamaAvail = await ollamaAI.isAvailable();
-    if (ollamaAvail) {
-      try {
-        await ollamaAI.chatStream(message, history, res);
-        saveToConversation(conversationId, req.user.id, message, '', language, null).catch(() => {});
-        pool.query('UPDATE users SET xp_points = xp_points + 5 WHERE id = $1', [req.user.id]).catch(() => {});
-        return;
-      } catch (ollamaErr) {
-        logger.warn('Ollama stream failed, using internal AI:', ollamaErr.message);
-        if (res.writableEnded) return;
+    if (!streamed && (pref === 'ollama' || pref === 'auto' || pref === 'gemini')) {
+      const ollamaAvail = await ollamaAI.isAvailable();
+      if (ollamaAvail) {
+        try {
+          await ollamaAI.chatStream(message, history, res);
+          saveToConversation(conversationId, req.user.id, message, '', language, null).catch(() => {});
+          pool.query('UPDATE users SET xp_points = xp_points + 5 WHERE id = $1', [req.user.id]).catch(() => {});
+          streamed = true;
+          return;
+        } catch (ollamaErr) {
+          logger.warn('Ollama stream failed:', ollamaErr.message);
+          if (res.writableEnded) return;
+        }
       }
     }
 
     // 3️⃣ Last resort: internal AI as single chunk
-    const fallback = internalAI.generateChatResponse(message, history, language);
-    res.write(`data: ${JSON.stringify({ chunk: fallback })}\n\n`);
-    res.write(`data: ${JSON.stringify({ done: true, fullText: fallback, provider: 'internal-fallback' })}\n\n`);
-    res.end();
-    pool.query('UPDATE users SET xp_points = xp_points + 5 WHERE id = $1', [req.user.id]).catch(() => {});
+    if (!streamed) {
+      const fallback = internalAI.generateChatResponse(message, history, language);
+      res.write(`data: ${JSON.stringify({ chunk: fallback })}\n\n`);
+      res.write(`data: ${JSON.stringify({ done: true, fullText: fallback, provider: 'internal-fallback' })}\n\n`);
+      res.end();
+      pool.query('UPDATE users SET xp_points = xp_points + 5 WHERE id = $1', [req.user.id]).catch(() => {});
+    }
   } catch (err) {
     logger.error('Stream error:', err.message);
     if (!res.writableEnded) {

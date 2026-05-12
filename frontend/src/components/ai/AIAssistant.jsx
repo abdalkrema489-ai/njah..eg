@@ -302,7 +302,7 @@ function AIChat() {
 
     try {
       const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-      const token = localStorage.getItem('token');
+      const token = useAuthStore.getState().token;
 
       const resp = await fetch(`${API}/ai/chat/stream`, {
         method: 'POST',
@@ -1019,22 +1019,27 @@ function YouTubePanel() {
 
 // ── Tabs Container (main export) ─────────────────────────────
 const TABS = [
-  { id:'chat',      label:'💬 Chat' },
-  { id:'quiz',      label:'🧠 Quiz' },
-  { id:'summarize', label:'📄 Summarize' },
-  { id:'plan',      label:'📅 Study Plan' },
-  { id:'youtube',   label:'🎥 YouTube' },
-  { id:'homework', label: isAr ? '📸 صحح واجبك' : '📸 Homework' },
+  { id:'chat',      labelEn:'💬 Chat',       labelAr:'💬 المحادثة' },
+  { id:'quiz',      labelEn:'🧠 Quiz',       labelAr:'🧠 الاختبارات' },
+  { id:'summarize', labelEn:'📄 Summarize',  labelAr:'📄 التلخيص' },
+  { id:'plan',      labelEn:'📅 Study Plan', labelAr:'📅 خطة الدراسة' },
+  { id:'youtube',   labelEn:'🎥 YouTube',    labelAr:'🎥 يوتيوب' },
+  { id:'homework',  labelEn:'📸 Homework',   labelAr:'📸 صحح واجبك' },
 ];
 
 export default function AIAssistant() {
   const [tab, setTab] = useState('chat');
+  const { language } = useUIStore();
+  const isAr = language === 'ar';
+  
   return (
     <div style={{ height:'calc(100vh - 90px)', display:'flex', flexDirection:'column' }}>
       <div style={{ display:'flex', gap:4, padding:'10px 20px', background:'var(--surface2)', borderBottom:'1px solid var(--border)', overflowX:'auto', flexShrink:0, scrollbarWidth:'none' }}>
         {TABS.map(t => (
           <motion.button key={t.id} whileHover={{ scale:1.04 }} whileTap={{ scale:0.96 }} onClick={()=>setTab(t.id)}
-            style={{ padding:'8px 20px', borderRadius:12, fontWeight:700, fontSize:13.5, border:'none', cursor:'pointer', transition:'all 0.2s', whiteSpace:'nowrap', background:tab===t.id?'linear-gradient(135deg,#6366F1,#8B5CF6)':'var(--surface)', color:tab===t.id?'#fff':'var(--text2)', boxShadow:tab===t.id?'0 4px 14px rgba(99,102,241,0.30)':'none' }}>{t.label}</motion.button>
+            style={{ padding:'8px 20px', borderRadius:12, fontWeight:700, fontSize:13.5, border:'none', cursor:'pointer', transition:'all 0.2s', whiteSpace:'nowrap', background:tab===t.id?'linear-gradient(135deg,#6366F1,#8B5CF6)':'var(--surface)', color:tab===t.id?'#fff':'var(--text2)', boxShadow:tab===t.id?'0 4px 14px rgba(99,102,241,0.30)':'none' }}>
+              {isAr ? t.labelAr : t.labelEn}
+          </motion.button>
         ))}
       </div>
       <div style={{ flex:1, overflowY:'auto', background:'var(--ink2)' }}>
@@ -1043,7 +1048,7 @@ export default function AIAssistant() {
         {tab==='summarize' && <SummarizePanel />}
         {tab==='plan'      && <StudyPlanPanel />}
         {tab==='youtube'   && <YouTubePanel />}
-        {tab==='homework'  && <HomeworkCorrector isAr={useUIStore().language === 'ar'} />}
+        {tab==='homework'  && <HomeworkCorrector isAr={isAr} />}
       </div>
     </div>
   );

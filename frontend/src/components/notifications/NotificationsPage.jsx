@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 import { notificationsAPI } from '../../api/index';
 import { useNotifStore } from '../../context/store';
 import { Card, Btn, SectionHeader, EmptyState, Spinner } from '../shared/UI';
@@ -21,6 +22,7 @@ const TYPE_ICONS = {
 
 export default function NotificationsPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const { setAll } = useNotifStore();
 
   const { data, isLoading } = useQuery({
@@ -97,7 +99,22 @@ export default function NotificationsPage() {
                     animate={{ opacity: 1,  x: 0     }}
                     exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
                     whileHover={{ scale: 1.01, x: 4 }}
-                    onClick={() => !n.is_read && markOne(n.id)}
+                    onClick={() => {
+                      if (!n.is_read) markOne(n.id);
+                      const data = n.data ? (typeof n.data === 'string' ? JSON.parse(n.data) : n.data) : {};
+                      const link = data?.link || data?.groupId ? `/groups/${data.groupId}` : null;
+                      const TYPE_LINKS = {
+                        'grade':       `/groups/${data?.groupId || ''}`,
+                        'broadcast':   `/groups/${data?.groupId || ''}`,
+                        'earning':     '/payment',
+                        'absence':     '/students',
+                        'reminder':    '/planner',
+                        'summary':     '/analytics',
+                        'achievement': '/achievements',
+                      };
+                      const target = link || TYPE_LINKS[n.type];
+                      if (target) navigate(target);
+                    }}
                     className="floating-card"
                     style={{
                       display: 'flex', alignItems: 'flex-start', gap: 16,

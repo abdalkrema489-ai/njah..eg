@@ -57,6 +57,7 @@ async function runMigrations(client) {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_status VARCHAR(20) DEFAULT 'unverified';
       ALTER TABLE users ADD COLUMN IF NOT EXISTS faculty VARCHAR(150);
       ALTER TABLE users ADD COLUMN IF NOT EXISTS university_name VARCHAR(200);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_ai_provider VARCHAR(20) DEFAULT 'auto';
       ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
       ALTER TABLE users ADD CONSTRAINT users_role_check CHECK(role IN('student','teacher','school_admin','university','university_admin','admin'));
       -- study_sessions
@@ -313,6 +314,29 @@ async function runMigrations(client) {
     CREATE INDEX IF NOT EXISTS idx_board_subject_date  ON board_posts(subject, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_notifs_user_unread  ON notifications(user_id, is_read, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_quiz_user_subject   ON quiz_attempts(user_id, subject, created_at DESC);
+    CREATE TABLE IF NOT EXISTS platform_settings (
+      key        VARCHAR(100) PRIMARY KEY,
+      value      JSONB NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    INSERT INTO platform_settings (key, value)
+    VALUES ('branding', '{"platformName":"Najah","primaryColor":"#6366F1","logoEmoji":"🎓"}')
+    ON CONFLICT DO NOTHING;
+
+    CREATE TABLE IF NOT EXISTS support_tickets (
+      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id       UUID REFERENCES users(id),
+      user_name     VARCHAR(255),
+      user_email    VARCHAR(255),
+      category      VARCHAR(50) DEFAULT 'general',
+      subject       VARCHAR(255) NOT NULL,
+      message       TEXT NOT NULL,
+      status        VARCHAR(20) DEFAULT 'open',
+      admin_reply   TEXT,
+      created_at    TIMESTAMPTZ DEFAULT NOW(),
+      updated_at    TIMESTAMPTZ DEFAULT NOW()
+    );
+
     -- Wallet tables
     CREATE TABLE IF NOT EXISTS teacher_earnings (
       id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
