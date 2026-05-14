@@ -1,0 +1,73 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.najah.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.najah.app"
+        minSdk 21
+        targetSdk 34
+        versionCode 1
+        versionName "1.0.0"
+        resValue "string", "hostName", "njaheg-theta.vercel.app"
+        resValue "string", "launchUrl", "https://njaheg-theta.vercel.app/?source=pwa"
+        resValue "string", "defaultUrl", "https://njaheg-theta.vercel.app/?source=pwa"
+    }
+
+    signingConfigs {
+        release {
+            storeFile file('../najah-release.keystore')
+            storePassword 'najah2024'
+            keyAlias 'najah'
+            keyPassword 'najah2024'
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+}
+
+dependencies {
+    // Trusted Web Activity support
+    implementation('com.google.androidbrowserhelper:androidbrowserhelper:2.5.0') {
+        exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
+        exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
+    }
+
+    // AndroidX core
+    implementation 'androidx.core:core:1.12.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+
+    // Force consistent Kotlin stdlib
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.9.0'
+}
+
+configurations.all {
+    resolutionStrategy {
+        force 'org.jetbrains.kotlin:kotlin-stdlib:1.9.0'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.0'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.0'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-common:1.9.0'
+    }
+}

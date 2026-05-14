@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">نجاح</string>
+    <string name="hostName">njaheg-theta.vercel.app</string>
+    <string name="launchUrl">https://njaheg-theta.vercel.app/?source=pwa</string>
+
+    <!-- App Shortcuts -->
+    <string name="shortcut_ai_label">Najah AI</string>
+    <string name="shortcut_ai_long_label">المحادثة الذكية</string>
+    <string name="shortcut_planner_label">جدول</string>
+    <string name="shortcut_planner_long_label">المخطط الدراسي</string>
+    <string name="shortcut_groups_label">مجموعات</string>
+    <string name="shortcut_groups_long_label">المجموعات الدراسية</string>
+
+    <!-- Digital Asset Links statement -->
+    <string name="assetStatements">
+        [{
+            \"relation\": [\"delegate_permission/common.handle_all_urls\"],
+            \"target\": {
+                \"namespace\": \"web\",
+                \"site\": \"https://njaheg-theta.vercel.app\"
+            }
+        }]
+    </string>
+</resources>

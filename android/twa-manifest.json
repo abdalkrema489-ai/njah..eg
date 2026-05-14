@@ -1,0 +1,54 @@
+{
+  "packageId": "com.najah.app",
+  "host": "njaheg-theta.vercel.app",
+  "name": "نجاح — منصة التعلم الذكية",
+  "launcherName": "نجاح",
+  "display": "standalone",
+  "orientation": "default",
+  "themeColor": "#6366F1",
+  "navigationColor": "#030308",
+  "navigationColorDark": "#030308",
+  "navigationDividerColor": "#030308",
+  "navigationDividerColorDark": "#030308",
+  "backgroundColor": "#030308",
+  "enableNotifications": true,
+  "startUrl": "/?source=pwa",
+  "iconUrl": "https://njaheg-theta.vercel.app/pwa-512x512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./najah-release.keystore",
+    "alias": "najah"
+  },
+  "appVersionCode": 1,
+  "appVersionName": "1.0.0",
+  "shortcuts": [
+    {
+      "name": "Najah AI",
+      "shortName": "AI",
+      "url": "/ai",
+      "chosenIconUrl": "https://njaheg-theta.vercel.app/pwa-192x192.png"
+    },
+    {
+      "name": "المخطط",
+      "shortName": "Planner",
+      "url": "/planner",
+      "chosenIconUrl": "https://njaheg-theta.vercel.app/pwa-192x192.png"
+    }
+  ],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://njaheg-theta.vercel.app/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {
+    "locationDelegation": { "enabled": true },
+    "playBilling": { "enabled": false }
+  },
+  "alphaDependencies": { "enabled": false },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://njaheg-theta.vercel.app/",
+  "minSdkVersion": 21,
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": []
+}

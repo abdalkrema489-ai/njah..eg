@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <shortcut
+        android:shortcutId="ai_chat"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_ai_label"
+        android:shortcutLongLabel="@string/shortcut_ai_long_label">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="https://njaheg-theta.vercel.app/ai" />
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="planner"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_planner_label"
+        android:shortcutLongLabel="@string/shortcut_planner_long_label">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="https://njaheg-theta.vercel.app/planner" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="groups"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_groups_label"
+        android:shortcutLongLabel="@string/shortcut_groups_long_label">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="https://njaheg-theta.vercel.app/groups" />
+    </shortcut>
+
+</shortcuts>

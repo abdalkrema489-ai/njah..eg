@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.najah.app",
+      "sha256_cert_fingerprints": [
+        "D5:22:FC:97:A7:39:15:4C:DC:72:CF:8C:7E:0A:B6:95:13:12:A4:27:CD:35:03:93:79:81:D4:BF:ED:AA:00:B0"
+      ]
+    }
+  }
+]

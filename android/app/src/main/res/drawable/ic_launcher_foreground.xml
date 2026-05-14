@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Outer glow circle -->
+    <path
+        android:fillColor="#33A78BFA"
+        android:pathData="M54,54m-44,0a44,44 0,1 1,88 0a44,44 0,1 1,-88 0" />
+
+    <!-- Inner circle -->
+    <path
+        android:fillColor="#6366F1"
+        android:pathData="M54,54m-36,0a36,36 0,1 1,72 0a36,36 0,1 1,-72 0" />
+
+    <!-- Graduation cap top (mortarboard) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,30 L78,42 L54,54 L30,42 Z" />
+
+    <!-- Cap tassel string -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:pathData="M78,42 L78,56" />
+
+    <!-- Cap tassel ball -->
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M78,56m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0" />
+
+    <!-- Diploma scroll -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.85"
+        android:pathData="M42,56 Q54,64 66,56 L66,74 Q54,82 42,74 Z" />
+
+    <!-- Stars -->
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M26,28 L27.5,32 L32,32 L28.5,34.5 L30,38.5 L26,36 L22,38.5 L23.5,34.5 L20,32 L24.5,32 Z" />
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M82,28 L83.5,32 L88,32 L84.5,34.5 L86,38.5 L82,36 L78,38.5 L79.5,34.5 L76,32 L80.5,32 Z" />
+</vector>
