@@ -40,12 +40,14 @@ export default function PaymentPage() {
 
   const dbPayments = historyData?.data?.transactions || [];
 
-  const payments = [
-    { id: 1, title: 'Physics Grade 10 - April Bundle', amount: 250, date: '2026-04-25', status: 'upcoming' },
-    ...dbPayments.map(t => ({
-      id: t._id, title: t.metadata?.title || 'Wallet Top-up', amount: t.amount, date: new Date(t.createdAt).toLocaleDateString(), status: t.status === 'success' ? 'paid' : 'upcoming'
-    }))
-  ];
+  const payments = dbPayments.map(t => ({
+    id:     t._id,
+    title:  t.metadata?.title || (isAr ? 'شحن محفظة' : 'Wallet Top-up'),
+    amount: t.amount,
+    date:   new Date(t.createdAt).toLocaleDateString(isAr ? 'ar-EG' : 'en-US'),
+    status: t.status === 'success' ? 'paid' : t.status === 'pending' ? 'pending' : 'failed',
+    gateway: t.gateway,
+  }));
 
   const baseAmount = checkoutTarget ? checkoutTarget.amount : 250;
   const finalAmount = appliedCoupon ? appliedCoupon.newTotal : baseAmount;

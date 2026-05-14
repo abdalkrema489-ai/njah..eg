@@ -582,17 +582,7 @@ Always be encouraging.`;
 
     if (!geminiAI.isAvailable()) return res.status(503).json({ error:'AI Vision unavailable' });
 
-    const visionModel = geminiAI.getVisionModel?.() || (() => {
-      const { GoogleGenerativeAI } = require('@google/generative-ai');
-      return new GoogleGenerativeAI(process.env.GEMINI_API_KEY).getGenerativeModel({ model:'gemini-2.0-flash' });
-    })();
-
-    const imgData = imageBase64.replace(/^data:image\/\w+;base64,/, '');
-    const result  = await visionModel.generateContent([
-      prompt,
-      { inlineData: { mimeType:'image/jpeg', data: imgData } },
-    ]);
-    const text = result.response.text();
+    const text = await geminiAI.analyzeImage(imageBase64, prompt, 'image/jpeg');
 
     pool.query('UPDATE users SET xp_points=xp_points+10 WHERE id=$1', [req.user.id]).catch(()=>{});
     res.json({ correction: text, subject, grade });

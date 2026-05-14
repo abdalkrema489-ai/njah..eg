@@ -9,6 +9,7 @@ import { groupsAPI } from '../../api/index';
 import { useAuthStore, useUIStore } from '../../context/store';
 import BroadcastModal from './BroadcastModal';
 import LeaderboardWidget from './LeaderboardWidget';
+import EditGroupModal from './EditGroupModal';
 
 /* ── helpers ──────────────────────────────────────────────── */
 const getTabs = (isAr) => [
@@ -183,6 +184,7 @@ export default function GroupDetailPage() {
 
   const [tab,           setTab]           = useState('feed');
   const [broadcastModal,setBroadcastModal]= useState(false);
+  const [showEdit,      setShowEdit]      = useState(false);
   const [annModal,      setAnnModal]      = useState(false);
   const [assignModal,   setAssignModal]   = useState(false);
   const [submitModal,   setSubmitModal]   = useState(null); // assignment obj
@@ -370,6 +372,12 @@ export default function GroupDetailPage() {
             <div style={{ display: 'flex', gap: 10, paddingBottom: 8 }}>
               {isOwner && (
                 <>
+                  <button onClick={() => setShowEdit(true)}
+                    style={{ padding:'8px 16px',borderRadius:10,border:'1px solid var(--border)',
+                      background:'var(--surface2)',cursor:'pointer',fontSize:13,color:'var(--text)',
+                      display:'flex',alignItems:'center',gap:6, fontWeight:700 }}>
+                    ✏️ {isAr ? 'تعديل' : 'Edit'}
+                  </button>
                   <div style={{ padding:'8px 16px', borderRadius:10, background:'var(--surface2)', border:'1px solid var(--border)', fontFamily:'var(--font-mono)', fontWeight:800, fontSize:16, color:'var(--primary)', display:'flex', alignItems:'center', gap:8 }}>
                     <span style={{ fontSize:10, fontWeight:700, color:'var(--text3)', fontFamily:'var(--font-body)', letterSpacing:0 }}>{isAr ? 'كود' : 'CODE'}</span>
                     {group.code}
@@ -752,6 +760,14 @@ export default function GroupDetailPage() {
             isAr={isAr} 
             onClose={() => setBroadcastModal(false)} 
           />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showEdit && (
+          <EditGroupModal group={group} isAr={isAr}
+            onClose={() => setShowEdit(false)}
+            onSave={() => qc.invalidateQueries(['group', id])} />
         )}
       </AnimatePresence>
     </div>

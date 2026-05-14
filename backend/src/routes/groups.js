@@ -126,16 +126,27 @@ router.post('/:id/activate', auth, async (req, res) => {
       metadata: { title: `Listing fee – ${group.name}`, listingFee: true },
     });
 
-    // Immediately mark as paid (real gateway would use webhook)
-    tx.status = 'success';
+    if (process.env.NODE_ENV !== 'production' || !process.env.PAYMOB_API_KEY || process.env.PAYMOB_API_KEY === 'MISSING_PAYMOB_KEY') {
+      // Dev mode only: auto-approve
+      tx.status = 'success';
+      tx.transactionId = `DEV-LISTING-${Date.now()}`;
+      await tx.save();
+      group.status = 'active'; 
+      group.listingFeePaid = true;
+      group.listingFeeTransactionId = tx._id.toString();
+      await group.save();
+      return res.json({ success: true, group, devMode: true });
+    }
+    
+    // Production: return pending status
+    tx.status = 'pending';
     await tx.save();
-
-    group.status             = 'active';
-    group.listingFeePaid     = true;
-    group.listingFeeTransactionId = tx._id.toString();
-    await group.save();
-
-    res.json({ success: true, group, transactionId: tx._id });
+    return res.json({
+      requiresPayment: true,
+      transactionId: tx._id,
+      listingFee,
+      message: 'Please complete payment to activate group',
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -194,6 +194,7 @@ export const groupsAPI = {
   create:        d         => client.post('/groups', d),
   get:           id        => client.get(`/groups/${id}`),
   update:        (id, d)   => client.patch(`/groups/${id}`, d),
+  updateGroup:   (id, data) => client.patch(`/groups/${id}`, data),
   remove:        id        => client.delete(`/groups/${id}`),
   join:          code      => client.post('/groups/join', { code }),
   removeMember:  (id, uid) => client.delete(`/groups/${id}/members/${uid}`),

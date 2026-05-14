@@ -481,6 +481,16 @@ Return JSON: {"score": N, "feedback": "detailed feedback", "strengths": ["streng
   return JSON.parse(clean);
 }
 
+// ── Analyze Image (Vision AI) ─────────────────────────────────
+async function analyzeImage(base64, prompt = 'Describe this image in detail.', mimeType = 'image/jpeg') {
+  if (!model) throw new Error('GEMINI_NOT_AVAILABLE');
+  const result = await model.generateContent([
+    prompt,
+    { inlineData: { mimeType, data: base64.replace(/^data:image\/\w+;base64,/, '') } },
+  ]);
+  return result.response.text();
+}
+
 // ── Availability check ────────────────────────────────────────
 function isAvailable() { return !!model; }
 function getModelName() { return 'gemini-2.0-flash'; }
@@ -498,6 +508,7 @@ module.exports = {
   generateLessonPlan,
   generateExamQuestions,
   gradeEssay,
+  analyzeImage,
   buildContextualPrompt,
   isAvailable,
   getModelName,
