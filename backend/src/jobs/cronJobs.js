@@ -2,6 +2,7 @@
 'use strict';
 const cron   = require('node-cron');
 const { pool }   = require('../config/postgres');
+const { getRedis } = require('../config/redis');
 const { sendEmail } = require('../services/emailService');
 const { pushNotification } = require('../config/socket');
 const { seedAchievements } = require('../services/achievementService');
@@ -133,6 +134,28 @@ function startCronJobs() {
       logger.info(`✅ Weekly XP report sent to ${count} students`);
     } catch (err) { logger.error('Weekly XP cron:', err); }
   }, { timezone: 'Africa/Cairo' });
+
+  // ── XP Batch Flush every 5 minutes ──
+  cron.schedule('*/5 * * * *', async () => {
+    try {
+      const redis = getRedis();
+      if (!redis || !redis.isOpen) return;
+      const keys = await redis.keys('xp_pending:*');
+      if (!keys.length) return;
+      const values = await Promise.all(keys.map(k => redis.get(k)));
+      const updates = keys.map((k, i) => ({
+        userId: k.replace('xp_pending:', ''),
+        xp: parseInt(values[i] || 0),
+      })).filter(u => u.xp > 0);
+      if (updates.length) {
+        for (const u of updates) {
+          await pool.query('UPDATE users SET xp_points=xp_points+$1 WHERE id=$2::uuid', [u.xp, u.userId]);
+        }
+        await Promise.all(keys.map(k => redis.del(k)));
+        logger.info(`XP batch: flushed ${updates.length} users`);
+      }
+    } catch (e) { logger.error('XP batch cron error:', e.message); }
+  });
 
   logger.info('✅ Cron jobs started');
 }

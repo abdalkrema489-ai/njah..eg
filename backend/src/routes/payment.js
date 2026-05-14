@@ -258,7 +258,7 @@ router.post('/initiate', authenticate, async (req, res) => {
       if (process.env.NODE_ENV === 'production') {
         return res.status(500).json({ error: 'Payment gateway is not configured for production.' });
       }
-      console.log('Using simulated Paymob gateway due to missing API key.');
+      logger.warn('Using simulated Paymob gateway — PAYMOB_API_KEY not configured');
       transaction.orderId = 'SIM_' + Math.floor(Math.random() * 1000000);
 
       let refCode = null;

@@ -10,6 +10,7 @@ import { Avatar } from './UI';
 // InstitutionSwitcher removed — institution mode is now locked at registration
 import toast from 'react-hot-toast';
 import CreateGroupWizard from '../groups/CreateGroupWizard';
+import GlobalSearch from './GlobalSearch';
 
 /* ── SVG Icon set ──────────────────────────────────────────── */
 const Icons = {
@@ -73,6 +74,7 @@ const NAV_SECTIONS_DEF = [
       { key:'board',        path:'/board',        Icon: Icons.board,         tKey:'nav.board' },
       { key:'achievements', path:'/achievements', Icon: Icons.achievements,  tKey:'nav.achievements' },
       { key:'notifications',path:'/notifications',Icon: Icons.notifications, tKey:'nav.notifications', badge: true },
+      { key:'wallet',       path:'/wallet',        Icon: Icons.payment,       tKey:'nav.wallet' },
       { key:'payment',      path:'/payment',      Icon: Icons.payment,       tKey:'nav.payment' },
       { key:'support',      path:'/support',      Icon: Icons.help,          tKey:'nav.support' },
       { key:'help',         path:'/help',         Icon: Icons.help,          tKey:'nav.help' },
@@ -816,8 +818,13 @@ export function Header({ sidebarOpen, onToggle, onOpenNotifs, onOpenWizard }) {
             <span style={{ fontSize: 16 }}>✨</span> {lang === 'ar' ? 'مجموعة جديدة' : 'New Group'}
           </motion.button>
 
-          {/* Search */}
-          <HeaderBtn title={t('common.search') + ' (⌘K)'} onClick={() => window.dispatchEvent(new CustomEvent('open-command-palette'))}>
+          {/* Global Search */}
+          <div className="hide-mobile">
+            <GlobalSearch isAr={lang === 'ar'} />
+          </div>
+
+          {/* Search icon (mobile fallback) */}
+          <HeaderBtn title={t('common.search') + ' (⌘K)'} onClick={() => window.dispatchEvent(new CustomEvent('open-command-palette'))} className="show-mobile">
             <Icons.search />
           </HeaderBtn>
 

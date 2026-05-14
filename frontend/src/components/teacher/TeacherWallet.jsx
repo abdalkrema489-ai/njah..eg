@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import toast from 'react-hot-toast';
 import { walletAPI } from '../../api/index';
 import { useTranslation } from '../../i18n/index';
@@ -137,26 +138,24 @@ export default function TeacherWallet() {
           <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', marginBottom: 20, letterSpacing: '-0.02em' }}>
             {isAr ? '📊 إيرادات الأشهر' : '📊 Monthly Earnings'}
           </h3>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 150 }}>
-            {earnings.monthly.map((m, i) => {
-              const h = Math.max(8, (parseFloat(m.total) / maxMonthly) * 130);
-              return (
-                <div key={m.month} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#10B981' }}>{parseFloat(m.total).toFixed(0)}</span>
-                  <motion.div
-                    initial={{ height: 0 }}
-                    animate={{ height: h }}
-                    transition={{ delay: i * 0.08, duration: 0.6 }}
-                    style={{
-                      width: '100%', maxWidth: 40, borderRadius: 8,
-                      background: 'linear-gradient(to top, #10B981, #34D399)',
-                    }}
-                  />
-                  <span style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600 }}>{m.month.slice(5)}</span>
-                </div>
-              );
-            })}
-          </div>
+          <ResponsiveContainer width="100%" height={200}>
+            <AreaChart data={earnings.monthly.map(m => ({ name: m.month?.slice(5) || m.month, value: parseFloat(m.total || 0) }))}>
+              <defs>
+                <linearGradient id="walletGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10B981" stopOpacity={0.5}/>
+                  <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+              <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--text3)' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: 'var(--text3)' }} axisLine={false} tickLine={false} tickFormatter={v => `${v}`} width={50} />
+              <Tooltip
+                contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 12 }}
+                formatter={v => [`${v.toFixed(2)} EGP`, isAr ? 'الإيراد' : 'Earnings']}
+              />
+              <Area type="monotone" dataKey="value" stroke="#10B981" strokeWidth={2.5} fill="url(#walletGrad)" dot={{ r: 3, fill: '#10B981' }} />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
       )}
 

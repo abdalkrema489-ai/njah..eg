@@ -56,6 +56,7 @@ const ExamBuilder          = lazy(() => import('./components/teacher/ExamBuilder
 const EssayGrader          = lazy(() => import('./components/teacher/EssayGrader'));
 const TeacherWallet        = lazy(() => import('./components/teacher/TeacherWallet'));
 const SupportPage          = lazy(() => import('./components/help/SupportPage'));
+const WalletPage           = lazy(() => import('./components/wallet/WalletPage'));
 
 // ── QueryClient ─────────────────────────────────────────────
 const qc = new QueryClient({
@@ -104,6 +105,13 @@ function Protected({ children }) {
       </ErrorBoundary>
     </AppShell>
   );
+}
+
+// ── Teacher-only route ──────────────────────────────────────
+function TeacherOnly({ children }) {
+  const { user } = useAuthStore();
+  if (!user || user.role !== 'teacher') return <Navigate to="/" replace />;
+  return children;
 }
 
 // ── Admin-only route (uses separate adminToken) ─────────────
@@ -287,7 +295,13 @@ export default function App() {
             <Route path="/analytics"       element={<Protected><AnalyticsPage /></Protected>} />
             <Route path="/profile"         element={<Protected><ProfilePage /></Protected>} />
             <Route path="/settings"        element={<Protected><SettingsPage /></Protected>} />
-            <Route path="/affiliates"      element={<Protected><AffiliateDashboard /></Protected>} />
+            <Route path="/affiliates"      element={
+              <Protected>
+                <TeacherOnly>
+                  <AffiliateDashboard />
+                </TeacherOnly>
+              </Protected>
+            } />
             <Route path="/exam"            element={<Protected><ExamPage /></Protected>} />
             <Route path="/quiz-history"    element={<Protected><QuizHistoryPage /></Protected>} />
             <Route path="/groups"          element={<Protected><GroupsPage /></Protected>} />
@@ -307,6 +321,7 @@ export default function App() {
             <Route path="/exam-builder"   element={<Protected><ExamBuilder /></Protected>} />
             <Route path="/essay-grader"   element={<Protected><EssayGrader /></Protected>} />
             <Route path="/teacher/wallet" element={<Protected><TeacherWallet /></Protected>} />
+            <Route path="/wallet"         element={<Protected><WalletPage /></Protected>} />
 
             {/* ── Admin (owner only, protected standalone) ── */}
             <Route path="/admin/login"     element={<Suspense fallback={<PageLoader />}><AdminLoginPage /></Suspense>} />

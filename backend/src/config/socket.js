@@ -4,6 +4,7 @@ const { pool } = require('./postgres');
 const { Message, PrivateMessage } = require('./mongo');
 const geminiAI = require('../services/geminiAI');
 const internalAI = require('../services/internalAI');
+const { cacheGet, cacheSet } = require('./redis');
 const logger = require('../utils/logger');
 
 let ioInstance;
@@ -68,8 +69,12 @@ function setupSocketIO(io) {
           userName: socket.user.name, avatarUrl: socket.user.avatar_url,
           content, type, fileUrl, replyTo, createdAt: msg.createdAt,
         });
-        // +5 XP for chat participation
-        await pool.query('UPDATE users SET xp_points=xp_points+5 WHERE id=$1', [socket.user.id]);
+        // +5 XP for chat participation — batched via Redis to avoid per-message DB writes
+        try {
+          const pendingKey = `xp_pending:${socket.user.id}`;
+          const current = await cacheGet(pendingKey) || 0;
+          await cacheSet(pendingKey, parseInt(current) + 5, 300); // flush every 5 min via cron
+        } catch {}
 
         // ── Inline @AI processing ──
         if (type === 'text' && content.toLowerCase().includes('@ai')) {

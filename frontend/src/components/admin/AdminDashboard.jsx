@@ -511,16 +511,17 @@ export default function AdminDashboard() {
             {activeTab === 'overview' && stats && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-                  <StatCard icon="👥" label="Total Users" value={parseInt(stats.total_users || 0).toLocaleString()} sub={`${stats.new_this_week || 0} new this week`} color={COLORS.blue} />
-                  <StatCard icon="🎓" label="Students" value={parseInt(stats.students || 0).toLocaleString()} color={COLORS.indigo} />
-                  <StatCard icon="👨‍🏫" label="Teachers" value={parseInt(stats.teachers || 0).toLocaleString()} color={COLORS.purple} />
-                  <StatCard icon="⚡" label="Active (24h)" value={parseInt(stats.active_today || 0).toLocaleString()} color={COLORS.green} />
-                  <StatCard icon="🔵" label="Google Users" value={parseInt(stats.google_users || 0).toLocaleString()} color={COLORS.blue} />
-                  <StatCard icon="🎧" label="Open Tickets" value={stats.open_tickets || 0} color={COLORS.red} />
-                  <StatCard icon="🏫" label="Groups" value={stats.groups?.total || 0} sub={`${stats.groups?.paid || 0} paid`} color={COLORS.amber} />
-                  <StatCard icon="💰" label="Your Earnings" value={`EGP ${(stats.revenue?.platformEarnings || 0).toFixed(0)}`} sub={`${stats.revenue?.feePercent || 10}% platform fee`} color={COLORS.green} />
+                  <StatCard icon="👥" label={isAr ? 'إجمالي المستخدمين' : 'Total Users'}   value={parseInt(stats.total_users || 0).toLocaleString()} sub={`${stats.new_this_week || 0} ${isAr ? 'جديد هذا الأسبوع' : 'new this week'}`} color={COLORS.blue} />
+                  <StatCard icon="🎓" label={isAr ? 'الطلاب' : 'Students'}                  value={parseInt(stats.students || 0).toLocaleString()}    color={COLORS.indigo} />
+                  <StatCard icon="👨‍🏫" label={isAr ? 'المعلمون' : 'Teachers'}               value={parseInt(stats.teachers || 0).toLocaleString()}    color={COLORS.purple} />
+                  <StatCard icon="⚡" label={isAr ? 'نشط (24 ساعة)' : 'Active (24h)'}       value={parseInt(stats.active_today || 0).toLocaleString()} color={COLORS.green} />
+                  <StatCard icon="🔵" label={isAr ? 'مستخدمو Google' : 'Google Users'}      value={parseInt(stats.google_users || 0).toLocaleString()} color={COLORS.blue} />
+                  <StatCard icon="🎧" label={isAr ? 'تذاكر مفتوحة' : 'Open Tickets'}        value={stats.open_tickets || 0}                           color={COLORS.red} />
+                  <StatCard icon="🏫" label={isAr ? 'المجموعات' : 'Groups'}                 value={stats.groups?.total || 0} sub={`${stats.groups?.paid || 0} ${isAr ? 'مدفوعة' : 'paid'}`} color={COLORS.amber} />
+                  <StatCard icon="💰" label={isAr ? 'أرباحك' : 'Your Earnings'}             value={`EGP ${(stats.revenue?.platformEarnings || 0).toFixed(0)}`} sub={`${stats.revenue?.feePercent || 10}% ${isAr ? 'عمولة المنصة' : 'platform fee'}`} color={COLORS.green} />
                 </div>
                 <EarningsCard revenue={stats.revenue} />
+
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                   <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 24, padding: 24 }}>

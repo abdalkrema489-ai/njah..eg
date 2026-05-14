@@ -59,7 +59,7 @@ async function runMigrations(client) {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS university_name VARCHAR(200);
       ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_ai_provider VARCHAR(20) DEFAULT 'auto';
       ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
-      ALTER TABLE users ADD CONSTRAINT users_role_check CHECK(role IN('student','teacher','school_admin','university','university_admin','admin'));
+      ALTER TABLE users ADD CONSTRAINT users_role_check CHECK(role IN('student','teacher','school_admin','university','university_admin','admin','center_owner'));
       -- study_sessions
       ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
       ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS pomodoros_done INTEGER DEFAULT 0;
@@ -88,7 +88,7 @@ async function runMigrations(client) {
       avatar_url     TEXT,
       grade          VARCHAR(20),
       school         VARCHAR(200),
-      role           VARCHAR(20)   DEFAULT 'student' CHECK(role IN('student','teacher','school_admin','university','university_admin','admin')),
+      role           VARCHAR(20)   DEFAULT 'student' CHECK(role IN('student','teacher','school_admin','university','university_admin','admin','center_owner')),
       language       VARCHAR(5)    DEFAULT 'ar',
       xp_points      INTEGER       DEFAULT 0,
       level          INTEGER       DEFAULT 1,

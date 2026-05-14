@@ -199,14 +199,17 @@ export default function SettingsPage() {
               />
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 }}>
-                <Input 
-                  label={isAr ? 'كلمة المرور الجديدة' : 'New Password'} type={showNew ? 'text' : 'password'} 
-                  icon={<ShieldAlertIcon />} placeholder={isAr ? 'حد أدنى 8 حروف' : 'Minimum 8 characters'}
-                  rightIcon={showNew ? <EyeOffIcon /> : <EyeIcon />}
-                  onRightIconClick={() => setShowNew(v => !v)}
-                  error={errors.newPassword?.message}
-                  {...register('newPassword', { required: 'Required', minLength: { value: 8, message: 'Min 8 chars' } })} 
-                />
+                <div>
+                  <Input 
+                    label={isAr ? 'كلمة المرور الجديدة' : 'New Password'} type={showNew ? 'text' : 'password'} 
+                    icon={<ShieldAlertIcon />} placeholder={isAr ? 'حد أدنى 8 حروف' : 'Minimum 8 characters'}
+                    rightIcon={showNew ? <EyeOffIcon /> : <EyeIcon />}
+                    onRightIconClick={() => setShowNew(v => !v)}
+                    error={errors.newPassword?.message}
+                    {...register('newPassword', { required: 'Required', minLength: { value: 8, message: 'Min 8 chars' } })} 
+                  />
+                  <PasswordStrengthBar password={newPwd} isAr={isAr} />
+                </div>
                 <Input 
                   label={isAr ? 'تأكيد كلمة المرور' : 'Confirm Password'} type={showCfm ? 'text' : 'password'} 
                   icon={<ShieldAlertIcon />} placeholder={isAr ? 'أعد إدخال كلمة المرور' : 'Re-enter password'}
@@ -268,7 +271,40 @@ export default function SettingsPage() {
   );
 }
 
-/* ── Custom Toggle Switch ───────────────────────────────── */
+/* ── Password Strength Bar ───────────────────────────────── */
+function PasswordStrengthBar({ password, isAr }) {
+  if (!password) return null;
+  const checks = [
+    /.{8,}/.test(password),
+    /[A-Z]/.test(password),
+    /[0-9]/.test(password),
+    /[^A-Za-z0-9]/.test(password),
+  ];
+  const strength = checks.filter(Boolean).length;
+  const colors   = ['#EF4444', '#F59E0B', '#10B981', '#6366F1'];
+  const labelsAr = ['ضعيفة', 'مقبولة', 'جيدة', 'قوية جداً'];
+  const labelsEn = ['Weak', 'Fair', 'Good', 'Strong'];
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} style={{
+            flex: 1, height: 4, borderRadius: 4,
+            background: i <= strength ? colors[strength - 1] : 'var(--surface3)',
+            transition: 'background 0.3s',
+          }} />
+        ))}
+      </div>
+      {strength > 0 && (
+        <p style={{ fontSize: 11, fontWeight: 700, color: colors[strength - 1], margin: 0 }}>
+          {isAr ? labelsAr[strength - 1] : labelsEn[strength - 1]}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ── Custom Toggle Switch ──────────────────────────────── */
 function Toggle({ checked, onChange }) {
   return (
     <motion.button

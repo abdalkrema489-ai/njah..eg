@@ -414,18 +414,56 @@ async function submitQuizResult(req, res) {
 
 // ── Study Plan ────────────────────────────────────────────────
 async function generateStudyPlan(req, res) {
-  const { subject, deadline, dailyHours = 2, currentLevel = 'beginner', language = 'en' } = req.body;
-  if (!subject) return res.status(400).json({ error: 'subject is required' });
-  if (!deadline) return res.status(400).json({ error: 'deadline is required' });
+  // Accept both old single-subject payload AND new multi-subject payload from StudyPlanGenerator
+  const {
+    subject, subjects, deadline, examDate,
+    dailyHours, hoursPerDay = 2,
+    currentLevel, level = 'intermediate',
+    language = 'ar',
+  } = req.body;
 
-  const daysUntil = Math.ceil((new Date(deadline) - new Date()) / 86400000);
-  if (daysUntil < 1) return res.status(400).json({ error: 'Deadline must be in the future' });
+  const resolvedSubjects = subjects?.length ? subjects : (subject ? [subject] : null);
+  const resolvedDeadline = examDate || deadline;
+  const resolvedHours    = hoursPerDay || dailyHours || 2;
+  const resolvedLevel    = level || currentLevel || 'intermediate';
 
-  let plan = internalAI.generateStudyPlan({ subject, daysUntil, dailyHours: parseInt(dailyHours), currentLevel, language });
-  let usedProvider = 'najah_heuristics';
+  if (!resolvedSubjects?.length) return res.status(400).json({ error: 'subjects (or subject) is required' });
+  if (!resolvedDeadline)        return res.status(400).json({ error: 'examDate (or deadline) is required' });
 
-  res.json({ ...plan, subject, deadline, daysUntil, dailyHours, currentLevel, provider: usedProvider });
+  const daysUntil = Math.ceil((new Date(resolvedDeadline) - new Date()) / 86400000);
+  if (daysUntil < 1) return res.status(400).json({ error: 'Exam date must be in the future' });
+
+  // Try Gemini first for a rich markdown plan
+  if (geminiAI.isAvailable()) {
+    try {
+      const prompt = language === 'ar'
+        ? `أنشئ خطة مذاكرة شاملة ومفصلة باللغة العربية للطالب بالمعطيات التالية:
+- المواد: ${resolvedSubjects.join('، ')}
+- أيام المتبقية: ${daysUntil} يوم
+- ساعات الدراسة يومياً: ${resolvedHours} ساعة
+- مستوى الطالب: ${resolvedLevel}
+
+أنشئ جدولاً أسبوعياً مفصلاً مقسماً حسب الأيام والمواد. استخدم رموز ## للعناوين الرئيسية و### للفرعية. كن عملياً ومحدداً.`
+        : `Create a detailed, structured study plan in English with the following parameters:
+- Subjects: ${resolvedSubjects.join(', ')}
+- Days until exam: ${daysUntil} days
+- Daily study hours: ${resolvedHours}h
+- Student level: ${resolvedLevel}
+
+Generate a week-by-week schedule broken down by subject. Use ## for major headings and ### for sub-headings. Be practical and specific.`;
+
+      const plan = await geminiAI.chat(prompt, [], language, req.user.id);
+      return res.json({ plan, subjects: resolvedSubjects, daysUntil, hoursPerDay: resolvedHours, level: resolvedLevel, provider: 'gemini-2.0-flash' });
+    } catch (err) {
+      logger.warn('Gemini study plan failed, using heuristics:', err.message);
+    }
+  }
+
+  // Fallback: internal heuristic plan (single subject)
+  const plan = internalAI.generateStudyPlan({ subject: resolvedSubjects[0], daysUntil, dailyHours: parseInt(resolvedHours), currentLevel: resolvedLevel, language });
+  res.json({ ...plan, subjects: resolvedSubjects, daysUntil, hoursPerDay: resolvedHours, level: resolvedLevel, provider: 'najah_heuristics' });
 }
+
 
 // ── Answer from File ──────────────────────────────────────────
 async function answerFromFile(req, res) {

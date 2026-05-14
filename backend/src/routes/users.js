@@ -17,19 +17,47 @@ router.get('/public/stats', async (req, res) => {
 
 router.use(authenticate);
 
-// ── Search Users ──────────────────────────────────────────
+// ── Global Content Search (files + notes + sessions) ─────
 router.get('/search', async (req, res) => {
-  const { q } = req.query;
-  if (!q || q.length < 2) return res.json({ users: [] });
-  
-  const { rows } = await pool.query(`
-    SELECT id, name, avatar_url, grade, school, level
-    FROM users 
-    WHERE (name ILIKE $1 OR id::text ILIKE $1)
-    AND is_active = true
-    LIMIT 10
-  `, [`%${q}%`]);
-  res.json({ users: rows });
+  try {
+    const { q } = req.query;
+    if (!q || q.length < 2) return res.json({ results: [], users: [] });
+    const term = `%${q}%`;
+
+    // Also keep user search for backward compat
+    const [files, notes, sessions, users] = await Promise.all([
+      pool.query(
+        `SELECT 'file' AS type, id::text, name AS title, COALESCE(subject,'') AS subtitle, created_at
+         FROM files WHERE user_id=$1 AND name ILIKE $2 LIMIT 5`,
+        [req.user.id, term]
+      ),
+      pool.query(
+        `SELECT 'note' AS type, id::text, title, LEFT(COALESCE(content,''),80) AS subtitle, updated_at AS created_at
+         FROM notes WHERE user_id=$1 AND (title ILIKE $2 OR content ILIKE $2) LIMIT 5`,
+        [req.user.id, term]
+      ),
+      pool.query(
+        `SELECT 'session' AS type, id::text, subject AS title, COALESCE(topic,'') AS subtitle, created_at
+         FROM study_sessions WHERE user_id=$1 AND subject ILIKE $2 LIMIT 3`,
+        [req.user.id, term]
+      ),
+      pool.query(
+        `SELECT id, name, avatar_url, grade, school, level
+         FROM users WHERE (name ILIKE $1 OR id::text ILIKE $1) AND is_active=true LIMIT 10`,
+        [term]
+      ),
+    ]);
+
+    const results = [
+      ...files.rows.map(r => ({ ...r, icon: '📄', link: '/files' })),
+      ...notes.rows.map(r => ({ ...r, icon: '📝', link: '/notes' })),
+      ...sessions.rows.map(r => ({ ...r, icon: '📅', link: '/planner' })),
+    ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 10);
+
+    res.json({ results, users: users.rows, query: q });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 router.get('/profile', async (req, res) => {
   const { rows } = await pool.query(`
