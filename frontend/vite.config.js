@@ -8,51 +8,141 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      devOptions: { enabled: true },
+      injectRegister: 'auto',
+      includeAssets: [
+        'favicon.ico', 'apple-touch-icon.png',
+        'pwa-192x192.png', 'pwa-512x512.png',
+        'offline.html',
+      ],
+
+      // ── Web App Manifest ──────────────────────────────────────
       manifest: {
-        name: 'Najah Smart Learning',
-        short_name: 'Najah',
-        description: 'AI-Powered Smart Learning Platform',
-        theme_color: '#ffffff',
+        name: 'نجاح — منصة التعلم الذكية',
+        short_name: 'نجاح',
+        description: 'منصة التعلم الذكية للطلاب المصريين — مدعومة بالذكاء الاصطناعي',
+        theme_color: '#6366F1',
+        background_color: '#030308',
+        display: 'standalone',
+        orientation: 'any',
+        scope: '/',
+        start_url: '/?source=pwa',
+        lang: 'ar',
+        dir: 'rtl',
+        categories: ['education'],
         icons: [
+          { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
+        shortcuts: [
           {
-            src: 'pwa-192x192.png',
-            sizes: '192x192',
-            type: 'image/png'
+            name: 'المحادثة الذكية',
+            short_name: 'Najah AI',
+            url: '/ai',
+            icons: [{ src: 'pwa-192x192.png', sizes: '192x192' }],
           },
           {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png'
-          }
-        ]
-      }
-    })
+            name: 'المخطط الدراسي',
+            short_name: 'جدول',
+            url: '/planner',
+            icons: [{ src: 'pwa-192x192.png', sizes: '192x192' }],
+          },
+          {
+            name: 'المجموعات',
+            short_name: 'مجموعات',
+            url: '/groups',
+            icons: [{ src: 'pwa-192x192.png', sizes: '192x192' }],
+          },
+        ],
+        prefer_related_applications: false,
+      },
+
+      // ── Workbox Strategies ────────────────────────────────────
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,webp,json}'],
+        navigateFallback: '/offline.html',
+        navigateFallbackDenylist: [/^\/api\//, /^\/socket\.io\//],
+        cleanupOutdatedCaches: true,
+
+        runtimeCaching: [
+          // API → Network-first (serves cache when offline)
+          {
+            urlPattern: /^https?:\/\/.*\/api\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'najah-api-v1',
+              networkTimeoutSeconds: 8,
+              expiration: { maxEntries: 200, maxAgeSeconds: 86400 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          // Google Fonts → Cache-first (works offline)
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-stylesheets',
+              expiration: { maxEntries: 10, maxAgeSeconds: 31536000 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-webfonts',
+              expiration: { maxEntries: 20, maxAgeSeconds: 31536000 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          // Images → Stale-while-revalidate
+          {
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'najah-images-v1',
+              expiration: { maxEntries: 150, maxAgeSeconds: 2592000 },
+            },
+          },
+          // Firebase Storage files → Cache-first
+          {
+            urlPattern: /^https:\/\/firebasestorage\.googleapis\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'firebase-storage-v1',
+              expiration: { maxEntries: 100, maxAgeSeconds: 604800 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          // JS/CSS chunks → Stale-while-revalidate
+          {
+            urlPattern: /\.(?:js|css)$/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'najah-static-v1',
+              expiration: { maxEntries: 60, maxAgeSeconds: 86400 },
+            },
+          },
+        ],
+      },
+    }),
   ],
-  define: {
-    'process.env': {}
-  },
+
+  define: { 'process.env': {} },
+
   server: {
     port: 3000,
-    allowedHosts: process.env.VITE_NGROK === 'true' ? true : ['postmalarial-linearly-milly.ngrok-free.dev'],
+    allowedHosts: process.env.VITE_NGROK === 'true'
+      ? true
+      : ['postmalarial-linearly-milly.ngrok-free.dev'],
     proxy: {
-      '/api': {
-        target: 'http://localhost:5000',
-        changeOrigin: true,
-      },
-      '/socket.io': {
-        target: 'http://localhost:5000',
-        ws: true,
-      }
-    }
-  },
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
+      '/api':       { target: 'http://localhost:5000', changeOrigin: true },
+      '/socket.io': { target: 'http://localhost:5000', ws: true },
     },
   },
-  build: {
-    outDir: 'build',
-  }
+
+  resolve: { alias: { '@': path.resolve(__dirname, './src') } },
+
+  build: { outDir: 'build', sourcemap: false },
 });
-// Trigger restart

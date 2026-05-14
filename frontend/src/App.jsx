@@ -9,6 +9,9 @@ import { ErrorBoundary } from './components/shared/ErrorBoundary';
 import { Spinner } from './components/shared/UI';
 import { CommandPalette } from './components/shared/CommandPalette';
 import { I18nProvider, useTranslation } from './i18n/index';
+import OfflineBanner  from './components/pwa/OfflineBanner';
+import InstallPrompt  from './components/pwa/InstallPrompt';
+import MobileBottomNav from './components/pwa/MobileBottomNav';
 import './styles/global.css';
 
 // ── Lazy load all pages ──────────────────────────────────────
@@ -143,13 +146,6 @@ function GlobalSync() {
   const { user } = useAuthStore();
 
   useEffect(() => {
-    // Clear potentially corrupted Service Workers
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(regs => {
-        for (let r of regs) r.unregister();
-      });
-    }
-
     // Load White-Label Branding
     fetch(import.meta.env.VITE_API_URL + '/admin/branding')
       .then(res => res.json())
@@ -164,14 +160,12 @@ function GlobalSync() {
           localStorage.setItem('platformName', data.platformName);
           localStorage.setItem('logoEmoji', data.logoEmoji || '🎓');
         }
-      }).catch(console.error);
+      }).catch(() => {});
 
     // Capture Affiliate Referral
     const urlParams = new URLSearchParams(window.location.search);
     const ref = urlParams.get('ref');
-    if (ref) {
-      localStorage.setItem('affiliate_ref', ref);
-    }
+    if (ref) localStorage.setItem('affiliate_ref', ref);
   }, []);
 
   useEffect(() => {
@@ -243,6 +237,8 @@ export default function App() {
       <QueryClientProvider client={qc}>
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <GlobalSync />
+          <OfflineBanner />
+          <InstallPrompt />
           <CommandPalette />
           <Toaster
             position="bottom-right"
@@ -330,6 +326,7 @@ export default function App() {
             {/* ── 404 ── */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <MobileBottomNav />
         </BrowserRouter>
       </QueryClientProvider>
       </I18nProvider>

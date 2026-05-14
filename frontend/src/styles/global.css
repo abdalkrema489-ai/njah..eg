@@ -1451,3 +1451,115 @@ code, pre {
   box-shadow: 0 20px 40px rgba(0,0,0,0.1), 0 0 0 1px rgba(255,255,255,0.05);
 }
 
+
+/* ══════════════════════════════════════════════════════════
+   📱 PWA / MOBILE ENHANCEMENTS
+   ══════════════════════════════════════════════════════════ */
+
+/* Show bottom nav only on mobile/tablet */
+.mobile-bottom-nav        { display: none !important; }
+.mobile-nav-spacer        { display: none !important; }
+
+@media (max-width: 1023px) {
+  .mobile-bottom-nav      { display: flex !important; }
+  .mobile-nav-spacer      { display: block !important; }
+}
+
+/* Safe-area padding for main content when bottom nav is visible */
+@media (max-width: 1023px) {
+  /* push main layout content above the bottom nav */
+  main, [class*="page-content"], .main-content {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+/* iOS standalone mode — extra top padding for status bar */
+@media (display-mode: standalone) {
+  body {
+    padding-top: env(safe-area-inset-top);
+  }
+  /* Hide browser-specific elements not needed in standalone */
+  .hide-in-pwa { display: none !important; }
+}
+
+/* Touch optimization — prevent 300ms tap delay */
+* { touch-action: manipulation; }
+
+/* Bigger tap targets on mobile */
+@media (max-width: 768px) {
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Improve text readability */
+  body { font-size: 16px; } /* Prevent iOS zoom on input focus */
+
+  /* Card and panel adjustments */
+  .floating-card:hover {
+    transform: none; /* Disable hover lift effects on touch */
+  }
+
+  /* Scrollable areas — momentum scrolling on iOS */
+  .scroll-y, [style*="overflow-y: auto"], [style*="overflow: auto"] {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  /* Full-width modals on mobile */
+  [role="dialog"] {
+    border-radius: 24px 24px 0 0 !important;
+    margin-bottom: 0 !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* Prevent text selection on tap-heavy UI elements */
+.mobile-bottom-nav,
+.header-btn,
+button {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Input focus — keep visible on mobile without jumping */
+input:focus, textarea:focus, select:focus {
+  scroll-margin-top: 72px;
+}
+
+/* Offline badge utility */
+.offline-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(239,68,68,0.1);
+  color: #EF4444;
+  border: 1px solid rgba(239,68,68,0.2);
+}
+.offline-badge::before {
+  content: '';
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #EF4444;
+  animation: status-pulse 1.5s infinite;
+}
+
+/* Pull-to-refresh indicator area */
+.ptr-indicator {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #6366F1, #8B5CF6, #A78BFA);
+  transform-origin: left;
+  z-index: 10001;
+}
