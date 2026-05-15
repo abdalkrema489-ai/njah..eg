@@ -7,6 +7,27 @@ import { io } from 'socket.io-client';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { useUIStore } from '../../context/store';
 
+// ── Export Users CSV (UTF-8 BOM for Excel Arabic support) ────
+function exportUsersCSV(users, isAr) {
+  if (!users?.length) return toast.error(isAr ? 'لا يوجد مستخدمون' : 'No users to export');
+  const headers = isAr
+    ? 'الاسم,البريد,الدور,الحالة,طريقة التسجيل,تاريخ الانضمام'
+    : 'Name,Email,Role,Status,Join Type,Joined Date';
+  const rows = users.map(u =>
+    `"${u.name}","${u.email}","${u.role}",` +
+    `"${u.is_active ? (isAr ? 'نشط' : 'Active') : (isAr ? 'غير نشط' : 'Inactive')}",` +
+    `"${u.is_google_user ? 'Google' : 'Email'}",` +
+    `"${new Date(u.created_at).toLocaleDateString()}"`
+  );
+  const csv  = [headers, ...rows].join('\n');
+  // \uFEFF = UTF-8 BOM — makes Excel open Arabic correctly
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `users_${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+}
+
 function downloadCSV(data, filename) {
   if (!data || !data.length) return toast.error('No data to export');
   const headers = Object.keys(data[0]);
@@ -164,20 +185,32 @@ function EarningsCard({ revenue }) {
   );
 }
 
-function UsersTable({ users = [], onToggle }) {
+function UsersTable({ users = [], onToggle, isAr, onExport }) {
   return (
     <div style={{
       background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
       borderRadius: 24, overflow: 'hidden',
     }}>
-      <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-        <h3 style={{ color: '#fff', margin: 0, fontSize: 16, fontWeight: 800 }}>👥 Users</h3>
+      <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 style={{ color: '#fff', margin: 0, fontSize: 16, fontWeight: 800 }}>👥 {isAr ? 'المستخدمون' : 'Users'}</h3>
+        <button onClick={onExport} style={{
+          background: 'rgba(16,185,129,0.2)', border: '1px solid rgba(16,185,129,0.4)',
+          color: '#34D399', padding: '6px 14px', borderRadius: 10, cursor: 'pointer', fontSize: 12, fontWeight: 700
+        }}>📥 {isAr ? 'تصدير CSV' : 'Export CSV'}</button>
       </div>
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
-              {['Name', 'Email', 'Role', 'Joined', 'Type', 'Status', 'Action'].map(h => (
+              {[
+                isAr ? 'الاسم'           : 'Name',
+                isAr ? 'البريد'          : 'Email',
+                isAr ? 'الدور'           : 'Role',
+                isAr ? 'تاريخ الانضمام' : 'Joined',
+                isAr ? 'طريقة التسجيل'  : 'Join Type',
+                isAr ? 'الحالة'          : 'Status',
+                isAr ? 'إجراءات'         : 'Actions',
+              ].map(h => (
                 <th key={h} style={{
                   padding: '12px 16px', textAlign: 'left',
                   color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 700,
@@ -208,13 +241,13 @@ function UsersTable({ users = [], onToggle }) {
                     background: u.is_active ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)',
                     color: u.is_active ? '#34D399' : '#F87171',
                     padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
-                  }}>{u.is_active ? 'Active' : 'Banned'}</span>
+                  }}>{u.is_active ? (isAr ? 'نشط' : 'Active') : (isAr ? 'محظور' : 'Banned')}</span>
                 </td>
                 <td style={{ padding: '12px 16px' }}>
                   <button onClick={() => onToggle(u)} style={{
                     background: 'rgba(255,255,255,0.08)', border: 'none', cursor: 'pointer',
                     color: '#fff', padding: '5px 12px', borderRadius: 8, fontSize: 11,
-                  }}>{u.is_active ? 'Ban' : 'Unban'}</button>
+                  }}>{u.is_active ? (isAr ? 'حظر' : 'Ban') : (isAr ? 'رفع الحظر' : 'Unban')}</button>
                 </td>
               </tr>
             ))}
@@ -813,16 +846,16 @@ export default function AdminDashboard() {
             {activeTab === 'support' && (
               <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 24, padding: 24 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                  <h3 style={{ color: '#fff', margin: 0, fontSize: 18, fontWeight: 800 }}>🎧 Support Tickets</h3>
+                  <h3 style={{ color: '#fff', margin: 0, fontSize: 18, fontWeight: 800 }}>🎧 {isAr ? 'تذاكر الدعم الفني' : 'Support Tickets'}</h3>
                 </div>
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr style={{ background: 'rgba(255,255,255,0.03)' }}>
-                        <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>User</th>
-                        <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>Subject & Message</th>
-                        <th style={{ padding: '12px', textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>Status</th>
-                        <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>Reply</th>
+                        <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>{isAr ? 'المستخدم' : 'User'}</th>
+                        <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>{isAr ? 'الموضوع والرسالة' : 'Subject & Message'}</th>
+                        <th style={{ padding: '12px', textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>{isAr ? 'الحالة' : 'Status'}</th>
+                        <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>{isAr ? 'رد' : 'Reply'}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -844,8 +877,8 @@ export default function AdminDashboard() {
                           <td style={{ padding: '12px' }}>
                             {t.status === 'open' ? (
                               <form onSubmit={(e) => replyToTicket(e, t.id)} style={{ display: 'flex', gap: 8 }}>
-                                <input name="reply" placeholder="Type reply..." required style={{ flex: 1, padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.2)', color: '#fff', fontSize: 12 }} />
-                                <button type="submit" style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: '#6366F1', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 12 }}>Send</button>
+                                <input name="reply" placeholder={isAr ? 'اكتب الرد...' : 'Type reply...'} required style={{ flex: 1, padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.2)', color: '#fff', fontSize: 12 }} />
+                                <button type="submit" style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: '#6366F1', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 12 }}>{isAr ? 'إرسال الرد' : 'Send Reply'}</button>
                               </form>
                             ) : (
                               <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Replied</div>
@@ -862,7 +895,12 @@ export default function AdminDashboard() {
 
             {/* ── USERS ── */}
             {activeTab === 'users' && (
-              <UsersTable users={users} onToggle={toggleUser} />
+              <UsersTable
+                users={users}
+                onToggle={toggleUser}
+                isAr={isAr}
+                onExport={() => exportUsersCSV(users, isAr)}
+              />
             )}
 
             {/* ── GROUPS ── */}
@@ -934,14 +972,18 @@ export default function AdminDashboard() {
                   background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
                   borderRadius: 24, padding: 28,
                 }}>
-                  <h3 style={{ color: '#fff', marginTop: 0, fontSize: 18, fontWeight: 800 }}>⚙️ Platform Settings</h3>
+                  <h3 style={{ color: '#fff', marginTop: 0, fontSize: 18, fontWeight: 800 }}>
+                    ⚙️ {isAr ? 'إعدادات المنصة' : 'Platform Settings'}
+                  </h3>
 
                   <div style={{ marginBottom: 24 }}>
                     <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>
-                      Platform Fee Percentage (%)
+                      {isAr ? 'رسوم المنصة (%)' : 'Platform Fee Percentage (%)'}
                     </label>
                     <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 0, marginBottom: 12 }}>
-                      This percentage is deducted from every paid group transaction as your platform commission.
+                      {isAr
+                        ? 'هذه النسبة تُخصم من كل معاملة مجموعة مدفوعة كعمولة للمنصة.'
+                        : 'This percentage is deducted from every paid group transaction as your platform commission.'}
                     </p>
                     <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                       <input
@@ -953,36 +995,46 @@ export default function AdminDashboard() {
                           color: '#fff', fontSize: 18, fontWeight: 800, outline: 'none',
                         }}
                       />
-                      <span style={{ color: 'rgba(255,255,255,0.5)' }}>% commission on all transactions</span>
+                      <span style={{ color: 'rgba(255,255,255,0.5)' }}>
+                        {isAr ? '% عمولة على كل المعاملات' : '% commission on all transactions'}
+                      </span>
                     </div>
                     <button onClick={updateFee} style={{
                       marginTop: 16, padding: '12px 24px', borderRadius: 12, border: 'none',
                       background: 'linear-gradient(135deg, #6366F1, #8B5CF6)',
                       color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 14,
-                    }}>💾 Save Fee Settings</button>
+                    }}>💾 {isAr ? 'حفظ إعدادات الرسوم' : 'Save Fee Settings'}</button>
                   </div>
 
                   <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.08)', marginBottom: 24 }} />
 
-                  <h3 style={{ color: '#fff', marginTop: 0, fontSize: 18, fontWeight: 800 }}>🎨 Appearance & Branding (White-Label)</h3>
+                  <h3 style={{ color: '#fff', marginTop: 0, fontSize: 18, fontWeight: 800 }}>
+                    🎨 {isAr ? 'المظهر والعلامة التجارية' : 'Appearance & Branding (White-Label)'}
+                  </h3>
                   <form onSubmit={updateBranding} style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
                     <div>
-                      <label style={{ display: 'block', color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Platform Name</label>
+                      <label style={{ display: 'block', color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: 600, marginBottom: 8 }}>
+                        {isAr ? 'اسم المنصة' : 'Platform Name'}
+                      </label>
                       <input value={branding.platformName} onChange={e => setBranding({...branding, platformName: e.target.value})} style={{ width: '100%', padding: '12px 16px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.2)', color: '#fff', fontSize: 14, outline: 'none' }} />
                     </div>
                     <div>
-                      <label style={{ display: 'block', color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Primary Theme Color</label>
+                      <label style={{ display: 'block', color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: 600, marginBottom: 8 }}>
+                        {isAr ? 'اللون الأساسي' : 'Primary Theme Color'}
+                      </label>
                       <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                         <input type="color" value={branding.primaryColor} onChange={e => setBranding({...branding, primaryColor: e.target.value})} style={{ width: 50, height: 50, padding: 0, border: 'none', borderRadius: 12, cursor: 'pointer', background: 'transparent' }} />
                         <span style={{ color: 'rgba(255,255,255,0.8)', fontFamily: 'monospace' }}>{branding.primaryColor}</span>
                       </div>
                     </div>
                     <div>
-                      <label style={{ display: 'block', color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Logo Emoji</label>
+                      <label style={{ display: 'block', color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: 600, marginBottom: 8 }}>
+                        {isAr ? 'إيموجي الشعار' : 'Logo Emoji'}
+                      </label>
                       <input value={branding.logoEmoji} onChange={e => setBranding({...branding, logoEmoji: e.target.value})} maxLength={2} style={{ width: 80, padding: '12px 16px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.2)', color: '#fff', fontSize: 20, outline: 'none', textAlign: 'center' }} />
                     </div>
                     <button type="submit" style={{ alignSelf: 'flex-start', padding: '12px 24px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #10B981, #059669)', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 14 }}>
-                      Apply Branding Globally
+                      {isAr ? 'تطبيق التغييرات عالمياً' : 'Apply Branding Globally'}
                     </button>
                   </form>
 
@@ -992,11 +1044,11 @@ export default function AdminDashboard() {
                     background: 'rgba(99,102,241,0.1)', borderRadius: 16, padding: 16,
                     border: '1px solid rgba(99,102,241,0.2)',
                   }}>
-                    <h4 style={{ color: '#A78BFA', marginTop: 0 }}>👤 Owner Account</h4>
+                    <h4 style={{ color: '#A78BFA', marginTop: 0 }}>👤 {isAr ? 'حساب المالك' : 'Owner Account'}</h4>
                     <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, margin: 0 }}>
-                      <strong style={{ color: '#fff' }}>Name:</strong> {owner.name || 'Ahmed AbdEl-Kareem'}<br />
-                      <strong style={{ color: '#fff' }}>Email:</strong> {owner.email || 'ahmed1abdalkrem1@gmail.com'}<br />
-                      <strong style={{ color: '#fff' }}>Role:</strong> Platform Owner
+                      <strong style={{ color: '#fff' }}>{isAr ? 'الاسم:' : 'Name:'}</strong> {owner.name || 'Ahmed AbdEl-Kareem'}<br />
+                      <strong style={{ color: '#fff' }}>{isAr ? 'البريد:' : 'Email:'}</strong> {owner.email || 'ahmed1abdalkrem1@gmail.com'}<br />
+                      <strong style={{ color: '#fff' }}>{isAr ? 'الدور:' : 'Role:'}</strong> {isAr ? 'مالك المنصة' : 'Platform Owner'}
                     </p>
                   </div>
                 </div>

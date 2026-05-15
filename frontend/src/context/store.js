@@ -69,9 +69,11 @@ export const useUIStore = create(
         document.documentElement.setAttribute('lang', lang);
         set({ language: lang });
       },
-      toggleDark:      ()    => set(s => ({ darkMode: !s.darkMode })),
-      setSidebarOpen:  v     => set({ sidebarOpen: v }),
-      setInstitutionMode: m => set({ institutionMode: m }),
+      toggleDark:      ()      => set(s => ({ darkMode: !s.darkMode })),
+      // FIX 6: setTheme(true|false) — used by system dark mode sync
+      setTheme:        (isDark) => set({ darkMode: isDark }),
+      setSidebarOpen:  v       => set({ sidebarOpen: v }),
+      setInstitutionMode: m    => set({ institutionMode: m }),
     }),
     { name: 'najah-ui', partialize: s => ({ language: s.language, darkMode: s.darkMode, institutionMode: s.institutionMode }) }
   )

@@ -6,6 +6,18 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
+/* font-display: swap — prevents invisible text while fonts load */
+@font-face {
+  font-family: 'Cairo';
+  font-display: swap;
+  src: local('Cairo');
+}
+@font-face {
+  font-family: 'Outfit';
+  font-display: swap;
+  src: local('Outfit');
+}
+
 /* ══════════════════════════════════════════════════════════
    CSS CUSTOM PROPERTIES — LIGHT MODE ONLY
    ══════════════════════════════════════════════════════════ */
@@ -1563,3 +1575,16 @@ input:focus, textarea:focus, select:focus {
   transform-origin: left;
   z-index: 10001;
 }
+
+/* ── Mobile Bottom Nav ─────────────────────────────────────── */
+/* Show on mobile, hide on desktop */
+.mobile-bottom-nav  { display: flex; }
+.mobile-nav-spacer  { display: block; }
+@media (min-width: 768px) {
+  .mobile-bottom-nav { display: none !important; }
+  .mobile-nav-spacer { display: none !important; }
+}
+
+/* ── System Dark Mode Class ───────────────────────────────── */
+/* Support both [data-theme] and class-based dark mode */
+.dark-mode { color-scheme: dark; }

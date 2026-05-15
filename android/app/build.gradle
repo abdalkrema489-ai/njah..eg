@@ -20,9 +20,9 @@ android {
     signingConfigs {
         release {
             storeFile file('../najah-release.keystore')
-            storePassword 'najah2024'
-            keyAlias 'najah'
-            keyPassword 'najah2024'
+            storePassword System.getenv('KEYSTORE_PASSWORD') ?: project.findProperty('KEYSTORE_PASSWORD') ?: 'najah2024'
+            keyAlias    System.getenv('KEY_ALIAS')           ?: project.findProperty('KEY_ALIAS')           ?: 'najah'
+            keyPassword System.getenv('KEY_PASSWORD')        ?: project.findProperty('KEY_PASSWORD')         ?: 'najah2024'
         }
     }
 

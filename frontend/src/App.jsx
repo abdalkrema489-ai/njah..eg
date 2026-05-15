@@ -12,6 +12,7 @@ import { I18nProvider, useTranslation } from './i18n/index';
 import OfflineBanner  from './components/pwa/OfflineBanner';
 import InstallPrompt  from './components/pwa/InstallPrompt';
 import MobileBottomNav from './components/pwa/MobileBottomNav';
+import { usePushNotifications } from './hooks/usePushNotifications';
 import './styles/global.css';
 
 // ── Lazy load all pages ──────────────────────────────────────
@@ -142,7 +143,7 @@ function Public({ children }) {
 
 // ── Theme + language sync ────────────────────────────────────
 function GlobalSync() {
-  const { darkMode, language, setInstitutionMode } = useUIStore();
+  const { darkMode, setTheme, language, setInstitutionMode } = useUIStore();
   const { user } = useAuthStore();
 
   useEffect(() => {
@@ -168,6 +169,24 @@ function GlobalSync() {
     if (ref) localStorage.setItem('affiliate_ref', ref);
   }, []);
 
+  // ── FIX 6: System dark mode sync ──────────────────────────
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+    const applyTheme = (isDark) => {
+      // Only follow system if user hasn't made an explicit choice
+      const savedTheme = localStorage.getItem('najah-theme');
+      if (!savedTheme || savedTheme === 'system') {
+        if (setTheme) setTheme(isDark ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+      }
+    };
+
+    applyTheme(mediaQuery.matches);
+    mediaQuery.addEventListener('change', (e) => applyTheme(e.matches));
+    return () => mediaQuery.removeEventListener('change', applyTheme);
+  }, [setTheme]);
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
     document.documentElement.setAttribute('dir',  language === 'ar' ? 'rtl' : 'ltr');
@@ -182,6 +201,13 @@ function GlobalSync() {
     }
   }, [user?.institution_type, user?.institutionType]);
 
+  return null;
+}
+
+// ── Push Notifications bridge ────────────────────────────────
+function PushInit() {
+  const { user } = useAuthStore();
+  usePushNotifications(user?.id);
   return null;
 }
 
@@ -237,6 +263,7 @@ export default function App() {
       <QueryClientProvider client={qc}>
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <GlobalSync />
+          <PushInit />
           <OfflineBanner />
           <InstallPrompt />
           <CommandPalette />

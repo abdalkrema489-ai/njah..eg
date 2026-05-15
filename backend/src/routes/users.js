@@ -248,6 +248,25 @@ router.get('/my-students', async (req, res) => {
   }
 });
 
+// ── POST /push-token — Save FCM/APNs Push Token ──────────────
+router.post('/push-token', async (req, res) => {
+  try {
+    const { token, platform } = req.body;
+    if (!token) return res.status(400).json({ error: 'Token required' });
+    await pool.query(
+      `UPDATE users SET
+         push_token = $1,
+         push_platform = $2,
+         push_token_updated = NOW()
+       WHERE id = $3`,
+      [token, platform || 'android', req.user.id]
+    );
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── GET Public Profile by ID ──────────────────────────────
 // IMPORTANT: This wildcard must come AFTER all literal routes above
 router.get('/:id', async (req, res) => {

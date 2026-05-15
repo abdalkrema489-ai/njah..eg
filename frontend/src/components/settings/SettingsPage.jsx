@@ -125,12 +125,51 @@ export default function SettingsPage() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 0', borderBottom: '1px solid var(--border)' }}>
-                <div>
-                  <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)', fontFamily: 'var(--font-head)' }}>{isAr ? 'الوضع الليلي' : 'Dark Mode'}</div>
-                  <div style={{ fontSize: 13, color: 'var(--text4)', marginTop: 4, fontWeight: 500 }}>{isAr ? 'تفعيل الواجهة الداكنة المريحة للعين' : 'Switch to the eye-friendly dark interface'}</div>
+              {/* 3-way Theme selector */}
+              <div style={{ padding: '20px 0', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)', fontFamily: 'var(--font-head)', marginBottom: 12 }}>
+                  {isAr ? 'وضع العرض' : 'Display Mode'}
                 </div>
-                <Toggle checked={darkMode} onChange={toggleDark} />
+                <div style={{ fontSize: 13, color: 'var(--text4)', marginBottom: 16, fontWeight: 500 }}>
+                  {isAr ? 'اختر بين الوضع الفاتح والداكن أو اتبع إعداد الجهاز' : 'Choose light, dark, or follow your device setting'}
+                </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  {[
+                    { value: 'light',  icon: '☀️', ar: 'فاتح',       en: 'Light'  },
+                    { value: 'dark',   icon: '🌙', ar: 'داكن',       en: 'Dark'   },
+                    { value: 'system', icon: '🖥️', ar: 'تبع الجهاز', en: 'System' },
+                  ].map(t => {
+                    const saved = localStorage.getItem('najah-theme') || 'system';
+                    const isSelected = saved === t.value || (!saved && t.value === 'system');
+                    return (
+                      <button
+                        key={t.value}
+                        type="button"
+                        onClick={() => {
+                          localStorage.setItem('najah-theme', t.value);
+                          if (t.value === 'system') {
+                            const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                            toggleDark(isDark);
+                          } else {
+                            toggleDark(t.value === 'dark');
+                          }
+                        }}
+                        style={{
+                          flex: 1, padding: '12px 8px', borderRadius: 12, cursor: 'pointer',
+                          fontSize: 13, fontWeight: 700, textAlign: 'center',
+                          border: `2px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}`,
+                          background: isSelected ? 'rgba(99,102,241,0.1)' : 'var(--surface2)',
+                          color: isSelected ? 'var(--primary)' : 'var(--text3)',
+                          transition: 'all 0.2s',
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                        }}
+                      >
+                        <span style={{ fontSize: 18 }}>{t.icon}</span>
+                        <span>{isAr ? t.ar : t.en}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 0' }}>
@@ -141,6 +180,7 @@ export default function SettingsPage() {
                 <Toggle checked={language === 'ar'} onChange={() => setLanguage(language === 'ar' ? 'en' : 'ar')} />
               </div>
             </div>
+
           </div>
         </motion.div>
 

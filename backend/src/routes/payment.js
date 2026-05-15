@@ -338,7 +338,7 @@ router.post('/initiate', authenticate, async (req, res) => {
     res.status(200).json(responsePayload);
 
   } catch (err) {
-    console.error('Payment Initiation Error:', err.response?.data || err.message);
+    logger.error('Payment initiation error', { error: err.response?.data || err.message });
     res.status(500).json({ error: 'Failed to initiate genuine payment. Please check gateway configurations.' });
   }
 });

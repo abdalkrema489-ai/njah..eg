@@ -58,6 +58,9 @@ async function runMigrations(client) {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS faculty VARCHAR(150);
       ALTER TABLE users ADD COLUMN IF NOT EXISTS university_name VARCHAR(200);
       ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_ai_provider VARCHAR(20) DEFAULT 'auto';
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS push_token          TEXT;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS push_platform       VARCHAR(10);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS push_token_updated  TIMESTAMPTZ;
       ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
       ALTER TABLE users ADD CONSTRAINT users_role_check CHECK(role IN('student','teacher','school_admin','university','university_admin','admin','center_owner'));
       -- study_sessions
@@ -314,6 +317,7 @@ async function runMigrations(client) {
     CREATE INDEX IF NOT EXISTS idx_board_subject_date  ON board_posts(subject, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_notifs_user_unread  ON notifications(user_id, is_read, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_quiz_user_subject   ON quiz_attempts(user_id, subject, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_users_push_token    ON users(push_token) WHERE push_token IS NOT NULL;
     CREATE TABLE IF NOT EXISTS platform_settings (
       key        VARCHAR(100) PRIMARY KEY,
       value      JSONB NOT NULL,
