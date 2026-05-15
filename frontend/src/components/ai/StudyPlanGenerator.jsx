@@ -26,7 +26,8 @@ const LEVELS = [
 
 function MarkdownPlan({ content, isAr }) {
   // Simple markdown renderer for the plan
-  const lines = content.split('\n');
+  const safeContent = typeof content === 'string' ? content : JSON.stringify(content, null, 2) || '';
+  const lines = safeContent.split('\n');
   return (
     <div style={{ lineHeight: 1.8, fontSize: 14, color: 'var(--text)' }}>
       {lines.map((line, i) => {
