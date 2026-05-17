@@ -226,11 +226,13 @@ function AIChat() {
   const [showHistory, setShowHistory] = useState(false);
   const [searchMode, setSearchMode]   = useState(false);
   const [speaking, setSpeaking]       = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const [geminiOk, setGeminiOk]       = useState(null);
 
   const bottomRef  = useRef(null);
   const inputRef   = useRef(null);
   const speechRef  = useRef(null);
+  const recognitionRef = useRef(null);
 
   // Check Gemini status
   useQuery({
@@ -251,6 +253,43 @@ function AIChat() {
   const conversations = histData || [];
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+
+  // ── Speech Recognition ──
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = true;
+      recognitionRef.current.lang = language === 'ar' ? 'ar-EG' : 'en-US';
+
+      recognitionRef.current.onresult = (event) => {
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
+        }
+        if (finalTranscript) setInput(prev => prev + (prev ? ' ' : '') + finalTranscript);
+      };
+
+      recognitionRef.current.onend = () => setIsRecording(false);
+      recognitionRef.current.onerror = () => setIsRecording(false);
+    }
+  }, [language]);
+
+  const toggleVoice = () => {
+    if (!recognitionRef.current) return toast.error('Voice input is not supported in your browser');
+    if (isRecording) {
+      recognitionRef.current.stop();
+      setIsRecording(false);
+    } else {
+      try {
+        recognitionRef.current.start();
+        setIsRecording(true);
+      } catch {
+        toast.error('Could not start voice recognition');
+      }
+    }
+  };
 
   // ── TTS ──
   const speak = useCallback((text) => {
@@ -626,6 +665,22 @@ function AIChat() {
                 }}
               />
             </div>
+            <motion.button
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.92 }}
+              onClick={toggleVoice}
+              title={isAr ? 'إدخال صوتي' : 'Voice Input'}
+              style={{
+                width: 48, height: 48, borderRadius: '50%',
+                background: isRecording ? '#EF4444' : 'var(--surface)',
+                border: '1px solid var(--border)',
+                color: isRecording ? '#fff' : 'var(--text)',
+                cursor: 'pointer', fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              🎤
+            </motion.button>
             <motion.button
               whileHover={{ scale: 1.08 }}
               whileTap={{ scale: 0.92 }}

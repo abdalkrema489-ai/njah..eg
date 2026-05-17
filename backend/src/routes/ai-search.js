@@ -9,6 +9,7 @@ const axios   = require('axios');
 const router  = express.Router();
 const { authenticate } = require('../middleware/auth');
 const { aiLimiter }    = require('../middleware/rateLimiter');
+const logger           = require('../utils/logger');
 
 const GEMINI_API_KEY    = process.env.GEMINI_API_KEY;
 const SERPAPI_KEY       = process.env.SERPAPI_KEY || '';
@@ -127,7 +128,7 @@ router.post('/chat', aiLimiter, async (req, res) => {
       usedWebSearch: useWebSearch
     });
   } catch (err) {
-    console.error('[AI Search Chat Error]', err.response?.data || err.message);
+    logger.error('[AI Search Chat Error]', { error: err.response?.data || err.message });
     res.status(500).json({ error: 'AI service temporarily unavailable. Please try again.' });
   }
 });
@@ -176,7 +177,7 @@ router.post('/search', aiLimiter, async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (err) {
-    console.error('[AI Search Error]', err.message);
+    logger.error('[AI Search Error]', { error: err.message });
     res.status(500).json({ error: 'Search service error' });
   }
 });

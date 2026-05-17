@@ -10,6 +10,7 @@ import { useAuthStore } from '../../context/store';
 import { useTranslation } from '../../i18n/index';
 import CreateGroupWizard from './CreateGroupWizard';
 import PaidGroupActivationModal from './PaidGroupActivationModal';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 
 /* ── helpers ────────────────────────────────────────────── */
 const SUBJECT_COLORS = {
@@ -403,6 +404,10 @@ export default function GroupsPage() {
   const { t, lang } = useTranslation();
   const isTeacher  = user?.role === 'teacher';
 
+  const indicatorRef = usePullToRefresh(() => {
+    qc.invalidateQueries({ queryKey: ['groups'] });
+  });
+
   const [showCreate, setShowCreate] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   const [showJoin,   setShowJoin]   = useState(false);
@@ -428,7 +433,8 @@ export default function GroupsPage() {
   const handleJoined  = () => qc.invalidateQueries({ queryKey: ['groups'] });
 
   return (
-    <div style={{ direction: lang === 'ar' ? 'rtl' : 'ltr' }}>
+    <div style={{ direction: lang === 'ar' ? 'rtl' : 'ltr', position: 'relative' }}>
+      <div ref={indicatorRef} style={{ position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%) rotate(0deg)', fontSize: 24, opacity: 0, transition: 'opacity 0.2s', zIndex: 999, pointerEvents: 'none' }}>🔄</div>
       {/* Header */}
       <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:28, flexWrap:'wrap', gap:16 }}>
         <div>

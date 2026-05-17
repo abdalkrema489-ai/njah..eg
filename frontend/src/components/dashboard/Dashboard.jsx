@@ -1,5 +1,5 @@
 // src/components/dashboard/Dashboard.jsx — Professional v4 (role-aware)
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { lazy, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -12,6 +12,7 @@ import { useTextToSpeech } from '../../hooks/useTextToSpeech';
 import { useTranslation } from '../../i18n/index';
 import StreakHeatmap from '../shared/StreakHeatmap';
 import { WeatherWidget, WordOfDayWidget } from '../shared/PublicAPIWidgets';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 
 const TeacherDashboard      = lazy(() => import('../teacher/TeacherDashboard'));
 const SchoolStudentDashboard= lazy(() => import('./SchoolStudentDashboard'));
@@ -426,6 +427,13 @@ function GroupsWidget({ navigate }) {
 function StudentDashboard() {
   const { user }    = useAuthStore();
   const navigate    = useNavigate();
+  const qc          = useQueryClient();
+
+  const indicatorRef = usePullToRefresh(() => {
+    qc.invalidateQueries({ queryKey: ['stats'] });
+    qc.invalidateQueries({ queryKey: ['sessions', 'today'] });
+    qc.invalidateQueries({ queryKey: ['public-stats'] });
+  });
 
   const { data: sessData, isLoading: loadSess } = useQuery({
     queryKey: ['sessions', 'today'],
@@ -456,7 +464,8 @@ function StudentDashboard() {
   const isAr = lang === 'ar';
 
   return (
-    <motion.div variants={stagger.container} initial="hidden" animate="visible">
+    <motion.div variants={stagger.container} initial="hidden" animate="visible" style={{ position: 'relative' }}>
+      <div ref={indicatorRef} style={{ position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%) rotate(0deg)', fontSize: 24, opacity: 0, transition: 'opacity 0.2s', zIndex: 999, pointerEvents: 'none' }}>🔄</div>
       <motion.div variants={stagger.item}><WelcomeBanner user={user} /></motion.div>
 
       {/* Groups widget */}

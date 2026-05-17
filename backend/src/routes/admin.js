@@ -60,14 +60,12 @@ router.post('/login', adminLoginLimiter, async (req, res) => {
   if (email.toLowerCase().trim() !== OWNER_EMAIL.toLowerCase())
     return res.status(401).json({ error: 'Invalid credentials' });
 
-  // bcrypt compare or plain-text fallback
-  const OWNER_PASS = process.env.OWNER_PASSWORD || 'Admin@Najah2026!';
+  // Only use hashed password for security
   let isValid = false;
   if (OWNER_HASH && OWNER_HASH.startsWith('$2')) {
     isValid = await bcrypt.compare(password, OWNER_HASH);
   } else {
-    isValid = password === OWNER_PASS;
-    if (isValid) logger.warn('Admin using plain-text password — set OWNER_PASSWORD_HASH in production');
+    logger.error('OWNER_PASSWORD_HASH is not set or invalid in environment. Admin login disabled.');
   }
 
   if (!isValid)

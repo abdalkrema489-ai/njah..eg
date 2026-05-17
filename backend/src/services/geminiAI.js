@@ -341,8 +341,17 @@ async function searchAndAnswer(query, language = 'en') {
 
 Explain clearly and in an organized way in English, with practical examples.`;
 
-  const result = await model.generateContent(prompt);
-  return result.response.text();
+  try {
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      tools: [{ googleSearch: {} }]
+    });
+    return result.response.text();
+  } catch (err) {
+    logger.warn('Gemini Google Search tool failed, falling back to basic prompt:', err.message);
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+  }
 }
 
 // ── Answer from file context ──────────────────────────────────

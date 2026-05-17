@@ -11,6 +11,7 @@ const Assignment   = require('../models/Assignment');
 // Simple in-process auth middleware (re-uses the JWT from the auth routes)
 const jwt    = require('jsonwebtoken');
 const SECRET = process.env.JWT_SECRET || 'najah_secret';
+const logger = require('../utils/logger');
 
 function auth(req, res, next) {
   const h = req.headers.authorization || '';
@@ -382,7 +383,7 @@ router.patch('/:id/assignments/:aId/submissions/:sId', auth, ownerOnly, async (r
     pushNotification(sub.studentId, { type: 'grade', title: notifTitle, body: notifBody });
   } catch (notifErr) {
     // Non-fatal: grading succeeded even if notification fails
-    console.error('[Grading] Notification error:', notifErr.message);
+    logger.warn('[Grading] Notification error:', { error: notifErr.message });
   }
 
   res.json({ ok: true });

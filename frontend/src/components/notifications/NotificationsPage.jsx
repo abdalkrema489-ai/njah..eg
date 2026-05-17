@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { notificationsAPI } from '../../api/index';
 import { useNotifStore } from '../../context/store';
 import { Card, Btn, SectionHeader, EmptyState, Spinner } from '../shared/UI';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 
 const TYPE_ICONS = {
   reminder:       '⏰',
@@ -24,6 +25,10 @@ export default function NotificationsPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const { setAll } = useNotifStore();
+
+  const indicatorRef = usePullToRefresh(() => {
+    qc.invalidateQueries(['notifications']);
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ['notifications'],
@@ -60,7 +65,8 @@ export default function NotificationsPage() {
   }, {});
 
   return (
-    <div>
+    <div style={{ position: 'relative' }}>
+      <div ref={indicatorRef} style={{ position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%) rotate(0deg)', fontSize: 24, opacity: 0, transition: 'opacity 0.2s', zIndex: 999, pointerEvents: 'none' }}>🔄</div>
       <SectionHeader
         icon="🔔"
         title="Notifications"

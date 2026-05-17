@@ -13,6 +13,8 @@ import OfflineBanner  from './components/pwa/OfflineBanner';
 import InstallPrompt  from './components/pwa/InstallPrompt';
 import MobileBottomNav from './components/pwa/MobileBottomNav';
 import { usePushNotifications } from './hooks/usePushNotifications';
+import { useOfflineSync } from './hooks/useOfflineSync';
+import { useAppRating } from './hooks/useAppRating.jsx';
 import './styles/global.css';
 
 // ── Lazy load all pages ──────────────────────────────────────
@@ -204,10 +206,16 @@ function GlobalSync() {
   return null;
 }
 
-// ── Push Notifications bridge ────────────────────────────────
 function PushInit() {
   const { user } = useAuthStore();
   usePushNotifications(user?.id);
+  return null;
+}
+
+// ── Offline Sync & App Rating bridge ────────────────────────
+function AppFeatures() {
+  useOfflineSync();
+  useAppRating();
   return null;
 }
 
@@ -264,6 +272,7 @@ export default function App() {
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <GlobalSync />
           <PushInit />
+          <AppFeatures />
           <OfflineBanner />
           <InstallPrompt />
           <CommandPalette />

@@ -6,6 +6,7 @@ const geminiAI = require('../services/geminiAI');
 const internalAI = require('../services/internalAI');
 const { cacheGet, cacheSet } = require('./redis');
 const logger = require('../utils/logger');
+const axios = require('axios');
 
 let ioInstance;
 
@@ -321,6 +322,28 @@ function setupSocketIO(io) {
 
 async function pushNotification(userId, notification) {
   if (ioInstance) ioInstance.to(`user:${userId}`).emit('notification', notification);
+  await sendPushToUser(userId, notification);
+}
+
+async function sendPushToUser(userId, notification) {
+  try {
+    const { rows } = await pool.query('SELECT fcm_token FROM users WHERE id=$1', [userId]);
+    const token = rows[0]?.fcm_token;
+    if (!token || !process.env.FIREBASE_SERVER_KEY) return;
+    
+    await axios.post('https://fcm.googleapis.com/fcm/send', {
+      to: token,
+      notification: { title: notification.title, body: notification.body },
+      data: notification.data
+    }, {
+      headers: {
+        'Authorization': `key=${process.env.FIREBASE_SERVER_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+  } catch (err) {
+    logger.warn('FCM Push failed:', err.message);
+  }
 }
 
 async function broadcastToRoom(subject, event, data) {
@@ -331,4 +354,4 @@ async function broadcastToAdmin(event, data) {
   if (ioInstance) ioInstance.to('admin_dashboard').emit(event, data);
 }
 
-module.exports = { setupSocketIO, pushNotification, broadcastToRoom, broadcastToAdmin };
+module.exports = { setupSocketIO, pushNotification, sendPushToUser, broadcastToRoom, broadcastToAdmin };

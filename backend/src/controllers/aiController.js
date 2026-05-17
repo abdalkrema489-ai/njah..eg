@@ -117,7 +117,7 @@ async function chat(req, res) {
   const pref = req.user?.preferred_ai_provider || 'auto';
 
   // 1️⃣ Try Gemini if preferred or auto
-  if ((pref === 'auto' || pref === 'gemini') && geminiAI.isAvailable()) {
+  if ((pref === 'auto' || pref === 'gemini' || pref === 'claude') && geminiAI.isAvailable()) {
     try {
       reply = await geminiAI.chat(message, history, language, req.user.id);
       usedProvider = 'gemini-2.0-flash';
@@ -208,7 +208,7 @@ async function chatStream(req, res) {
     let streamed = false;
 
     // 1️⃣ Primary: Gemini streaming
-    if ((pref === 'auto' || pref === 'gemini') && geminiAI.isAvailable() && typeof geminiAI.chatStream === 'function') {
+    if ((pref === 'auto' || pref === 'gemini' || pref === 'claude') && geminiAI.isAvailable() && typeof geminiAI.chatStream === 'function') {
       try {
         await geminiAI.chatStream(message, history, res, req.user.id);
         saveToConversation(conversationId, req.user.id, message, '', language, null).catch(() => {});
