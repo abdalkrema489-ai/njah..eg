@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { achievementsAPI } from '../../api/index';
 import { useAuthStore } from '../../context/store';
 import { Card, Tabs, SectionHeader, Avatar, ProgressBar, EmptyState, Spinner } from '../shared/UI';
+import { haptic } from '../../utils/haptics';
 
 export default function AchievementsPage() {
   const { user }  = useAuthStore();

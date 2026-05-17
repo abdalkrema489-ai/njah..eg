@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { groupsAPI } from '../../api/index';
+import { haptic } from '../../utils/haptics';
 
 const COLORS = ['#6366F1','#8B5CF6','#EC4899','#EF4444','#F59E0B','#10B981','#3B82F6','#06B6D4'];
 const EMOJIS = ['📚','🔬','🧮','⚡','🌍','🎨','💻','🏛️','🔭','🧬','📐','🎯','🚀','💡'];
@@ -19,6 +20,7 @@ export default function EditGroupModal({ group, isAr, onClose, onSave }) {
     mutationFn: (data) => groupsAPI.updateGroup(group._id, data),
     onSuccess: (res) => {
       toast.success(isAr ? '✅ تم تحديث المجموعة' : '✅ Group updated');
+      haptic.success();
       qc.invalidateQueries(['group', group._id]);
       qc.invalidateQueries(['groups']);
       onSave?.(res.data.group);
@@ -28,6 +30,7 @@ export default function EditGroupModal({ group, isAr, onClose, onSave }) {
   });
 
   const handleSubmit = () => {
+    haptic.medium();
     if (!name.trim()) return toast.error(isAr ? 'الاسم مطلوب' : 'Name is required');
     mutation.mutate({ name: name.trim(), description: desc.trim(), color, emoji, maxStudents: parseInt(maxSt) });
   };

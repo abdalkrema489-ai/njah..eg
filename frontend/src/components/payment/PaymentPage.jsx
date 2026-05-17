@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { paymentAPI, usersAPI, groupsAPI } from '../../api/index';
 import { useTranslation } from '../../i18n/index';
 import { useAuthStore } from '../../context/store';
+import { haptic } from '../../utils/haptics';
 
 export default function PaymentPage() {
   const { t, lang } = useTranslation();
@@ -148,10 +149,12 @@ export default function PaymentPage() {
         toast.success(isAr ? 'تم بدء عملية الدفع!' : 'Payment initiated!');
         setShowCheckout(false);
       }
+      haptic.success();
       setCheckoutTarget(null);
       setAppliedCoupon(null);
       setCouponCode('');
     } catch (err) {
+      haptic.error();
       toast.error(isAr ? 'فشل الدفع.' : 'Payment failed.');
       console.error(err);
     } finally {
@@ -459,7 +462,7 @@ export default function PaymentPage() {
               )}
 
               {selectedGateway !== 'topup' && (
-                <button onClick={handlePay} disabled={processing} style={{
+                <button onClick={() => { haptic.medium(); handlePay(); }} disabled={processing} style={{
                   width: '100%', padding: 16, borderRadius: 12, background: 'var(--primary)', color: '#fff',
                   fontWeight: 800, fontSize: 16, border: 'none', cursor: processing ? 'not-allowed' : 'pointer',
                   opacity: processing ? 0.7 : 1

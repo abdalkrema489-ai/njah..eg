@@ -6,6 +6,7 @@ import { useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import client from '../../api/index';
 import { Spinner } from '../shared/UI';
+import { haptic } from '../../utils/haptics';
 
 const SUBJECTS_LIST = [
   { key: 'mathematics',    en: 'Mathematics',    ar: 'رياضيات', icon: '📐' },
@@ -89,6 +90,7 @@ export default function StudyPlanGenerator({ isAr }) {
     }).then(r => r.data),
     onSuccess: (data) => {
       setPlan(data.plan || data.content || data.response || JSON.stringify(data));
+      haptic.success();
     },
     onError: (err) => {
       toast.error(err.response?.data?.error || (isAr ? 'فشل توليد الخطة' : 'Failed to generate plan'));
@@ -206,7 +208,7 @@ export default function StudyPlanGenerator({ isAr }) {
         <motion.button
           whileHover={isValid ? { scale: 1.02 } : {}}
           whileTap={isValid ? { scale: 0.97 } : {}}
-          onClick={() => generateMutation.mutate()}
+          onClick={() => { haptic.medium(); generateMutation.mutate(); }}
           disabled={!isValid || generateMutation.isPending}
           style={{
             width: '100%', padding: '15px 24px', borderRadius: 14, border: 'none',

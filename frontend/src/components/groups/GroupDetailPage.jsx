@@ -10,6 +10,7 @@ import { useAuthStore, useUIStore } from '../../context/store';
 import BroadcastModal from './BroadcastModal';
 import LeaderboardWidget from './LeaderboardWidget';
 import EditGroupModal from './EditGroupModal';
+import { haptic } from '../../utils/haptics';
 
 /* ── helpers ──────────────────────────────────────────────── */
 const getTabs = (isAr) => [
@@ -144,7 +145,7 @@ function AssignmentCard({ assignment, isOwner, userId, groupId, onGrade, onSubmi
           {isOwner && <span>📤 {totalSubs} {isAr ? 'تسليمات' : 'submissions'}</span>}
         </div>
         {!isOwner && !mySubmission && (
-          <button onClick={() => onSubmit(assignment)} style={{ padding:'6px 14px', borderRadius:9, background:'linear-gradient(135deg,#3B82F6,#1D4ED8)', color:'#fff', fontWeight:700, fontSize:12, cursor:'pointer', border:'none', fontFamily:'inherit' }}>
+          <button onClick={() => { haptic.medium(); onSubmit(assignment); }} style={{ padding:'6px 14px', borderRadius:9, background:'linear-gradient(135deg,#3B82F6,#1D4ED8)', color:'#fff', fontWeight:700, fontSize:12, cursor:'pointer', border:'none', fontFamily:'inherit' }}>
             {isAr ? 'تسليم ←' : 'Submit →'}
           </button>
         )}
@@ -279,6 +280,7 @@ export default function GroupDetailPage() {
       }
       await groupsAPI.submitAssignment(id, submitModal._id, payload);
       toast.success(isAr ? 'تم التسليم بنجاح! ✅' : 'Submitted successfully! ✅');
+      haptic.success();
       setSubmitModal(null);
       setSubmitContent('');
       setSubmitFile(null);
@@ -296,6 +298,7 @@ export default function GroupDetailPage() {
     try {
       await groupsAPI.gradeSubmission(id, gradeModal._id, gradeTarget._id, gradeForm);
       toast.success(isAr ? 'تم التقييم!' : 'Graded!');
+      haptic.success();
       setGradeModal(null);
       setGradeTarget(null);
       setGradeForm({ score:'', feedback:'' });

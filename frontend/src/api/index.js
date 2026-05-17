@@ -2,7 +2,8 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API = import.meta.env.VITE_API_URL
+  || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
 
 // Standard client — 30s timeout for regular endpoints
 const client = axios.create({ baseURL: API, timeout: 30000 });

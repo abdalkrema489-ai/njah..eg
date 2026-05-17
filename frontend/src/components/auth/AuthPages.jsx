@@ -8,6 +8,8 @@ import { authAPI } from '../../api/index';
 import { useAuthStore, useUIStore } from '../../context/store';
 import { Btn, Input, Spinner, Divider } from '../shared/UI';
 import { useTranslation } from '../../i18n/index';
+import { useBiometric } from '../../hooks/useBiometric';
+import { haptic } from '../../utils/haptics';
 
 const STUDENT_GRADES = [
   'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6',
@@ -316,18 +318,39 @@ export function LoginPage() {
   const [showPwd, setShowPwd] = useState(false);
   const [role, setRole] = useState('student');
   const [pwdValue, setPwdValue] = useState('');
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm();
+  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm();
   const { setAuth } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
   const { language } = useUIStore();
   const isAr = language === 'ar';
 
+  const { isBiometricAvailable, loginWithBiometric, enableBiometric } = useBiometric();
+  const [biometricAvail, setBiometricAvail] = useState(false);
+
+  useEffect(() => {
+    isBiometricAvailable().then(setBiometricAvail);
+  }, [isBiometricAvailable]);
+
   const onSubmit = async d => {
     try {
       const { data } = await authAPI.login({ ...d, role });
       setAuth(data);
       toast.success('Welcome back! 👋');
+
+      const biometricEnabled = localStorage.getItem('biometric_enabled');
+      if (!biometricEnabled && await isBiometricAvailable()) {
+        const enable = window.confirm(
+          isAr
+            ? 'هل تريد تفعيل تسجيل الدخول بالبصمة في المرات القادمة؟'
+            : 'Enable biometric login for next time?'
+        );
+        if (enable) {
+          await enableBiometric({ email: d.email });
+          haptic.success();
+        }
+      }
+
       // BUG #3 FIX: redirect back to original destination
       const from = location.state?.from?.pathname || '/';
       navigate(from, { replace: true });
@@ -380,6 +403,32 @@ export function LoginPage() {
               {isAr ? 'نسيت كلمة المرور؟' : 'Forgot password?'}
             </Link>
           </div>
+
+          {biometricAvail && localStorage.getItem('biometric_enabled') === 'true' && (
+            <motion.button
+              type="button"
+              whileTap={{ scale:0.95 }}
+              onClick={async () => {
+                haptic.medium();
+                const email = await loginWithBiometric();
+                if (email) {
+                  setValue('email', email);
+                  toast.success(isAr ? '✅ تم التحقق بالبصمة' : '✅ Biometric verified');
+                  haptic.success();
+                } else {
+                  haptic.error();
+                }
+              }}
+              style={{
+                width:'100%', padding:'14px', borderRadius:14, marginBottom:12, marginTop:8,
+                border:'1px solid var(--border)', background:'var(--surface2)',
+                cursor:'pointer', fontSize:15, fontWeight:700, color:'var(--text)',
+                display:'flex', alignItems:'center', justifyContent:'center', gap:12,
+              }}
+            >
+              🔐 {isAr ? 'تسجيل الدخول بالبصمة' : 'Login with Biometrics'}
+            </motion.button>
+          )}
 
           <Btn type="submit" loading={isSubmitting} size="lg"
             style={{ width: '100%', marginTop: 4, borderRadius: 12, background: `linear-gradient(135deg, ${accentColor}, #8B5CF6)`, color: '#fff', border: 'none', boxShadow: `0 4px 20px ${accentColor}55` }}>

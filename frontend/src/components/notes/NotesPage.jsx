@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { notesAPI } from '../../api/index';
 import { Card, Button, Input, Select, Tag, EmptyState, SectionHeader, Btn, Spinner } from '../shared/UI';
 import { useTranslation } from '../../i18n/index';
+import { haptic } from '../../utils/haptics';
 
 const SUBJECTS = ['mathematics','science','arabic','english','social_studies','physics','chemistry','biology'];
 const SUBJECT_COLORS = {
@@ -93,12 +94,12 @@ export default function NotesPage() {
 
   const { mutate: saveNote, isPending: isSaving } = useMutation({
     mutationFn: ({ id, data }) => notesAPI.update(id, data),
-    onSuccess: () => { qc.invalidateQueries(['notes']); setIsDirty(false); toast.success('Changes synced'); },
+    onSuccess: () => { qc.invalidateQueries(['notes']); setIsDirty(false); toast.success('Changes synced'); haptic.light(); },
   });
 
   const { mutate: deleteNote } = useMutation({
     mutationFn: notesAPI.delete,
-    onSuccess: () => { qc.invalidateQueries(['notes']); setSelectedNote(null); toast.success('Document obliterated'); },
+    onSuccess: () => { qc.invalidateQueries(['notes']); setSelectedNote(null); toast.success('Document obliterated'); haptic.medium(); },
   });
 
   const openNote = (note) => {

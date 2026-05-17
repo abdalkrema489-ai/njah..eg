@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { groupsAPI } from '../../api/index';
+import { haptic } from '../../utils/haptics';
 
 export default function BroadcastModal({ groupId, studentsCount, isAr, onClose }) {
   const [msg, setMsg]   = useState('');
@@ -12,6 +13,7 @@ export default function BroadcastModal({ groupId, studentsCount, isAr, onClose }
     mutationFn: () => groupsAPI.broadcast(groupId, { message: msg, type }),
     onSuccess: (d) => {
       toast.success(isAr ? `✅ أُرسلت لـ ${d.data.sent} طالب` : `✅ Sent to ${d.data.sent} students`);
+      haptic.success();
       onClose();
     },
     onError: () => toast.error(isAr ? 'فشل الإرسال' : 'Send failed'),
@@ -58,7 +60,7 @@ export default function BroadcastModal({ groupId, studentsCount, isAr, onClose }
             {isAr ? 'إلغاء' : 'Cancel'}
           </button>
           <motion.button whileHover={{ scale:1.02 }} whileTap={{ scale:0.98 }}
-            onClick={() => mutation.mutate()} disabled={!msg.trim() || mutation.isPending}
+            onClick={() => { haptic.medium(); mutation.mutate(); }} disabled={!msg.trim() || mutation.isPending}
             style={{ flex:2, padding:'12px', borderRadius:12, border:'none', cursor:'pointer', fontWeight:800, fontSize:14,
               background:'linear-gradient(135deg,#6366F1,#8B5CF6)', color:'#fff',
               opacity: !msg.trim()?0.5:1 }}>

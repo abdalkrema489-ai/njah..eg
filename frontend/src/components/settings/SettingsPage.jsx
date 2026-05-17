@@ -8,6 +8,7 @@ import { usersAPI } from '../../api/index';
 import { useUIStore, useAuthStore } from '../../context/store';
 import { Card, Btn, Input, SectionHeader, Divider } from '../shared/UI';
 import { useTranslation } from '../../i18n/index';
+import { haptic } from '../../utils/haptics';
 
 /* ── SVG Icons ───────────────────────────────────────────── */
 const PaintBrushIcon = () => (
@@ -77,7 +78,7 @@ export default function SettingsPage() {
 
   const { mutate: changePwd, isSuccess: saved } = useMutation({
     mutationFn: usersAPI.changePassword,
-    onSuccess: () => { toast.success('Password updated successfully!'); reset(); },
+    onSuccess: () => { toast.success('Password updated successfully!'); haptic.light(); reset(); },
     onError:   (err) => toast.error(err.response?.data?.error || 'Current password incorrect'),
   });
 
@@ -93,6 +94,7 @@ export default function SettingsPage() {
       await usersAPI.updateProfile({ preferred_ai_provider: val });
       if (setUser) setUser({ ...user, preferred_ai_provider: val });
       toast.success(isAr ? 'تم تحديث مزود الذكاء الاصطناعي' : 'AI Provider updated');
+      haptic.light();
     } catch {
       toast.error(isAr ? 'فشل التحديث' : 'Update failed');
     }
