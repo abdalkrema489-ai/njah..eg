@@ -68,13 +68,14 @@ const io         = new Server(httpServer, {
         'http://127.0.0.1:3001',
         'https://njaheg-theta.vercel.app',
         'https://njaheg-production.up.railway.app',
-        'http://localhost',
-        'https://localhost',
       ].filter(Boolean);
-      if (!origin || allowed.includes(origin)) return callback(null, true);
-      return callback(null, true); // dev: allow all
+      // In dev allow all origins; in production enforce the allowlist
+      if (!origin || allowed.includes(origin) || process.env.NODE_ENV !== 'production') {
+        return callback(null, true);
+      }
+      return callback(new Error(`Socket CORS blocked: ${origin}`));
     },
-    methods: ['GET','POST'],
+    methods: ['GET', 'POST'],
     credentials: true,
   },
   transports: ['websocket','polling'],

@@ -68,6 +68,44 @@ client.interceptors.response.use(r => r, async err => {
 
 export default client;
 
+// ── aiClient 401 auto-refresh interceptor ────────────────────────────────
+// Mirrors the main client's interceptor so long-running AI calls (quiz gen,
+// PDF summary) that return 401 mid-flight also get a token refresh + retry.
+aiClient.interceptors.response.use(r => r, async err => {
+  const orig = err.config;
+  if (err.response?.status === 401 && !orig._retry) {
+    if (refreshing) {
+      // Piggyback on in-progress refresh
+      return new Promise((res, rej) => queue.push({ resolve: res, reject: rej }))
+        .then(t => { orig.headers.Authorization = `Bearer ${t}`; return aiClient(orig); });
+    }
+    orig._retry = true;
+    refreshing = true;
+    const ref = localStorage.getItem('refresh');
+    if (!ref) {
+      import('../context/store').then(m => m.useAuthStore.getState().logout());
+      refreshing = false;
+      return Promise.reject(err);
+    }
+    try {
+      const { data } = await axios.post(`${API}/auth/refresh`, { refresh: ref });
+      localStorage.setItem('token', data.token);
+      client.defaults.headers.Authorization = `Bearer ${data.token}`;
+      aiClient.defaults.headers.Authorization = `Bearer ${data.token}`;
+      flush(null, data.token);
+      orig.headers.Authorization = `Bearer ${data.token}`;
+      return aiClient(orig);
+    } catch (e) {
+      flush(e);
+      import('../context/store').then(m => m.useAuthStore.getState().logout());
+      return Promise.reject(e);
+    } finally {
+      refreshing = false;
+    }
+  }
+  return Promise.reject(err);
+});
+
 // ── API Modules ──────────────────────────────────────────
 
 export const authAPI = {
