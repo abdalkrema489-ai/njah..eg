@@ -46,6 +46,12 @@ replacements.txt
 npm_install_log.txt
 output.txt
 
+# Android keystore & secrets — NEVER commit
+android/najah-release.keystore
+android/*.keystore
+android/local.properties
+*.jks
+
 # Subfolders to ignore
 njah-clean/
 .vercel

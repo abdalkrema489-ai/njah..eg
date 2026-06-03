@@ -19,10 +19,14 @@ const Coupon      = require('../models/Coupon');
 const geminiAI    = require('../services/geminiAI');
 const logger      = require('../utils/logger');
 
-const OWNER_EMAIL  = process.env.OWNER_EMAIL          || 'ahmed1abdalkrem1@gmail.com';
-const OWNER_HASH   = process.env.OWNER_PASSWORD_HASH   || '';
-const OWNER_NAME   = process.env.OWNER_NAME            || 'Ahmed AbdEl-Kareem';
-const ADMIN_SECRET = (process.env.JWT_SECRET           || 'secret') + '_ADMIN_OWNER';
+const OWNER_EMAIL  = process.env.OWNER_EMAIL;
+const OWNER_HASH   = process.env.OWNER_PASSWORD_HASH || '';
+const OWNER_NAME   = process.env.OWNER_NAME || 'Platform Admin';
+const ADMIN_SECRET = (process.env.JWT_SECRET || 'secret') + '_ADMIN_OWNER';
+
+if (!OWNER_EMAIL) {
+  throw new Error('[admin] OWNER_EMAIL must be set in .env — refusing to start without it.');
+}
 
 // ── Rate limiter for admin login ──────────────────────────────
 const adminLoginLimiter = rateLimit({

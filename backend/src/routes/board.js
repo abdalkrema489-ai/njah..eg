@@ -3,7 +3,10 @@ const br = require('express').Router();
 const { pool } = require('../config/postgres');
 const { authenticate } = require('../middleware/auth');
 const { checkAchievements } = require('../services/achievementService');
+const { body, validationResult } = require('express-validator');
 br.use(authenticate);
+
+const VALID_SUBJECTS = ['mathematics','science','arabic','english','physics','chemistry','biology','history','geography','computer','religion','other'];
 
 br.get('/', async (req,res) => {
   const { subject,search,sort='newest',page=1,limit=12 } = req.query;
@@ -32,14 +35,21 @@ br.get('/', async (req,res) => {
   res.json({ posts: rows, total: parseInt(countResult.rows[0].count), page: Number(page), limit: Number(limit) });
 });
 
-br.post('/', async (req,res) => {
-  const { title,description,file_id,subject,grade } = req.body;
-  if (!title||!file_id) return res.status(400).json({ error:'title and file_id required' });
+br.post('/', [
+  body('title').trim().isLength({ min: 3, max: 200 }).withMessage('Title must be 3-200 characters'),
+  body('description').optional().trim().isLength({ max: 2000 }).withMessage('Description max 2000 characters'),
+  body('subject').optional().isIn(VALID_SUBJECTS).withMessage('Invalid subject'),
+  body('file_id').notEmpty().withMessage('file_id required'),
+], async (req,res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+  const { title, description, file_id, subject, grade } = req.body;
   const { rows:frows }=await pool.query('SELECT id FROM files WHERE id=$1 AND user_id=$2',[file_id,req.user.id]);
   if (!frows[0]) return res.status(403).json({ error:'File not found or not yours' });
   const { rows }=await pool.query(
     `INSERT INTO board_posts (user_id,title,description,file_id,subject,grade) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-    [req.user.id,title,description,file_id,subject,grade]
+    [req.user.id, title, description, file_id, subject, grade]
   );
   await pool.query('UPDATE files SET is_public=true WHERE id=$1',[file_id]);
   await checkAchievements(req.user.id,'board_post');

@@ -267,12 +267,58 @@ router.post('/push-token', async (req, res) => {
   }
 });
 
+// ── POST /users/:id/rate — Rate a teacher (students only) ───
+router.post('/:id/rate', async (req, res) => {
+  try {
+    const { rating, comment } = req.body;
+    if (!rating || rating < 1 || rating > 5)
+      return res.status(400).json({ error: 'Rating must be between 1 and 5' });
+
+    const teacherId = req.params.id;
+    const studentId = req.user.id;
+
+    if (teacherId === studentId)
+      return res.status(400).json({ error: 'You cannot rate yourself' });
+
+    // Verify the student has been in at least one of this teacher's groups
+    const Group = require('../models/Group');
+    const eligible = await Group.findOne({
+      teacherId,
+      'students.userId': studentId,
+      isActive: true,
+    });
+    if (!eligible)
+      return res.status(403).json({ error: 'You can only rate teachers you have studied with' });
+
+    // Upsert: one rating per student per teacher
+    await pool.query(`
+      INSERT INTO teacher_ratings (teacher_id, student_id, rating, comment)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (teacher_id, student_id)
+        DO UPDATE SET rating=$3, comment=$4, updated_at=NOW()
+    `, [teacherId, studentId, rating, comment || null]);
+
+    // Recompute avg_rating and rating_count atomically
+    await pool.query(`
+      UPDATE users SET
+        avg_rating   = (SELECT ROUND(AVG(rating)::numeric, 1) FROM teacher_ratings WHERE teacher_id = $1),
+        rating_count = (SELECT COUNT(*)                        FROM teacher_ratings WHERE teacher_id = $1)
+      WHERE id = $1
+    `, [teacherId]);
+
+    res.json({ success: true, message: 'Rating saved' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── GET Public Profile by ID ──────────────────────────────
 // IMPORTANT: This wildcard must come AFTER all literal routes above
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
   const { rows } = await pool.query(`
     SELECT id, name, avatar_url, grade, school, level, bio, subjects, xp_points, streak_days,
+      avg_rating, rating_count,
       (SELECT COUNT(*) FROM study_sessions  WHERE user_id=u.id AND status='completed') AS sessions_done,
       (SELECT COUNT(*) FROM user_achievements WHERE user_id=u.id) AS ach_count,
       (SELECT COALESCE(SUM(duration),0) FROM study_sessions WHERE user_id=u.id AND status='completed') AS total_minutes

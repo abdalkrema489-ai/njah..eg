@@ -66,6 +66,15 @@ export function useSocket() {
     };
   }, [token, user?.id, addMessage, addNotif]);
 
+  // BUG-06: Keep socket auth token in sync after token refresh
+  useEffect(() => {
+    if (!token || !socketInstance) return;
+    // Update the auth token on the existing socket without full reconnect
+    socketInstance.auth = { token };
+    // If already disconnected (e.g. old token expired), reconnect with the new token
+    if (!socketInstance.connected) socketInstance.connect();
+  }, [token]);
+
   return socketInstance;
 }
 

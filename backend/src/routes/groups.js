@@ -8,21 +8,10 @@ const Group        = require('../models/Group');
 const Announcement = require('../models/Announcement');
 const Assignment   = require('../models/Assignment');
 
-// Simple in-process auth middleware (re-uses the JWT from the auth routes)
-const jwt    = require('jsonwebtoken');
-const SECRET = process.env.JWT_SECRET || 'najah_secret';
+// Use shared authenticate middleware — checks is_active=true and avoids JWT drift
+const { authenticate } = require('../middleware/auth');
+const auth = authenticate; // alias so all existing router.*(path, auth, ...) calls work unchanged
 const logger = require('../utils/logger');
-
-function auth(req, res, next) {
-  const h = req.headers.authorization || '';
-  if (!h.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' });
-  try {
-    req.user = jwt.verify(h.slice(7), SECRET);
-    next();
-  } catch {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-}
 
 function teacherOnly(req, res, next) {
   if (req.user?.role !== 'teacher') return res.status(403).json({ error: 'Teachers only' });

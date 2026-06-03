@@ -97,6 +97,8 @@ export const usersAPI = {
   getUser:        id       => client.get(`/users/${id}`),
   searchUsers:    q        => client.get('/users/search', { params: { q } }),
   getMyStudents:  ()       => client.get('/users/my-students'),
+  // FEAT-01: Teacher rating — POST /users/:id/rate
+  rateTeacher:    (id, d)  => client.post(`/users/${id}/rate`, d),
 };
 
 export const plannerAPI = {

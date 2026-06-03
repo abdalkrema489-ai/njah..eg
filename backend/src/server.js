@@ -88,7 +88,27 @@ app.get('/health', (_req, res) =>
 );
 
 // ── Global Middleware ──
-app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: false })); // Allow cross-origin images
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc:  ["'self'"],
+      scriptSrc:   ["'self'", "'unsafe-inline'", 'https://www.gstatic.com', 'https://apis.google.com'],
+      styleSrc:    ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc:     ["'self'", 'https://fonts.gstatic.com', 'data:'],
+      imgSrc:      ["'self'", 'data:', 'blob:', 'https://firebasestorage.googleapis.com', 'https://lh3.googleusercontent.com', 'https://storage.googleapis.com'],
+      connectSrc:  ["'self'", 'https://generativelanguage.googleapis.com', 'https://api.openai.com', 'https://app.mem0.ai', 'wss:', 'ws:'],
+      mediaSrc:    ["'self'", 'blob:', 'https://firebasestorage.googleapis.com'],
+      frameSrc:    ["'none'"],
+      objectSrc:   ["'none'"],
+      baseUri:     ["'self'"],
+      formAction:  ["'self'"],
+    },
+    // Disable in development to allow Vite HMR etc.
+    ...(process.env.NODE_ENV !== 'production' ? { directives: { defaultSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", '*'] } } : {}),
+  },
+  crossOriginEmbedderPolicy: false, // Needed for Firebase Storage cross-origin images
+  crossOriginResourcePolicy: false, // Allow cross-origin image loads
+}));
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 app.use(compression());
 app.use(cors({

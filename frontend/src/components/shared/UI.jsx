@@ -774,3 +774,58 @@ export function Alert({ type = 'info', icon, title, message, onClose }) {
     </motion.div>
   );
 }
+/* ══════════════════════════════════════════════════════
+   StarRating — Teacher rating widget (interactive + read-only)
+   Usage:
+     <StarRating value={3} onChange={setRating} />          ← interactive
+     <StarRating value={4.2} readonly size={16} />           ← display-only
+   ══════════════════════════════════════════════════════ */
+export function StarRating({ value = 0, onChange, readonly = false, size = 22, count = 5 }) {
+  const [hovered, setHovered] = useState(0);
+  const display = hovered || value;
+
+  return (
+    <div
+      role={readonly ? 'img' : 'group'}
+      aria-label={`Rating: ${value} out of ${count}`}
+      style={{ display: 'inline-flex', gap: 3, alignItems: 'center' }}
+    >
+      {Array.from({ length: count }, (_, i) => i + 1).map(star => {
+        const filled = star <= Math.round(display);
+        return (
+          <motion.button
+            key={star}
+            type="button"
+            onClick={() => !readonly && onChange?.(star)}
+            onMouseEnter={() => !readonly && setHovered(star)}
+            onMouseLeave={() => !readonly && setHovered(0)}
+            whileHover={!readonly ? { scale: 1.25, rotate: -5 } : {}}
+            whileTap={!readonly ? { scale: 0.9 } : {}}
+            title={readonly ? undefined : `Rate ${star} star${star > 1 ? 's' : ''}`}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: readonly ? 'default' : 'pointer',
+              padding: 2,
+              fontSize: size,
+              lineHeight: 1,
+              color: filled ? '#FBBF24' : 'var(--border2)',
+              textShadow: filled ? '0 0 8px rgba(251,191,36,0.5)' : 'none',
+              transition: 'color 0.15s, text-shadow 0.15s',
+              display: 'flex',
+              alignItems: 'center',
+              userSelect: 'none',
+            }}
+          >
+            ★
+          </motion.button>
+        );
+      })}
+      {readonly && value > 0 && (
+        <span style={{ fontSize: size * 0.6, color: 'var(--text3)', marginInlineStart: 4, fontWeight: 600 }}>
+          {Number(value).toFixed(1)}
+        </span>
+      )}
+    </div>
+  );
+}

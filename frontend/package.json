@@ -56,7 +56,7 @@
     "dev": "vite",
     "start": "vite",
     "share": "set VITE_NGROK=true && vite --host",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "cap:sync": "npm run build && npx cap sync",
     "cap:open:android": "npx cap open android",

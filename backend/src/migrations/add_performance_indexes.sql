@@ -60,4 +60,31 @@ CREATE INDEX IF NOT EXISTS idx_board_likes_post_user
 CREATE INDEX IF NOT EXISTS idx_board_saves_post_user
   ON board_saves(post_id, user_id);
 
+-- ── Additional indexes from PERF-01 audit ──────────────────────
+
+-- Files: subject filter used in subject-based file browsing
+CREATE INDEX IF NOT EXISTS idx_files_subject
+  ON files(subject);
+
+-- Board posts: subject filter (most common browse query)
+CREATE INDEX IF NOT EXISTS idx_board_posts_subject
+  ON board_posts(subject);
+
+-- Notifications: partial index for unread only (tiny subset, maximum speed)
+CREATE INDEX IF NOT EXISTS idx_notifs_user_unread
+  ON notifications(user_id, is_read) WHERE is_read = false;
+
+-- Study sessions: user + status (already exists as idx_study_sessions_user_status)
+-- Quiz attempts: user + subject for subject analytics
+CREATE INDEX IF NOT EXISTS idx_quiz_user_subject
+  ON quiz_attempts(user_id, subject);
+
+-- Users: email lookup (auth critical path)
+CREATE INDEX IF NOT EXISTS idx_users_email
+  ON users(email);
+
+-- Users: role + active (admin user management + stats queries)
+CREATE INDEX IF NOT EXISTS idx_users_role_active
+  ON users(role, is_active);
+
 ANALYZE;

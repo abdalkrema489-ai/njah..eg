@@ -1,12 +1,13 @@
 // src/jobs/cronJobs.js
 'use strict';
-const cron   = require('node-cron');
-const { pool }   = require('../config/postgres');
-const { getRedis } = require('../config/redis');
-const { sendEmail } = require('../services/emailService');
+const cron               = require('node-cron');
+const { pool }           = require('../config/postgres');
+const { getRedis }       = require('../config/redis');
+const { sendEmail }      = require('../services/emailService');
 const { pushNotification } = require('../config/socket');
 const { seedAchievements } = require('../services/achievementService');
-const logger = require('../utils/logger');
+const { askGemini }      = require('../services/geminiAI');
+const logger             = require('../utils/logger');
 
 function startCronJobs() {
   // ── Seed achievements on startup ──
@@ -156,6 +157,81 @@ function startCronJobs() {
       }
     } catch (e) { logger.error('XP batch cron error:', e.message); }
   });
+
+  // ── FEAT-03: Smart AI Study Reminders — Mondays 7 AM Cairo ──────────
+  cron.schedule('0 7 * * 1', async () => {
+    try {
+      // Find users who have sessions in the past but none planned this week
+      const { rows: users } = await pool.query(`
+        SELECT u.id, u.name, u.email, u.language,
+          (
+            SELECT subject FROM study_sessions
+            WHERE user_id = u.id AND status = 'completed'
+            GROUP BY subject ORDER BY COUNT(*) ASC LIMIT 1
+          ) AS weakest_subject,
+          (
+            SELECT subject FROM study_sessions
+            WHERE user_id = u.id AND status = 'completed'
+            GROUP BY subject ORDER BY COUNT(*) DESC LIMIT 1
+          ) AS strongest_subject,
+          (
+            SELECT COUNT(*) FROM study_sessions
+            WHERE user_id = u.id
+              AND start_time BETWEEN NOW() AND NOW() + INTERVAL '7 days'
+              AND status = 'planned'
+          )::int AS planned_this_week
+        FROM users u
+        WHERE u.is_active = true
+          AND u.role IN ('student', 'university')
+          AND (
+            SELECT COUNT(*) FROM study_sessions
+            WHERE user_id = u.id AND created_at > NOW() - INTERVAL '30 days'
+          ) > 0
+        LIMIT 500
+      `);
+
+      let sent = 0;
+      const isAr = (u) => u.language === 'ar';
+
+      for (const u of users) {
+        // Only send if they have no planned sessions this week
+        if (u.planned_this_week > 0) continue;
+
+        let suggestion;
+        try {
+          // Ask Gemini for a personalised tip (30s timeout guard)
+          const prompt = u.weakest_subject
+            ? `A student named ${u.name} is weakest in ${u.weakest_subject} and strongest in ${u.strongest_subject || 'general'}. Write ONE concise study tip (max 2 sentences) for this Monday to help them. Language: ${u.language === 'ar' ? 'Arabic' : 'English'}.`
+            : `Give a motivating Monday study tip for a student in 2 sentences. Language: ${u.language === 'ar' ? 'Arabic' : 'English'}.`;
+
+          const resp = await Promise.race([
+            askGemini(prompt, null, { maxOutputTokens: 80 }),
+            new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000)),
+          ]);
+          suggestion = resp?.text || resp;
+        } catch {
+          // Fallback template if AI unavailable
+          suggestion = isAr(u)
+            ? (u.weakest_subject ? `تذكر أن ${u.weakest_subject} تحتاج مزيداً من الاهتمام هذا الأسبوع!` : 'ابدأ أسبوعك بخطة دراسية واضحة.')
+            : (u.weakest_subject ? `Focus on ${u.weakest_subject} this week — a little daily practice goes a long way!` : 'Plan your study sessions for this week and stay consistent!');
+        }
+
+        const title = isAr(u) ? '🧠 تذكير دراسي لهذا الأسبوع' : '🧠 Smart Study Reminder';
+
+        await Promise.all([
+          pool.query(
+            `INSERT INTO notifications (user_id, type, title, body) VALUES ($1, 'reminder', $2, $3)`,
+            [u.id, title, suggestion]
+          ),
+          pushNotification(u.id, { type: 'reminder', title, body: suggestion }).catch(() => {}),
+        ]);
+        sent++;
+        // Throttle: 1 per 50ms to avoid thundering herd
+        await new Promise(r => setTimeout(r, 50));
+      }
+      logger.info(`✅ FEAT-03: Smart reminders sent to ${sent}/${users.length} students`);
+    } catch (err) { logger.error('Smart reminder cron:', err); }
+  }, { timezone: 'Africa/Cairo' });
 
   logger.info('✅ Cron jobs started');
 }

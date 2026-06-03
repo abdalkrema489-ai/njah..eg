@@ -133,7 +133,11 @@ function AdminProtected({ children }) {
     return <Navigate to="/admin/login" replace />;
   }
   
-  return <Suspense fallback={<PageLoader />}>{children}</Suspense>;
+  return (
+    <ErrorBoundary>
+      <Suspense fallback={<PageLoader />}>{children}</Suspense>
+    </ErrorBoundary>
+  );
 }
 
 // ── Public route (redirect if already logged in) ───────────

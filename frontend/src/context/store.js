@@ -157,8 +157,10 @@ export const useChatStore = create(set => ({
     const old = s.privateMessages[targetId] || [];
     const msgId = msg.id || msg._id?.toString();
     if (old.some(m => (m.id || m._id?.toString()) === msgId)) return s;
+    // Cap at 150 messages per private conversation to prevent memory leak
+    const updated = [...old, { ...msg, id: msgId, status: msg.status || 'sent' }].slice(-150);
     return {
-      privateMessages: { ...s.privateMessages, [targetId]: [...old, { ...msg, id: msgId, status: msg.status || 'sent' }] }
+      privateMessages: { ...s.privateMessages, [targetId]: updated }
     };
   }),
 

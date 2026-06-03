@@ -4,14 +4,28 @@ const { pool } = require('../config/postgres');
 const { authenticate } = require('../middleware/auth');
 notifR.use(authenticate);
 notifR.get('/', async (req,res) => {
-  const { unread,page=1,limit=20 }=req.query;
-  const offset=(Number(page)-1)*Number(limit);
-  let q='SELECT * FROM notifications WHERE user_id=$1',p=[req.user.id],i=2;
-  if (unread==='true') q+=' AND is_read=false';
-  q+=` ORDER BY created_at DESC LIMIT $${i++} OFFSET $${i}`; p.push(Number(limit),offset);
-  const { rows }=await pool.query(q,p);
-  const { rows:cnt }=await pool.query('SELECT COUNT(*) FROM notifications WHERE user_id=$1 AND is_read=false',[req.user.id]);
-  res.json({ notifications:rows, unreadCount:parseInt(cnt[0].count) });
+  const { unread, page = 1, limit = 20 } = req.query;
+  const offset = (Number(page) - 1) * Number(limit);
+
+  const params = [req.user.id];
+  let where = 'user_id=$1';
+
+  if (unread === 'true') {
+    params.push(false); // is_read = false
+    where += ` AND is_read=$${params.length}`;
+  }
+
+  params.push(Number(limit), offset);
+  const limitIdx  = params.length - 1;
+  const offsetIdx = params.length;
+
+  const q = `SELECT * FROM notifications WHERE ${where} ORDER BY created_at DESC LIMIT $${limitIdx} OFFSET $${offsetIdx}`;
+
+  const [{ rows }, { rows: cnt }] = await Promise.all([
+    pool.query(q, params),
+    pool.query('SELECT COUNT(*) FROM notifications WHERE user_id=$1 AND is_read=false', [req.user.id]),
+  ]);
+  res.json({ notifications: rows, unreadCount: parseInt(cnt[0].count) });
 });
 notifR.patch('/read-all', async (req,res) => {
   await pool.query('UPDATE notifications SET is_read=true WHERE user_id=$1',[req.user.id]);

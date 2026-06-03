@@ -22,11 +22,13 @@ plannerRouter.post('/', async (req, res) => {
   if (!subject || !start_time || !end_time) return res.status(400).json({ error: 'subject, start_time, end_time required' });
 
   // Conflict detection: reject if the new session overlaps an existing one
+  // Cast explicitly to timestamptz to avoid server-timezone drift near midnight (Cairo time)
   const { rows: conflicts } = await pool.query(`
     SELECT id, subject, start_time, end_time FROM study_sessions
     WHERE user_id=$1
       AND status != 'cancelled'
-      AND tsrange(start_time, end_time) && tsrange($2::timestamptz, $3::timestamptz)
+      AND tsrange(start_time::timestamptz, end_time::timestamptz)
+       && tsrange($2::timestamptz, $3::timestamptz)
   `, [req.user.id, start_time, end_time]);
 
   if (conflicts.length > 0) {

@@ -31,6 +31,7 @@ const en = {
     payment:      'Payment',
     wallet:       'Wallet',
     help:         'Help Center',
+    support:      'Support',
     logout:       'Sign Out',
   },
   auth: {
