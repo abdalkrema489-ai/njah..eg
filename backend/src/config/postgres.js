@@ -36,49 +36,52 @@ async function connectPostgres() {
 
 async function runMigrations(client) {
   await client.query(`
-    -- Robust Column Check & Addition (Postgres 9.6+)
+    -- Guard: only run ALTER TABLE if tables already exist (skip on fresh DBs)
     DO $$ BEGIN
-      -- users
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS dob DATE;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS social_links JSONB DEFAULT '{}';
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS subjects TEXT;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS xp_points INTEGER DEFAULT 0;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS level INTEGER DEFAULT 1;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS streak_days INTEGER DEFAULT 0;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS institution_id UUID;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS institution_type VARCHAR(30) DEFAULT 'school';
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet_balance    NUMERIC(10,2) DEFAULT 0.00;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS total_earned      NUMERIC(10,2) DEFAULT 0.00;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_withdrawn NUMERIC(10,2) DEFAULT 0.00;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_status VARCHAR(20) DEFAULT 'unverified';
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS faculty VARCHAR(150);
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS university_name VARCHAR(200);
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_ai_provider VARCHAR(20) DEFAULT 'auto';
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS push_token          TEXT;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS push_platform       VARCHAR(10);
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS push_token_updated  TIMESTAMPTZ;
-      ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
-      ALTER TABLE users ADD CONSTRAINT users_role_check CHECK(role IN('student','teacher','school_admin','university','university_admin','admin','center_owner'));
-      -- study_sessions
-      ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
-      ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS pomodoros_done INTEGER DEFAULT 0;
-      
-      -- pomodoro_sessions
-      ALTER TABLE pomodoro_sessions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
-      
-      -- files
-      ALTER TABLE files ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
-      ALTER TABLE files ADD COLUMN IF NOT EXISTS description TEXT;
-      
-      -- quiz_attempts
-      ALTER TABLE quiz_attempts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
-      
-      -- notes
-      ALTER TABLE notes ADD COLUMN IF NOT EXISTS word_count INTEGER DEFAULT 0;
+      IF EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'users'
+      ) THEN
+        -- users
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS dob DATE;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS social_links JSONB DEFAULT '{}';
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS subjects TEXT;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS xp_points INTEGER DEFAULT 0;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS level INTEGER DEFAULT 1;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS streak_days INTEGER DEFAULT 0;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS institution_id UUID;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS institution_type VARCHAR(30) DEFAULT 'school';
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet_balance    NUMERIC(10,2) DEFAULT 0.00;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS total_earned      NUMERIC(10,2) DEFAULT 0.00;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_withdrawn NUMERIC(10,2) DEFAULT 0.00;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_status VARCHAR(20) DEFAULT 'unverified';
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS faculty VARCHAR(150);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS university_name VARCHAR(200);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_ai_provider VARCHAR(20) DEFAULT 'auto';
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS push_token          TEXT;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS push_platform       VARCHAR(10);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS push_token_updated  TIMESTAMPTZ;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS avg_rating          NUMERIC(3,1);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS rating_count        INTEGER DEFAULT 0;
+        ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+        ALTER TABLE users ADD CONSTRAINT users_role_check CHECK(role IN('student','teacher','school_admin','university','university_admin','admin','center_owner'));
+        -- study_sessions
+        ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+        ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS pomodoros_done INTEGER DEFAULT 0;
+        -- pomodoro_sessions
+        ALTER TABLE pomodoro_sessions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+        -- files
+        ALTER TABLE files ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+        ALTER TABLE files ADD COLUMN IF NOT EXISTS description TEXT;
+        -- quiz_attempts
+        ALTER TABLE quiz_attempts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+        -- notes
+        ALTER TABLE notes ADD COLUMN IF NOT EXISTS word_count INTEGER DEFAULT 0;
+      END IF;
     END $$;
 
     -- Standard Table Creation
