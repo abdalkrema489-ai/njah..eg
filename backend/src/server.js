@@ -68,6 +68,7 @@ const io         = new Server(httpServer, {
         'http://127.0.0.1:3001',
         'https://njaheg-theta.vercel.app',
         'https://njaheg-production.up.railway.app',
+        'https://njaheg-backend.onrender.com',
       ].filter(Boolean);
       // In dev allow all origins; in production enforce the allowlist
       if (!origin || allowed.includes(origin) || process.env.NODE_ENV !== 'production') {
@@ -124,6 +125,7 @@ app.use(cors({
       process.env.CLIENT_URL,
       'https://njaheg-theta.vercel.app',
       'https://njaheg-production.up.railway.app',
+      'https://njaheg-backend.onrender.com',
       ...fromEnv,
     ].filter(Boolean);
 
