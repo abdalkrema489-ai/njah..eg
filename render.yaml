@@ -2,16 +2,13 @@ services:
   - type: web
     name: njaheg-backend
     runtime: node
-    rootDir: backend
-    buildCommand: npm install
-    startCommand: node src/server.js
+    buildCommand: npm run render-build
+    startCommand: npm start
     plan: free
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 10000
       - key: CLIENT_URL
         value: https://njaheg-theta.vercel.app
       - key: ALLOWED_ORIGINS
