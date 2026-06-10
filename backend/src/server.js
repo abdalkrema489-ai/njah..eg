@@ -67,6 +67,7 @@ const io         = new Server(httpServer, {
         'http://127.0.0.1:3000',
         'http://127.0.0.1:3001',
         'https://njaheg-theta.vercel.app',
+        'https://njaheg-backend-production.up.railway.app',
         'https://njaheg-production.up.railway.app',
         'https://njaheg-backend.onrender.com',
       ].filter(Boolean);
@@ -124,6 +125,7 @@ app.use(cors({
     const prodList = [
       process.env.CLIENT_URL,
       'https://njaheg-theta.vercel.app',
+      'https://njaheg-backend-production.up.railway.app',
       'https://njaheg-production.up.railway.app',
       'https://njaheg-backend.onrender.com',
       ...fromEnv,
