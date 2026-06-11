@@ -71,8 +71,9 @@ const io         = new Server(httpServer, {
         'https://njaheg-production.up.railway.app',
         'https://njaheg-backend.onrender.com',
       ].filter(Boolean);
-      // In dev allow all origins; in production enforce the allowlist
-      if (!origin || allowed.includes(origin) || process.env.NODE_ENV !== 'production') {
+      const isVercelOrigin = origin && origin.endsWith('.vercel.app');
+      // In dev allow all origins; in production enforce the allowlist or vercel.app domains
+      if (!origin || allowed.includes(origin) || isVercelOrigin || process.env.NODE_ENV !== 'production') {
         return callback(null, true);
       }
       return callback(new Error(`Socket CORS blocked: ${origin}`));
@@ -133,13 +134,14 @@ app.use(cors({
 
     const devPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
     const isDevOrigin = !origin || devPattern.test(origin);
+    const isVercelOrigin = origin && origin.endsWith('.vercel.app');
 
     if (process.env.NODE_ENV !== 'production') {
       // Development: allow all localhost ports + same-origin requests
-      if (isDevOrigin || prodList.includes(origin)) return callback(null, true);
+      if (isDevOrigin || prodList.includes(origin) || isVercelOrigin) return callback(null, true);
     } else {
-      // Production: only explicitly listed origins
-      if (!origin || prodList.includes(origin)) return callback(null, true);
+      // Production: only explicitly listed origins or vercel.app domains
+      if (!origin || prodList.includes(origin) || isVercelOrigin) return callback(null, true);
       logger.warn(`[CORS] Blocked request from unlisted origin: ${origin}`);
       return callback(new Error(`CORS policy: ${origin} not allowed`));
     }

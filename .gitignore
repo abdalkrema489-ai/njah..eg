@@ -56,3 +56,11 @@ android/local.properties
 njah-clean/
 .vercel
 .env*.local
+
+# Temporary DevOps / Deploy scripts and vars
+*railway-vars*
+*set-railway-env*
+*set-vercel-env*
+*set-firebase-key*
+*vercel_out*
+*railway_logs*
