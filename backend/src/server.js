@@ -55,6 +55,7 @@ const walletRoutes        = require('./routes/wallet');
 const supportRoutes       = require('./routes/support');
 
 const app        = express();
+app.set('trust proxy', 1); // Trust first proxy (Railway/Render load balancers)
 const httpServer = createServer(app);
 const io         = new Server(httpServer, {
   cors: {

@@ -105,16 +105,16 @@ function startCronJobs() {
     try {
       const { rows } = await pool.query(`
         SELECT
-          u.id::text AS user_id,
+          u.id AS user_id,
           u.name,
-          SUM(qa.score)::int AS weekly_xp,
+          SUM(qa.score_pct)::int AS weekly_xp,
           COUNT(qa.id)::int  AS quizzes_count
         FROM users u
-        JOIN quiz_attempts qa ON qa.user_id = u.id::text
+        JOIN quiz_attempts qa ON qa.user_id = u.id
         WHERE u.role = 'student'
           AND qa.created_at >= NOW() - INTERVAL '7 days'
         GROUP BY u.id, u.name
-        HAVING SUM(qa.score) > 0
+        HAVING SUM(qa.score_pct) > 0
       `);
 
       let count = 0;
