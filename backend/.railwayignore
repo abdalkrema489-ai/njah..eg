@@ -1,0 +1,9 @@
+node_modules/
+logs/
+*.log
+public/uploads/
+.env
+.env.*
+python/
+test_*.js
+test-*.js
