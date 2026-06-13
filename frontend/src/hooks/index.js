@@ -28,7 +28,7 @@ export function useSocket() {
     if (!socketInstance) {
       const apiBase = import.meta.env.VITE_API_URL
         ? import.meta.env.VITE_API_URL.replace(/\/?api\/?$/, '')
-        : 'http://localhost:5000';
+        : (import.meta.env.PROD ? window.location.origin : 'http://localhost:5000');
 
       const socketURL = import.meta.env.VITE_SOCKET_URL || apiBase;
 
