@@ -341,7 +341,11 @@ function AIChat() {
     }]);
 
     try {
-      const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      let rawAPI = import.meta.env.VITE_API_URL;
+      if (import.meta.env.PROD && rawAPI && rawAPI.includes('localhost')) {
+        rawAPI = '/api';
+      }
+      const API = rawAPI || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
       const token = useAuthStore.getState().token;
 
       const resp = await fetch(`${API}/ai/chat/stream`, {
@@ -554,7 +558,11 @@ function AIChat() {
             whileTap={{ scale: 0.96 }}
             onClick={async () => {
               try {
-                const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+                let rawAPI = import.meta.env.VITE_API_URL;
+                if (import.meta.env.PROD && rawAPI && rawAPI.includes('localhost')) {
+                  rawAPI = '/api';
+                }
+                const API = rawAPI || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
                 const token = localStorage.getItem('token');
                 await fetch(`${API}/ai/clear-memory`, {
                   method: 'POST',

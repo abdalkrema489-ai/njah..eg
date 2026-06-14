@@ -69,7 +69,11 @@ const computeForecast = (data) => {
           { name: nextLabel.slice(5) + ' (Est)', GrossForecast: Math.max(0, nextVal), PlatformForecast: Math.max(0, nextPlatform) }];
 };
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+let rawAPI = import.meta.env.VITE_API_URL;
+if (import.meta.env.PROD && rawAPI && rawAPI.includes('localhost')) {
+  rawAPI = '/api';
+}
+const API = rawAPI || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
 
 function adminClient() {
   const token = localStorage.getItem('adminToken');

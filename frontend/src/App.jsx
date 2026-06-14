@@ -154,9 +154,12 @@ function GlobalSync() {
 
   useEffect(() => {
     // Load White-Label Branding
-    const apiBase = import.meta.env.VITE_API_URL
-      || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
-    fetch(`${apiBase}/admin/branding`)
+    let apiBase = import.meta.env.VITE_API_URL;
+    if (import.meta.env.PROD && apiBase && apiBase.includes('localhost')) {
+      apiBase = '/api';
+    }
+    const finalAPI = apiBase || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
+    fetch(`${finalAPI}/admin/branding`)
       .then(res => res.json())
       .then(data => {
         if (data.primaryColor) {

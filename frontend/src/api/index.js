@@ -2,11 +2,11 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-// Production: VITE_API_URL env var takes priority.
-// If not set and running on Vercel (PROD), use '/api' which gets proxied to Railway.
-// In local dev, fall back to localhost:5000.
-const API = import.meta.env.VITE_API_URL
-  || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
+let rawAPI = import.meta.env.VITE_API_URL;
+if (import.meta.env.PROD && rawAPI && rawAPI.includes('localhost')) {
+  rawAPI = '/api';
+}
+export const API = rawAPI || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
 
 // Standard client — 30s timeout for regular endpoints
 const client = axios.create({ baseURL: API, timeout: 30000 });

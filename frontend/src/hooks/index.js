@@ -28,11 +28,19 @@ export function useSocket() {
     if (!socketInstance) {
       // Socket.io must connect directly to Railway — Vercel can't proxy WebSockets reliably.
       // Priority: VITE_SOCKET_URL > derive from VITE_API_URL > Railway default > localhost in dev.
-      let socketURL;
-      if (import.meta.env.VITE_SOCKET_URL) {
-        socketURL = import.meta.env.VITE_SOCKET_URL;
-      } else if (import.meta.env.VITE_API_URL) {
-        socketURL = import.meta.env.VITE_API_URL.replace(/\/?api\/?$/, '');
+      let socketURL = import.meta.env.VITE_SOCKET_URL;
+      let apiURL = import.meta.env.VITE_API_URL;
+
+      // Ignore localhost in production
+      if (import.meta.env.PROD) {
+        if (socketURL && socketURL.includes('localhost')) socketURL = null;
+        if (apiURL && apiURL.includes('localhost')) apiURL = null;
+      }
+
+      if (socketURL) {
+        // use socketURL directly
+      } else if (apiURL) {
+        socketURL = apiURL.replace(/\/?api\/?$/, '');
       } else if (import.meta.env.PROD) {
         socketURL = 'https://njaheg-backend-production.up.railway.app';
       } else {
