@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=1.0, viewport-fit=cover" />
 
     <!-- PWA / Theme -->
     <meta name="theme-color"                     content="#6366F1" />
@@ -36,11 +36,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-    <!-- Preload critical Arabic font (Cairo 700 Latin+Arabic subset) -->
-    <link rel="preload" as="font" type="font/woff2"
-      href="https://fonts.gstatic.com/s/cairo/v28/SLXgc1nY6HkvalIhTp2mxdt0UX8.woff2"
-      crossorigin />
-
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@400;500&family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
 
@@ -50,17 +45,21 @@
       body {
         background: #030308;
         overflow-x: hidden;
-        /* iOS safe area */
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-y: none;
+        overscroll-behavior-x: none;
         padding-top: env(safe-area-inset-top);
         padding-bottom: env(safe-area-inset-bottom);
         padding-left: env(safe-area-inset-left);
         padding-right: env(safe-area-inset-right);
-        /* Prevent overscroll bounce on iOS standalone */
-        overscroll-behavior: none;
+        touch-action: pan-y;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-font-smoothing: antialiased;
       }
       #root {
         min-height: 100vh;
         min-height: 100dvh;
+        overflow-x: hidden;
       }
       /* Splash-screen skeleton while React loads */
       #root:empty {

@@ -1070,6 +1070,22 @@ export function AppShell({ children }) {
     setOpen(!isMobile);
   }, [isMobile]);
 
+  // Touch swipe handlers for RTL sidebar
+  const touchStartX = useRef(null);
+
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e) => {
+    if (touchStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    touchStartX.current = null;
+    // RTL: swipe right (positive dx) closes, swipe left (negative dx) opens
+    if (dx > 60 && open) setOpen(false);
+    if (dx < -60 && !open && isMobile) setOpen(true);
+  };
+
   return (
     <div className="app-shell" data-institution={institutionMode}>
       <ReadingProgress />
@@ -1087,7 +1103,11 @@ export function AppShell({ children }) {
 
       <Sidebar open={open} onToggle={() => setOpen(v => !v)} />
       
-      <div className="main-content">
+      <div
+        className="main-content"
+        onTouchStart={isMobile ? handleTouchStart : undefined}
+        onTouchEnd={isMobile ? handleTouchEnd : undefined}
+      >
         <Header 
           sidebarOpen={open} 
           onToggle={() => setOpen(v => !v)} 

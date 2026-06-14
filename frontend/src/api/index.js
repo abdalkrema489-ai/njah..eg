@@ -2,6 +2,9 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
+// Production: VITE_API_URL env var takes priority.
+// If not set and running on Vercel (PROD), use '/api' which gets proxied to Railway.
+// In local dev, fall back to localhost:5000.
 const API = import.meta.env.VITE_API_URL
   || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
 

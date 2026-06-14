@@ -479,85 +479,243 @@ code, pre {
   animation: fadeUp 0.4s var(--ease) both;
 }
 
-/* ════════════════════════════════════════════════════════
-   📱 RESPONSIVE LAYOUT — Unified Breakpoints
-   Breakpoints:
-     1100px: sidebar collapses from inline to overlay
-      768px: phone — tighter padding, larger touch targets
-      480px: small phone adjustments
-   ════════════════════════════════════════════════════════ */
+/* ══ RESPONSIVE BREAKPOINTS ══════════════════════════════════ */
 
-/* ── 1280px: Slightly tighter padding ─────────────────────── */
+/* Large desktop */
 @media (max-width: 1280px) {
   .page-container { padding: 32px 32px 48px; }
 }
 
-/* ── 1100px: Sidebar becomes overlay drawer ─────────────── */
-@media (max-width: 1099px) {
-  /* Page content takes full width now — sidebar is a fixed overlay */
-  .page-container {
-    padding: 24px 20px 100px;
-  }
-  /* The sidebar is positioned fixed via JS; just ensure no layout disruption */
+/* Tablet — sidebar collapses */
+@media (max-width: 1100px) {
+  .page-container { padding: 24px 20px 100px; }
+
   .main-sidebar {
-    box-shadow: -8px 0 40px rgba(0,0,0,0.25);
+    position: fixed;
+    top: 0;
+    right: 0; /* RTL */
+    z-index: 1000;
+    transform: translateX(100%);
+    width: 280px !important;
+    height: 100vh;
+    height: 100dvh;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: -4px 0 24px rgba(0,0,0,0.15);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
-  /* Show mobile utility classes */
-  .show-mobile   { display: flex !important; }
+  [dir="ltr"] .main-sidebar {
+    right: auto;
+    left: 0;
+    transform: translateX(-100%);
+  }
+  .main-sidebar.open {
+    transform: translateX(0) !important;
+  }
+
+  /* Backdrop overlay */
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  .sidebar-backdrop.open {
+    opacity: 1;
+    pointer-events: all;
+  }
 }
 
-/* ── 768px: Phone layout ────────────────────────────── */
+/* Mobile */
 @media (max-width: 768px) {
-  html { font-size: 14px; }
+  html { font-size: 15px; } /* Keep 15px — don't shrink Arabic */
+  .page-container { padding: 16px 14px 100px; }
 
-  .page-container {
-    padding: 16px 12px 96px;
-  }
+  /* Prevent ALL horizontal overflow */
+  * { max-width: 100%; }
+  img, video, iframe, canvas, svg { max-width: 100%; height: auto; }
 
-  /* Hide desktop-only elements */
-  .hide-mobile   { display: none !important; }
+  /* Tables scroll horizontally instead of overflowing */
+  table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; width: 100%; }
 
-  /* Touch target enforcement */
-  button, a, [role="button"], .header-btn {
+  /* Touch-friendly tap targets */
+  button, a, [role="button"], input[type="checkbox"], input[type="radio"] {
     min-height: 44px;
     min-width: 44px;
   }
 
-  /* Prevent iOS body zoom on inputs */
-  input, select, textarea { font-size: 16px !important; }
+  /* Forms */
+  input, textarea, select {
+    font-size: 16px !important; /* Prevents iOS zoom on focus */
+    min-height: 48px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  textarea { min-height: 100px; resize: vertical; }
 
-  /* Momentum scrolling on iOS */
-  .scroll-y, [style*="overflow-y: auto"], [style*="overflow: auto"] {
+  /* Modals */
+  .modal, [role="dialog"] {
+    width: calc(100vw - 24px) !important;
+    max-width: calc(100vw - 24px) !important;
+    max-height: 90dvh !important;
+    overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
+    margin: 12px !important;
+    border-radius: 20px !important;
   }
 
-  /* Bottom sheets instead of center modals */
-  [role="dialog"] {
-    border-radius: 24px 24px 0 0 !important;
-    position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-  }
+  /* Cards */
+  .card { border-radius: 14px !important; }
 
-  /* Disable card hover effects on touch */
-  .floating-card:hover,
-  .card:hover {
-    transform: none;
-  }
-
-  /* Grid collapse */
-  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  /* Typography */
+  h1 { font-size: 1.6rem !important; }
+  h2 { font-size: 1.35rem !important; }
+  h3 { font-size: 1.15rem !important; }
 }
 
-/* ── 480px: Small phones ────────────────────────────── */
-@media (max-width: 480px) {
-  html { font-size: 13.5px; }
-  .page-container { padding: 12px 10px 90px; }
+/* Small phones — 375px and below */
+@media (max-width: 375px) {
+  html { font-size: 14px; }
+  .page-container { padding: 12px 12px 96px; }
+  .btn { padding: 0 14px; font-size: 13px; }
+}
+
+/* ══ GRID — MOBILE RESPONSIVE ════════════════════════════════ */
+.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+@media (max-width: 1024px) {
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .grid-3 { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .grid-4 { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+}
+@media (max-width: 500px) {
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; gap: 10px; }
+}
+
+/* ══ MOBILE BOTTOM NAV — ENHANCED ═══════════════════════════ */
+.mobile-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 900;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: none;
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+@media (max-width: 1100px) {
+  .mobile-bottom-nav { display: flex; }
+}
+
+.mobile-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 8px 4px;
+  color: var(--text3);
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+  border: none;
+  background: transparent;
+  min-height: 56px;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.mobile-nav-item svg { flex-shrink: 0; }
+.mobile-nav-item span { font-size: 10px; line-height: 1.2; text-align: center; }
+.mobile-nav-item.active { color: var(--primary); }
+.mobile-nav-item:active { background: var(--surface3); border-radius: 12px; }
+
+/* ══ HIDE/SHOW UTILITIES ════════════════════════════════════ */
+@media (max-width: 768px) {
+  .hide-mobile { display: none !important; }
+  .show-mobile { display: flex !important; }
+}
+@media (min-width: 769px) {
+  .show-mobile { display: none !important; }
+  .hide-desktop { display: none !important; }
+}
+
+/* ══ AI CHAT — MOBILE KEYBOARD FIX ═════════════════════════ */
+.chat-input-area {
+  position: sticky;
+  bottom: 0;
+  bottom: env(safe-area-inset-bottom, 0px);
+  background: var(--surface);
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  z-index: 10;
+}
+
+/* iOS keyboard pushes content up — fix chat scroll */
+@supports (-webkit-touch-callout: none) {
+  .chat-messages-container {
+    padding-bottom: 120px;
+  }
+}
+
+/* ══ SCROLLBARS — MOBILE FRIENDLY ═══════════════════════════ */
+@media (max-width: 768px) {
+  ::-webkit-scrollbar { width: 0px; height: 0px; }
+}
+
+/* ══ SWIPE GESTURES SUPPORT ════════════════════════════════ */
+.swipeable {
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ══ FILE CARDS MOBILE FIX ════════════════════════════════ */
+@media (max-width: 768px) {
+  .file-card, .subject-card {
+    width: 100% !important;
+    min-width: unset !important;
+    max-width: 100% !important;
+  }
+  .files-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ══ QUIZ MOBILE ══════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .quiz-options { grid-template-columns: 1fr !important; }
+  .quiz-option { padding: 14px 16px !important; font-size: 14px !important; }
+  .quiz-header { flex-direction: column !important; gap: 12px !important; }
+}
+
+/* ══ BOARD MOBILE ════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .board-grid { grid-template-columns: 1fr !important; }
+  .board-post-meta { flex-wrap: wrap !important; gap: 8px !important; }
+}
+
+/* ══ ACTIVE STATES FOR MOBILE TOUCH FEEDBACK ══════════════ */
+@media (hover: none) {
+  .btn:active { transform: scale(0.97); opacity: 0.85; }
+  .card:active { transform: scale(0.99); }
+  .mobile-nav-item:active { background: var(--surface3); }
 }
 
 

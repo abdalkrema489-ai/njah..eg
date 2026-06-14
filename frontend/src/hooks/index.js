@@ -26,11 +26,18 @@ export function useSocket() {
     }
 
     if (!socketInstance) {
-      const apiBase = import.meta.env.VITE_API_URL
-        ? import.meta.env.VITE_API_URL.replace(/\/?api\/?$/, '')
-        : (import.meta.env.PROD ? window.location.origin : 'http://localhost:5000');
-
-      const socketURL = import.meta.env.VITE_SOCKET_URL || apiBase;
+      // Socket.io must connect directly to Railway — Vercel can't proxy WebSockets reliably.
+      // Priority: VITE_SOCKET_URL > derive from VITE_API_URL > Railway default > localhost in dev.
+      let socketURL;
+      if (import.meta.env.VITE_SOCKET_URL) {
+        socketURL = import.meta.env.VITE_SOCKET_URL;
+      } else if (import.meta.env.VITE_API_URL) {
+        socketURL = import.meta.env.VITE_API_URL.replace(/\/?api\/?$/, '');
+      } else if (import.meta.env.PROD) {
+        socketURL = 'https://njaheg-backend-production.up.railway.app';
+      } else {
+        socketURL = 'http://localhost:5000';
+      }
 
       socketInstance = io(socketURL, {
         auth: { token },

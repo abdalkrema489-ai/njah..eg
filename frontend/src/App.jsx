@@ -154,7 +154,9 @@ function GlobalSync() {
 
   useEffect(() => {
     // Load White-Label Branding
-    fetch(import.meta.env.VITE_API_URL + '/admin/branding')
+    const apiBase = import.meta.env.VITE_API_URL
+      || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
+    fetch(`${apiBase}/admin/branding`)
       .then(res => res.json())
       .then(data => {
         if (data.primaryColor) {
