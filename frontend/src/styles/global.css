@@ -479,24 +479,85 @@ code, pre {
   animation: fadeUp 0.4s var(--ease) both;
 }
 
+/* ════════════════════════════════════════════════════════
+   📱 RESPONSIVE LAYOUT — Unified Breakpoints
+   Breakpoints:
+     1100px: sidebar collapses from inline to overlay
+      768px: phone — tighter padding, larger touch targets
+      480px: small phone adjustments
+   ════════════════════════════════════════════════════════ */
+
+/* ── 1280px: Slightly tighter padding ─────────────────────── */
 @media (max-width: 1280px) {
   .page-container { padding: 32px 32px 48px; }
 }
-@media (max-width: 1100px) {
-  .page-container { padding: 24px 20px 100px; }
-  .main-sidebar {
-    position: fixed;
-    transform: translateX(100%);
-    width: 280px !important;
-    height: 100vh;
-    height: 100dvh;
+
+/* ── 1100px: Sidebar becomes overlay drawer ─────────────── */
+@media (max-width: 1099px) {
+  /* Page content takes full width now — sidebar is a fixed overlay */
+  .page-container {
+    padding: 24px 20px 100px;
   }
-  [dir="ltr"] .main-sidebar { transform: translateX(-100%); }
-  .main-sidebar.open { transform: translateX(0) !important; }
+  /* The sidebar is positioned fixed via JS; just ensure no layout disruption */
+  .main-sidebar {
+    box-shadow: -8px 0 40px rgba(0,0,0,0.25);
+  }
+  /* Show mobile utility classes */
+  .show-mobile   { display: flex !important; }
 }
+
+/* ── 768px: Phone layout ────────────────────────────── */
 @media (max-width: 768px) {
-  .page-container { padding: 20px 16px 96px; }
   html { font-size: 14px; }
+
+  .page-container {
+    padding: 16px 12px 96px;
+  }
+
+  /* Hide desktop-only elements */
+  .hide-mobile   { display: none !important; }
+
+  /* Touch target enforcement */
+  button, a, [role="button"], .header-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Prevent iOS body zoom on inputs */
+  input, select, textarea { font-size: 16px !important; }
+
+  /* Momentum scrolling on iOS */
+  .scroll-y, [style*="overflow-y: auto"], [style*="overflow: auto"] {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  /* Bottom sheets instead of center modals */
+  [role="dialog"] {
+    border-radius: 24px 24px 0 0 !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+
+  /* Disable card hover effects on touch */
+  .floating-card:hover,
+  .card:hover {
+    transform: none;
+  }
+
+  /* Grid collapse */
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+}
+
+/* ── 480px: Small phones ────────────────────────────── */
+@media (max-width: 480px) {
+  html { font-size: 13.5px; }
+  .page-container { padding: 12px 10px 90px; }
 }
 
 
@@ -902,7 +963,9 @@ code, pre {
   .grid-4 { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 600px) {
-  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .grid-3 { grid-template-columns: 1fr; }
+  .grid-4 { grid-template-columns: 1fr; }
 }
 
 /* ── Gradient Backgrounds ── */
@@ -1231,7 +1294,12 @@ code, pre {
   border-color: rgba(99, 102, 241, 0.25);
 }
 
-/* ── Hide on mobile ── */
+/* ── Responsive visibility utilities ────────────────────────── */
+.hide-mobile  { /* hidden on mobile, shown on desktop */ }
+.show-mobile  { display: none !important; /* hidden on desktop, shown on mobile */ }
+@media (max-width: 1099px) {
+  .show-mobile { display: flex !important; }
+}
 @media (max-width: 768px) {
   .hide-mobile { display: none !important; }
 }
@@ -1465,23 +1533,20 @@ code, pre {
 
 
 /* ══════════════════════════════════════════════════════════
-   📱 PWA / MOBILE ENHANCEMENTS
+   📱 PWA / MOBILE ENHANCEMENTS (Consolidated & Refined)
    ══════════════════════════════════════════════════════════ */
 
-/* Show bottom nav only on mobile/tablet */
+/* Show bottom nav only on mobile/tablet (breakpoint matching the js: 1100px) */
 .mobile-bottom-nav        { display: none !important; }
 .mobile-nav-spacer        { display: none !important; }
 
-@media (max-width: 1023px) {
+@media (max-width: 1099px) {
   .mobile-bottom-nav      { display: flex !important; }
-  .mobile-nav-spacer      { display: block !important; }
-}
+  .mobile-nav-spacer      { display: block !important; height: 80px; }
 
-/* Safe-area padding for main content when bottom nav is visible */
-@media (max-width: 1023px) {
   /* push main layout content above the bottom nav */
   main, [class*="page-content"], .main-content {
-    padding-bottom: calc(72px + env(safe-area-inset-bottom)) !important;
+    padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important;
   }
 }
 
@@ -1497,40 +1562,6 @@ code, pre {
 /* Touch optimization — prevent 300ms tap delay */
 * { touch-action: manipulation; }
 
-/* Bigger tap targets on mobile */
-@media (max-width: 768px) {
-  button, a, [role="button"] {
-    min-height: 44px;
-    min-width: 44px;
-  }
-
-  /* Improve text readability */
-  body { font-size: 16px; } /* Prevent iOS zoom on input focus */
-
-  /* Card and panel adjustments */
-  .floating-card:hover {
-    transform: none; /* Disable hover lift effects on touch */
-  }
-
-  /* Scrollable areas — momentum scrolling on iOS */
-  .scroll-y, [style*="overflow-y: auto"], [style*="overflow: auto"] {
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
-  }
-
-  /* Full-width modals on mobile */
-  [role="dialog"] {
-    border-radius: 24px 24px 0 0 !important;
-    margin-bottom: 0 !important;
-    position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-}
-
 /* Prevent text selection on tap-heavy UI elements */
 .mobile-bottom-nav,
 .header-btn,
@@ -1542,7 +1573,7 @@ button {
 
 /* Input focus — keep visible on mobile without jumping */
 input:focus, textarea:focus, select:focus {
-  scroll-margin-top: 72px;
+  scroll-margin-top: 80px;
 }
 
 /* Offline badge utility */
@@ -1576,15 +1607,5 @@ input:focus, textarea:focus, select:focus {
   z-index: 10001;
 }
 
-/* ── Mobile Bottom Nav ─────────────────────────────────────── */
-/* Show on mobile, hide on desktop */
-.mobile-bottom-nav  { display: flex; }
-.mobile-nav-spacer  { display: block; }
-@media (min-width: 768px) {
-  .mobile-bottom-nav { display: none !important; }
-  .mobile-nav-spacer { display: none !important; }
-}
-
-/* ── System Dark Mode Class ───────────────────────────────── */
 /* Support both [data-theme] and class-based dark mode */
 .dark-mode { color-scheme: dark; }

@@ -1,4 +1,5 @@
 // src/components/shared/Layout.jsx — Najah v6 — i18n + Mobile nav + Notif drawer
+// ✅ Full mobile/desktop responsiveness — June 2026
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -396,19 +397,22 @@ export function Sidebar({ open, onToggle }) {
     : isUniversity   ? UNIVERSITY_SECTIONS_DEF
     : NAV_SECTIONS_DEF;
 
+  const isMobile = useIsMobile();
+
   return (
     <>
       <StaticAppBackground />
-      {/* Mobile overlay */}
+      {/* Mobile overlay — only rendered when sidebar is open on mobile */}
       <AnimatePresence>
-        {open && window.innerWidth < 1100 && (
+        {open && isMobile && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={onToggle}
             style={{
               position: 'fixed', inset: 0,
-              background: 'rgba(3,3,8,0.75)',
+              background: 'rgba(3,3,8,0.78)',
               backdropFilter: 'blur(6px)',
+              WebkitBackdropFilter: 'blur(6px)',
               zIndex: 148,
             }}
           />
@@ -416,17 +420,23 @@ export function Sidebar({ open, onToggle }) {
       </AnimatePresence>
 
       <motion.nav
-        animate={{ width: open ? 272 : 72 }}
+        animate={isMobile
+          ? { x: open ? 0 : '100%', width: 272 }
+          : { width: open ? 272 : 72, x: 0 }
+        }
         transition={{ type: 'spring', stiffness: 340, damping: 34 }}
         className="main-sidebar floating-panel"
         style={{
-          height: 'calc(100vh - 24px)',
-          margin: '12px',
+          height: isMobile ? '100dvh' : 'calc(100vh - 24px)',
+          margin: isMobile ? '0' : '12px',
+          borderRadius: isMobile ? '0 0 0 0' : undefined,
           display: 'flex',
           flexDirection: 'column',
           overflowY: 'auto',
           overflowX: 'hidden',
-          position: 'relative',
+          position: isMobile ? 'fixed' : 'relative',
+          top: isMobile ? 0 : undefined,
+          insetInlineEnd: isMobile ? 0 : undefined,
           zIndex: 150,
         }}
       >
@@ -515,7 +525,7 @@ export function Sidebar({ open, onToggle }) {
                 return (
                   <motion.div
                     key={item.key}
-                    onClick={() => { navigate(item.path); if (open && window.innerWidth < 1100) onToggle(); }}
+                    onClick={() => { navigate(item.path); if (open && isMobile) onToggle(); }}
                     whileHover={{ x: active ? 0 : 4, scale: 1.02 }}
                     whileTap={{ scale: 0.95 }}
                     data-tip={!open ? item.label : undefined}
@@ -805,17 +815,19 @@ export function Header({ sidebarOpen, onToggle, onOpenNotifs, onOpenWizard }) {
           <motion.button
             whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
             onClick={onOpenWizard}
+            className="new-group-btn"
             style={{
-              height: 38, padding: '0 16px', borderRadius: 10,
+              height: 38, padding: '0 14px', borderRadius: 10,
               background: 'linear-gradient(135deg, var(--primary), var(--blue-600))',
               color: '#fff', border: 'none', cursor: 'pointer',
               fontSize: 13, fontWeight: 700,
               display: 'flex', alignItems: 'center', gap: 6,
               boxShadow: '0 4px 12px rgba(14,165,233,0.3)',
-              marginRight: 6
+              marginInlineEnd: 4, flexShrink: 0,
             }}
           >
-            <span style={{ fontSize: 16 }}>✨</span> {lang === 'ar' ? 'مجموعة جديدة' : 'New Group'}
+            <span style={{ fontSize: 16 }}>✨</span>
+            <span className="hide-mobile">{lang === 'ar' ? 'مجموعة جديدة' : 'New Group'}</span>
           </motion.button>
 
           {/* Global Search */}
@@ -1030,23 +1042,33 @@ function MobileBottomNav() {
   );
 }
 
+/* ── useIsMobile hook ─────────────────────────────────────── */
+function useIsMobile(breakpoint = 1100) {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < breakpoint);
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${breakpoint - 1}px)`);
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    setIsMobile(mq.matches);
+    return () => mq.removeEventListener('change', handler);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 /* ── AppShell ─────────────────────────────────────────────── */
 export function AppShell({ children }) {
-  const [open, setOpen]               = useState(window.innerWidth >= 1100);
+  const isMobile                      = useIsMobile();
+  const [open, setOpen]               = useState(false); // always start closed; effect sets properly
   const [notifOpen, setNotifOpen]     = useState(false);
   const [showWizard, setShowWizard]   = useState(false);
   const { institutionMode }           = useUIStore();
-  
+
   useSocket();
 
+  // Keep sidebar open on desktop, closed on mobile
   useEffect(() => {
-    const handle = () => {
-      if (window.innerWidth < 1100) setOpen(false);
-      else setOpen(true);
-    };
-    window.addEventListener('resize', handle);
-    return () => window.removeEventListener('resize', handle);
-  }, []);
+    setOpen(!isMobile);
+  }, [isMobile]);
 
   return (
     <div className="app-shell" data-institution={institutionMode}>
