@@ -228,7 +228,7 @@ export default function LandingPage() {
           <h2 style={{ fontSize: 36, fontWeight: 800, color: C.textD, marginBottom: 12 }}>{isAr ? 'استكشف أهم المواد' : 'Explore Top Subjects'}</h2>
           <p style={{ color: C.textM, fontSize: 16, marginBottom: 60 }}>{isAr ? 'أتقن مواضيع جديدة مع أفضل المعلمين المصريين' : 'Master new topics from the best Egyptian instructors'}</p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 32 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: 32 }}>
             {[
               { title: isAr ? 'مفاهيم متقدمة في الفيزياء' : 'Advanced Physics Concept', tutor: isAr ? 'أ. حسن' : 'Prof. Hassan', img: 'showcase-6.jpeg', tag: isAr ? 'فيزياء' : 'Physics' },
               { title: isAr ? 'كيمياء عضوية' : 'Organic Chemistry Masterclass', tutor: isAr ? 'د. رانيا' : 'Dr. Rania', img: 'showcase-7.jpeg', tag: isAr ? 'كيمياء' : 'Chemistry' },

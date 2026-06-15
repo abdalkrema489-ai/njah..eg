@@ -59,7 +59,7 @@ export default function AffiliateDashboard() {
         subtitle={isAr ? "قم بإنشاء روابط ترويجية واربح عمولات عند انضمام طلاب جدد." : "Create promotional links and earn commissions when new students join."} 
       />
 
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(240px, 1fr))', gap:20, marginBottom:32 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap:20, marginBottom:32 }}>
         <StatCard icon="🖱️" label={isAr ? "إجمالي النقرات" : "Total Clicks"} value={totalClicks} color="var(--primary)" />
         <StatCard icon="🎯" label={isAr ? "التحويلات" : "Conversions"} value={totalConversions} color="var(--success)" />
         <StatCard icon="💰" label={isAr ? "الأرباح" : "Earnings"} value={`${totalEarnings} EGP`} color="var(--warning)" />

@@ -142,7 +142,7 @@ export default function NotesPage() {
         </Btn>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 320px) 1fr', gap: 24, flex: 1, minHeight: 0 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(min(280px, 100%), 320px) 1fr', gap: 24, flex: 1, minHeight: 0 }}>
         
         {/* Left: Notes Sidebar */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>

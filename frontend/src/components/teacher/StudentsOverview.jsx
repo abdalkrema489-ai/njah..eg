@@ -120,7 +120,7 @@ export default function StudentsOverview() {
       </div>
 
       {/* Stats Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: 12 }}>
         {[
           { label: isAr ? 'إجمالي' : 'Total', value: students.length, icon: '👥', color: '#6366F1' },
           { label: isAr ? 'نشط' : 'Active', value: students.filter(s => s.status === 'Active').length, icon: '✅', color: '#10B981' },

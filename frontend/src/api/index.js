@@ -6,7 +6,11 @@ let rawAPI = import.meta.env.VITE_API_URL;
 if (import.meta.env.PROD && rawAPI && rawAPI.includes('localhost')) {
   rawAPI = '/api';
 }
-export const API = rawAPI || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
+export const API = rawAPI || (import.meta.env.DEV ? 'http://localhost:5000/api' : null);
+
+if (!API && import.meta.env.PROD) {
+  console.error('❌ VITE_API_URL is not set in Vercel environment variables!');
+}
 
 // Standard client — 30s timeout for regular endpoints
 const client = axios.create({ baseURL: API, timeout: 30000 });

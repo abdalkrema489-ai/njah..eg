@@ -97,7 +97,7 @@ export default function HelpCenter() {
       </div>
 
       {/* Categories Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12, marginBottom: 40 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(240px, 100%), 1fr))', gap: 12, marginBottom: 40 }}>
         {CATEGORIES.map((cat, i) => (
           <motion.div key={cat.id}
             initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}

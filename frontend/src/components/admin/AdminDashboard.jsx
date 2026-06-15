@@ -547,7 +547,7 @@ export default function AdminDashboard() {
             {/* ── OVERVIEW ── */}
             {activeTab === 'overview' && stats && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: 16 }}>
                   <StatCard icon="👥" label={isAr ? 'إجمالي المستخدمين' : 'Total Users'}   value={parseInt(stats.total_users || 0).toLocaleString()} sub={`${stats.new_this_week || 0} ${isAr ? 'جديد هذا الأسبوع' : 'new this week'}`} color={COLORS.blue} />
                   <StatCard icon="🎓" label={isAr ? 'الطلاب' : 'Students'}                  value={parseInt(stats.students || 0).toLocaleString()}    color={COLORS.indigo} />
                   <StatCard icon="👨‍🏫" label={isAr ? 'المعلمون' : 'Teachers'}               value={parseInt(stats.teachers || 0).toLocaleString()}    color={COLORS.purple} />
@@ -780,7 +780,7 @@ export default function AdminDashboard() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 24, padding: 24 }}>
                   <h3 style={{ color: '#fff', marginTop: 0, fontSize: 18, fontWeight: 800 }}>🎟️ Create New Coupon</h3>
-                  <form onSubmit={generateCoupon} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 16, alignItems: 'flex-end', marginTop: 16 }}>
+                  <form onSubmit={generateCoupon} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(150px, 100%), 1fr))', gap: 16, alignItems: 'flex-end', marginTop: 16 }}>
                     <div>
                       <label style={{ display: 'block', color: 'rgba(255,255,255,0.6)', fontSize: 12, marginBottom: 8 }}>Coupon Code</label>
                       <input name="code" type="text" required placeholder="e.g. VIP50" style={{ width: '100%', padding: '12px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.2)', color: '#fff', outline: 'none' }} />

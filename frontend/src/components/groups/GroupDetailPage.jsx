@@ -542,7 +542,7 @@ export default function GroupDetailPage() {
         )}
 
         {tab === 'insights' && isOwner && (
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:16 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(200px, 100%),1fr))', gap:16 }}>
             {[
               { label: isAr ? 'إجمالي الطلاب' : 'Total Students',   value: insights?.totalStudents || 0,    icon:'👥', color:'#6366f1' },
               { label: isAr ? 'التكاليف' : 'Assignments',       value: insights?.totalAssignments || 0, icon:'📝', color:'#6366f1' },

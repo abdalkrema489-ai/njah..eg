@@ -425,7 +425,7 @@ export function Sidebar({ open, onToggle }) {
           : { width: open ? 272 : 72, x: 0 }
         }
         transition={{ type: 'spring', stiffness: 340, damping: 34 }}
-        className="main-sidebar floating-panel"
+        className={`main-sidebar floating-panel${open ? ' open' : ''}`}
         style={{
           height: isMobile ? '100dvh' : 'calc(100vh - 24px)',
           margin: isMobile ? '0' : '12px',

@@ -516,7 +516,7 @@ export default function GroupsPage() {
 
       {/* Groups grid */}
       {!isLoading && groups.length > 0 && (
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:20 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(min(300px, 100%),1fr))', gap:20 }}>
           {groups.map((g, i) => (
           <GroupCard
               key={g._id}

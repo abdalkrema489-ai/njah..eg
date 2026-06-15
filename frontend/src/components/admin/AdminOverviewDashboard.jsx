@@ -56,7 +56,7 @@ export default function AdminOverviewDashboard() {
 
       {/* Stat Cards */}
       <motion.div variants={stagger.item} style={{
-        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))',
         gap: 16, marginBottom: 28,
       }}>
         <StatCard icon="👥" label={isAr ? 'إجمالي المستخدمين' : 'Total Users'}       value={stats?.totalUsers ?? '—'} />
@@ -70,7 +70,7 @@ export default function AdminOverviewDashboard() {
         <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>
           {isAr ? '⚡ إجراءات سريعة' : '⚡ Quick Actions'}
         </h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: 14 }}>
           {[
             { icon: '👥', label: isAr ? 'إدارة المستخدمين' : 'Manage Users',    path: '/students' },
             { icon: '📊', label: isAr ? 'التحليلات' : 'Analytics',              path: '/analytics' },

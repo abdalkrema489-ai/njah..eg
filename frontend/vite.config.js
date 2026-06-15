@@ -62,13 +62,15 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,webp,json}'],
         navigateFallback: '/offline.html',
-        navigateFallbackDenylist: [/^\/api\//, /^\/socket\.io\//],
+        navigateFallbackDenylist: [/^\/api\//, /^\/socket\.io\//, /^\/auth\//, /^\/admin\//],
         cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true,
 
         runtimeCaching: [
           // API → Network-first (serves cache when offline)
           {
-            urlPattern: /^https?:\/\/.*\/api\/.*/i,
+            urlPattern: ({ url }) => url.hostname !== 'localhost' && url.hostname !== '127.0.0.1' && url.pathname.startsWith('/api/'),
             handler: 'NetworkFirst',
             options: {
               cacheName: 'najah-api-v1',

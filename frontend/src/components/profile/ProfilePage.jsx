@@ -114,7 +114,7 @@ export default function ProfilePage() {
         gradient
       />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 360px) 1fr', gap: 32, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(min(320px, 100%), 360px) 1fr', gap: 32, alignItems: 'start' }}>
         {/* Left: Identity Card */}
         <motion.div variants={itemAnim} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           <div className="floating-panel" style={{ padding: 48, textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
@@ -260,19 +260,19 @@ export default function ProfilePage() {
             </h3>
             
             <form onSubmit={handleSubmit(onSubmit)} style={{ display:'flex', flexDirection:'column', gap:28 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: 20 }}>
                 <Input label={isAr ? 'الاسم الكامل' : 'Full Name'} {...register('name', { required:"Name is required" })} />
                 <Input label={isAr ? 'تاريخ الميلاد' : 'Date of Birth'} type="date" {...register('dob')} />
               </div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: 20 }}>
                 <Input label={isAr ? 'رقم الهاتف' : 'Phone Number'} placeholder="+20..." {...register('phone')} />
                 <Select label={isAr ? 'الصف الدراسي' : 'Academic Grade'} {...register('grade')}>
                   {GRADES.map(g=><option key={g} value={g}>{g.toUpperCase()}</option>)}
                 </Select>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: 20 }}>
                 <Input label={isAr ? 'المدرسة / الجامعة' : 'School / University'} placeholder={isAr ? 'اسم المؤسسة...' : 'Institution name...'} {...register('school')} />
                 <Select label={isAr ? 'اللغة' : 'Language'} {...register('language')}>
                   {LANGUAGES.map(l=><option key={l.value} value={l.value}>{l.label.toUpperCase()}</option>)}

@@ -131,7 +131,7 @@ export default function BoardPage() {
       </div>
 
       {isLoading ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 28 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))', gap: 28 }}>
           {[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="skeleton" style={{ height: 420, borderRadius: 24 }} />)}
         </div>
       ) : posts.length === 0 ? (
@@ -144,7 +144,7 @@ export default function BoardPage() {
           />
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 28 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))', gap: 28 }}>
           <AnimatePresence>
             {posts.map(p => <PostCard key={p.id} post={p} onLike={like} onSave={save_} />)}
           </AnimatePresence>

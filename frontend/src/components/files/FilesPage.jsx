@@ -183,7 +183,7 @@ export default function FilesPage() {
         subtitle={isAr ? "إدارة مستودعك الأكاديمي. يمكنك الوصول والتحليل وتنظيم المواد الدراسية بسهولة." : "Manage your academic repository. Access, analyze, and organize your study materials with ease."} 
       />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: 24, marginBottom: 32 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) min(320px, 100%)', gap: 24, marginBottom: 32 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           <UploadDropzone onUploaded={() => qc.invalidateQueries(['files'])} />
           

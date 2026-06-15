@@ -216,7 +216,7 @@ export default function TeacherDashboard() {
       {/* ── Quick Actions ── */}
       <motion.div variants={stagger.item} style={{ marginBottom:28 }}>
         <h3 style={{ fontSize:15, fontWeight:800, fontFamily:'var(--font-head)', marginBottom:14, letterSpacing:'-0.02em' }}>{isAr ? 'وصول سريع' : 'Quick Actions'}</h3>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(170px,1fr))', gap:12 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(min(170px, 100%),1fr))', gap:12 }}>
           {QUICK_ACTIONS.map(a => (
             <QuickAction key={a.label} {...a} onClick={() => navigate(a.path)} />
           ))}
@@ -247,7 +247,7 @@ export default function TeacherDashboard() {
             </button>
           </div>
         ) : (
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))', gap:14 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(min(260px, 100%),1fr))', gap:14 }}>
             {groups.slice(0,6).map(g => <MiniGroupCard key={g._id} group={g} navigate={navigate} />)}
           </div>
         )}

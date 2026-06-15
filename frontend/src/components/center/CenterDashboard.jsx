@@ -61,7 +61,7 @@ export default function CenterDashboard() {
 
       {/* Stat Cards */}
       <motion.div variants={stagger.item}
-        style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
+        style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: 16, marginBottom: 28 }}>
         {isLoading ? (
           <div style={{ gridColumn: '1/-1', display: 'flex', justifyContent: 'center', padding: 40 }}><Spinner /></div>
         ) : statCards.map((s, i) => (
@@ -84,7 +84,7 @@ export default function CenterDashboard() {
         <h3 style={{ fontSize: 15, fontWeight: 800, marginBottom: 18, fontFamily: 'var(--font-head)', letterSpacing: '-0.02em' }}>
           ⚡ {isAr ? 'إجراءات سريعة' : 'Quick Actions'}
         </h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))', gap: 12 }}>
           {quickActions.map((a, i) => (
             <motion.button key={a.path}
               onClick={() => navigate(a.path)}

@@ -104,7 +104,7 @@ export default function TeacherWallet() {
       </div>
 
       {/* ── Stats Cards ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: 16 }}>
         {[
           { label: isAr ? 'الرصيد المتاح' : 'Available Balance',    value: `${balance.available.toFixed(2)} EGP`, icon: '💰', color: '#10B981', bg: 'rgba(16,185,129,0.08)' },
           { label: isAr ? 'إجمالي المكتسب' : 'Total Earned',         value: `${balance.totalEarned.toFixed(2)} EGP`, icon: '📈', color: '#6366F1', bg: 'rgba(99,102,241,0.08)' },

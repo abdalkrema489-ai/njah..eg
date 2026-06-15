@@ -272,7 +272,7 @@ export default function NajahAI() {
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Quick prompts when empty */}
           {messages.length === 1 && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10, marginBottom: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(200px, 100%), 1fr))', gap: 10, marginBottom: 8 }}>
               {QUICK_PROMPTS.map(p => (
                 <button key={p} onClick={() => { setInput(p); inputRef.current?.focus(); }} style={{
                   padding: '10px 14px', borderRadius: 12, border: '1px solid var(--border)',

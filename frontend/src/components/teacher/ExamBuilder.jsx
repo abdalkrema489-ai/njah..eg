@@ -237,7 +237,7 @@ export default function ExamBuilder() {
                 </motion.button>
               </div>
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(380px, 1fr))', gap:14 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(min(380px, 100%), 1fr))', gap:14 }}>
               {questions.map((q, i) => (
                 <QuestionCard key={i} q={q} index={i} selected={selected.has(i)} onToggle={toggleQuestion} />
               ))}

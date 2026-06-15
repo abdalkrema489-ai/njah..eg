@@ -471,7 +471,7 @@ function StudentDashboard() {
       {/* Groups widget */}
       <GroupsWidget navigate={navigate} />
 
-      <motion.div variants={stagger.item} style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))', gap:16, marginBottom:28 }}>
+      <motion.div variants={stagger.item} style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(190px, 100%),1fr))', gap:16, marginBottom:28 }}>
         <StatCard icon="👥" value={studentCount.toLocaleString()} label={isAr ? 'طلاب نشطون' : 'Students Online'} color="#10B981" sub={isAr ? 'متواجدون الآن' : 'Active right now'} />
         <StatCard icon="📅" value={stats.sessions_done || 0} label={isAr ? 'جلسات مكتملة' : 'Sessions Done'} color="#7C3AED" change={stats.sessions_done > 5 ? (isAr ? '+معدل ممتاز' : '+Great pace') : undefined} />
         <StatCard icon="🎯" value={stats.quizzes_taken || 0} label={isAr ? 'اختبارات منجزة' : 'Quizzes Taken'} color="#06B6D4" sub={`${stats.avg_score || 0}% ${isAr ? 'متوسط الدرجات' : 'avg score'}`} />

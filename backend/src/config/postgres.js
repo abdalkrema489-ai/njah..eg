@@ -79,6 +79,7 @@ async function runMigrations(client) {
         ALTER TABLE files ADD COLUMN IF NOT EXISTS description TEXT;
         -- quiz_attempts
         ALTER TABLE quiz_attempts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+        ALTER TABLE quiz_attempts ADD COLUMN IF NOT EXISTS type VARCHAR(50) DEFAULT 'manual';
         -- notes
         ALTER TABLE notes ADD COLUMN IF NOT EXISTS word_count INTEGER DEFAULT 0;
       END IF;
@@ -254,6 +255,18 @@ async function runMigrations(client) {
       time_taken   INTEGER,
       questions    JSONB,
       created_at   TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS ai_conversations (
+      id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id    UUID REFERENCES users(id) ON DELETE CASCADE,
+      title      VARCHAR(500) DEFAULT 'New Chat',
+      messages   JSONB DEFAULT '[]',
+      context    TEXT,
+      file_id    VARCHAR(500),
+      language   VARCHAR(10) DEFAULT 'ar',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
     );
 
     CREATE TABLE IF NOT EXISTS achievements (

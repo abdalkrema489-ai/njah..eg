@@ -26,7 +26,7 @@ export default function AnalyticsPage() {
         subtitle={isAr ? "استخدم البيانات لتحسين مسار تعلمك وإتقان موادك." : "Harness data to optimize your learning trajectory and master your subjects."} 
       />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 24, marginBottom: 32 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(400px, 100%), 1fr))', gap: 24, marginBottom: 32 }}>
         <div className="floating-panel" style={{ padding: 28 }}>
           <h3 style={{ fontSize: 18, fontWeight: 900, fontFamily: 'var(--font-head)', marginBottom: 20 }}>{isAr ? 'إتقان المعرفة' : 'Knowledge Mastery'}</h3>
           {!(d.subjectBreakdown?.length) ? <EmptyState icon="📖" title={isAr ? "في انتظار البيانات" : "Awaiting Data"} subtitle={isAr ? "أكمل جلسات الدراسة لبدء تعيين المواد." : "Complete study sessions to begin subject mapping."} /> :

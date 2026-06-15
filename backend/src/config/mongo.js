@@ -5,9 +5,23 @@ const mongoose = require('mongoose');
 const logger   = require('../utils/logger');
 
 async function connectMongo() {
-  await mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 5000 });
-  logger.info('✅ MongoDB connected');
+  if (!process.env.MONGODB_URI) {
+    logger.warn('⚠️  MONGODB_URI not set — MongoDB features disabled');
+    return;
+  }
+  try {
+    await mongoose.connect(process.env.MONGODB_URI, {
+      serverSelectionTimeoutMS: 10000,
+      connectTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
+    });
+    logger.info('✅ MongoDB connected');
+  } catch (err) {
+    logger.error('❌ MongoDB connection failed:', err.message);
+  }
 }
+mongoose.connection.on('disconnected', () => logger.warn('MongoDB disconnected'));
+mongoose.connection.on('reconnected', () => logger.info('MongoDB reconnected'));
 
 const messageSchema = new mongoose.Schema({
   roomId:    { type: String, required: true, index: true },
