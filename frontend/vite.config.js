@@ -13,7 +13,6 @@ export default defineConfig({
       includeAssets: [
         'favicon.ico', 'apple-touch-icon.png',
         'pwa-192x192.png', 'pwa-512x512.png',
-        'offline.html',
       ],
 
       // ── Web App Manifest ──────────────────────────────────────
@@ -60,9 +59,8 @@ export default defineConfig({
 
       // ── Workbox Strategies ────────────────────────────────────
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,webp,json}'],
-        navigateFallback: '/offline.html',
-        navigateFallbackDenylist: [/^\/api\//, /^\/socket\.io\//, /^\/auth\//, /^\/admin\//],
+        globPatterns: ['**/*.{js,css,ico,png,svg,woff2,webp,json}'],
+        navigateFallback: null,
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,

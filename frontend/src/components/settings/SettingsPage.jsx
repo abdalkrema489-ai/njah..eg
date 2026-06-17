@@ -240,7 +240,7 @@ export default function SettingsPage() {
                 error={errors.currentPassword?.message} 
               />
               
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: 20 }}>
                 <div>
                   <Input 
                     label={isAr ? 'كلمة المرور الجديدة' : 'New Password'} type={showNew ? 'text' : 'password'} 

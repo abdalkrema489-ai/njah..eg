@@ -179,7 +179,7 @@ export default function UniversityStudentDashboard() {
       {/* ── Stats row ── */}
       <motion.div
         variants={stagger} initial="hidden" animate="show"
-        style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}
+        style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: 16, marginBottom: 24 }}
       >
         <StatCard icon="⏱️" label={isAr ? 'ساعات هذا الأسبوع' : 'Hours This Week'} value={`${totalHoursWeek.toFixed(1)}h`} sub={isAr ? 'الهدف: ٢٠ ساعة' : 'Goal: 20h'} color="#6366F1" />
         <StatCard icon="✅" label={isAr ? 'جلسات مكتملة' : 'Sessions Done'} value={completedSessions} sub={isAr ? 'إجمالي' : 'All time'} color="#10B981" />
