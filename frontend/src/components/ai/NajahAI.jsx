@@ -269,7 +269,7 @@ export default function NajahAI() {
         </div>
 
         {/* Messages */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', paddingBottom: '80px', display: 'flex', flexDirection: 'column', gap: 16, WebkitOverflowScrolling: 'touch' }}>
           {/* Quick prompts when empty */}
           {messages.length === 1 && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(200px, 100%), 1fr))', gap: 10, marginBottom: 8 }}>
@@ -367,8 +367,13 @@ export default function NajahAI() {
 
         {/* Input */}
         <div style={{
-          padding: '16px 24px', borderTop: '1px solid var(--border)',
+          padding: '16px 24px',
+          paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
+          borderTop: '1px solid var(--border)',
           background: 'var(--surface)',
+          position: 'sticky',
+          bottom: 0,
+          zIndex: 10,
         }}>
           <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
             <textarea

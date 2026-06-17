@@ -36,7 +36,8 @@ export default function LandingPage() {
   const isAr = lang === 'ar';
   const { scrollY } = useScroll();
   const yHero = useTransform(scrollY, [0, 500], [0, 100]);
-  
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   // Rotating images for dynamic visual testing
   const [assetIdx, setAssetIdx] = useState(1);
   useEffect(() => {
@@ -55,27 +56,61 @@ export default function LandingPage() {
         backgroundColor: 'rgba(11, 17, 32, 0.85)', backdropFilter: 'blur(12px)',
         borderBottom: `1px solid rgba(255,255,255,0.05)`,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 5%'
-      }}>
+      }} className="landing-nav">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => navigate('/')}>
           <div style={{ width: 32, height: 32, borderRadius: 8, background: C.magenta, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 18 }}>e</div>
           <span style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>Najah<span style={{color: C.magenta}}>.</span></span>
         </div>
 
-        <div style={{ display: 'flex', gap: 32, display: 'none', '@media (minWidth: 768px)': { display: 'flex' } }}>
+        {/* Desktop nav links */}
+        <div className="landing-nav-links" style={{ display: 'flex', gap: 32 }}>
            <a href="#courses" style={{ color: '#fff', textDecoration: 'none', fontSize: 14, fontWeight: 500 }}>{isAr ? 'الدورات' : 'Courses'}</a>
            <a href="#mentorship" style={{ color: '#fff', textDecoration: 'none', fontSize: 14, fontWeight: 500 }}>{isAr ? 'التوجيه' : 'Mentorship'}</a>
            <a href="#events" style={{ color: '#fff', textDecoration: 'none', fontSize: 14, fontWeight: 500 }}>{isAr ? 'الفعاليات' : 'Events'}</a>
            <a href="#community" style={{ color: '#fff', textDecoration: 'none', fontSize: 14, fontWeight: 500 }}>{isAr ? 'المجتمع' : 'Community'}</a>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-          <button onClick={() => navigate('/login')} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>{isAr ? 'دخول' : 'Login'}</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button onClick={() => navigate('/login')} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', minHeight: 44, minWidth: 44 }}>{isAr ? 'دخول' : 'Login'}</button>
           <button onClick={() => navigate('/register')} style={{ 
-            background: C.white, color: C.navy, border: 'none', padding: '10px 24px', borderRadius: 99, 
-            fontSize: 14, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+            background: C.white, color: C.navy, border: 'none', padding: '10px 20px', borderRadius: 99, 
+            fontSize: 14, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', whiteSpace: 'nowrap'
           }}>{isAr ? 'حساب جديد' : 'Sign Up'}</button>
+          {/* Mobile hamburger */}
+          <button
+            onClick={() => setMobileMenuOpen(v => !v)}
+            style={{ display: 'none', background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', padding: 8, minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center' }}
+            className="landing-hamburger"
+            aria-label="Toggle menu"
+          >
+            {mobileMenuOpen ? '✕' : '☰'}
+          </button>
         </div>
       </nav>
+
+      {/* Mobile menu dropdown */}
+      {mobileMenuOpen && (
+        <div style={{
+          position: 'fixed', top: 80, left: 0, right: 0, zIndex: 99,
+          background: 'rgba(11, 17, 32, 0.97)', backdropFilter: 'blur(12px)',
+          padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16,
+          borderBottom: '1px solid rgba(255,255,255,0.08)',
+        }}>
+          {[{href: '#courses', label: isAr ? 'الدورات' : 'Courses'}, {href: '#mentorship', label: isAr ? 'التوجيه' : 'Mentorship'}, {href: '#events', label: isAr ? 'الفعاليات' : 'Events'}, {href: '#community', label: isAr ? 'المجتمع' : 'Community'}].map(item => (
+            <a key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)}
+              style={{ color: '#fff', textDecoration: 'none', fontSize: 16, fontWeight: 600, padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              {item.label}
+            </a>
+          ))}
+        </div>
+      )}
+
+      {/* Inject hamburger show rule */}
+      <style>{`
+        @media (max-width: 768px) {
+          .landing-hamburger { display: flex !important; }
+        }
+      `}</style>
 
       {/* ── HERO SECTION (Navy) ── */}
       <section style={{ 
@@ -89,7 +124,7 @@ export default function LandingPage() {
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 5%', textAlign: 'center', position: 'relative', zIndex: 10 }}>
           <motion.div variants={stagger} initial="hidden" animate="visible" style={{ maxWidth: 800, margin: '0 auto' }}>
             <motion.h1 variants={fadeInUp} style={{ 
-              fontSize: 'min(5.5vw, 64px)', fontWeight: 800, color: '#fff', lineHeight: 1.1, letterSpacing: '-0.03em', marginBottom: 24
+              fontSize: 'clamp(28px, 5.5vw, 64px)', fontWeight: 800, color: '#fff', lineHeight: 1.1, letterSpacing: '-0.03em', marginBottom: 24
             }}>
               {isAr ? 'طوّر مهاراتك لترتقي بمسارك المهني.' : <span dangerouslySetInnerHTML={{__html: 'Grow Your Skills to<br/>Advance Your Career Path.'}} />}
             </motion.h1>
@@ -112,12 +147,11 @@ export default function LandingPage() {
           </motion.div>
 
           {/* ── THE 3 FLOATING HERO CARDS ── */}
-          <motion.div style={{ y: yHero, display: 'flex', justifyContent: 'center', gap: 24, marginTop: 80, flexWrap: 'wrap' }}>
+          <motion.div className="landing-hero-cards" style={{ y: yHero, display: 'flex', justifyContent: 'center', gap: 24, marginTop: 80, flexWrap: 'wrap' }}>
             {/* Yellow Card (Asset 1) */}
             <motion.div initial={{ opacity: 0, y: 100 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, type: 'spring' }}
-              style={{ width: 280, height: 380, borderRadius: 24, background: C.yellow, position: 'relative', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.4)', transform: 'translateY(40px)' }}>
+              style={{ width: 280, height: 380, borderRadius: 24, background: C.yellow, position: 'relative', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.4)', transform: 'translateY(40px)', flexShrink: 0 }}>
               <img src="/images/showcase-1.jpeg" alt="Student" style={{ width: '100%', height: '100%', objectFit: 'cover', mixBlendMode: 'multiply', opacity: 0.9 }} />
-              {/* Fake UI floating element */}
               <div style={{ position: 'absolute', bottom: 20, left: 20, right: 20, background: '#fff', padding: 16, borderRadius: 16, boxShadow: '0 10px 20px rgba(0,0,0,0.15)' }}>
                 <div style={{ fontSize: 14, fontWeight: 800, color: C.textD }}>{isAr ? 'أحمد مصطفى' : 'Ahmed Mostafa'}</div>
                 <div style={{ fontSize: 12, color: C.textM }}>{isAr ? 'مسار الهندسة' : 'Engineering Track'}</div>
@@ -126,7 +160,7 @@ export default function LandingPage() {
 
             {/* Blue Center Card (Asset 2) */}
             <motion.div initial={{ opacity: 0, y: 100 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, type: 'spring' }}
-              style={{ width: 300, height: 420, borderRadius: 24, background: C.blue, position: 'relative', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.5)', zIndex: 2 }}>
+              style={{ width: 300, height: 420, borderRadius: 24, background: C.blue, position: 'relative', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.5)', zIndex: 2, flexShrink: 0 }}>
               <img src="/images/showcase-2.jpeg" alt="Student 2" style={{ width: '100%', height: '100%', objectFit: 'cover', mixBlendMode: 'multiply', opacity: 0.9 }} />
               <div style={{ position: 'absolute', top: 20, right: 20, background: C.magenta, color: '#fff', padding: '6px 12px', borderRadius: 99, fontSize: 12, fontWeight: 800 }}>{isAr ? 'مباشر' : 'LIVE'}</div>
               <div style={{ position: 'absolute', bottom: 20, left: 20, right: 20, background: '#fff', padding: 16, borderRadius: 16, boxShadow: '0 10px 20px rgba(0,0,0,0.15)' }}>
@@ -137,7 +171,7 @@ export default function LandingPage() {
 
             {/* Orange Card (Asset 3) */}
             <motion.div initial={{ opacity: 0, y: 100 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6, type: 'spring' }}
-              style={{ width: 280, height: 380, borderRadius: 24, background: C.orange, position: 'relative', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.4)', transform: 'translateY(40px)' }}>
+              style={{ width: 280, height: 380, borderRadius: 24, background: C.orange, position: 'relative', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.4)', transform: 'translateY(40px)', flexShrink: 0 }}>
               <img src="/images/showcase-3.jpeg" alt="Student 3" style={{ width: '100%', height: '100%', objectFit: 'cover', mixBlendMode: 'multiply', opacity: 0.9 }} />
               <div style={{ position: 'absolute', bottom: 20, left: 20, right: 20, background: '#fff', padding: 16, borderRadius: 16, boxShadow: '0 10px 20px rgba(0,0,0,0.15)' }}>
                 <div style={{ fontSize: 14, fontWeight: 800, color: C.textD }}>{isAr ? 'عمر يوسف' : 'Omar Youssef'}</div>
@@ -150,8 +184,8 @@ export default function LandingPage() {
       </section>
 
       {/* ── WHITE FEATURES SECTION ── */}
-      <section style={{ backgroundColor: C.gray, padding: '120px 5% 80px', position: 'relative' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', flexWrap: 'wrap', gap: 64, alignItems: 'center' }}>
+      <section style={{ backgroundColor: C.gray, padding: '120px 5% 80px', position: 'relative' }} id="courses">
+        <div className="landing-features-grid" style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', flexWrap: 'wrap', gap: 64, alignItems: 'center' }}>
           
           {/* Left Side: Video Call Mockup */}
           <div style={{ flex: '1 1 500px', position: 'relative' }}>
@@ -171,6 +205,7 @@ export default function LandingPage() {
 
             {/* Overlapping Small Call Card */}
             <motion.div initial={{ opacity: 0, scale: 0.8 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once:true }} transition={{ delay: 0.3 }}
+              className="landing-features-overlay-card"
               style={{ position: 'absolute', bottom: -30, right: -30, width: 220, background: '#fff', borderRadius: 16, padding: 10, boxShadow: '0 20px 40px rgba(0,0,0,0.12)', zIndex: 10 }}>
               <img src="/images/showcase-5.jpeg" alt="Video Call Small" style={{ width: '100%', borderRadius: 10, objectFit: 'cover', aspectRatio: '4/3' }} />
               <div style={{ position: 'absolute', top: 16, right: 16, background: '#10B981', width: 10, height: 10, borderRadius: '50%', border: '2px solid #fff' }} />
@@ -178,14 +213,15 @@ export default function LandingPage() {
 
             {/* Floating UI Elements matching reference */}
             <motion.div animate={{ y: [0, -10, 0] }} transition={{ repeat: Infinity, duration: 4 }}
+              className="landing-floating-badge"
               style={{ position: 'absolute', top: -30, left: -20, background: '#fff', padding: '12px 20px', borderRadius: 99, boxShadow: '0 10px 20px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 12, zIndex: 5 }}>
               <span style={{ fontSize: 20 }}>👏</span> <span style={{ fontWeight: 800, color: C.textD }}>{isAr ? 'إجابة ممتازة!' : 'Excellent Answer!'}</span>
             </motion.div>
           </div>
 
           {/* Right Side: Text & Features */}
-          <motion.div initial={{ opacity: 0, x: 50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once:true }} style={{ flex: '1 1 400px' }}>
-            <h2 style={{ fontSize: 'min(4vw, 44px)', fontWeight: 800, color: C.textD, lineHeight: 1.1, letterSpacing: '-0.03em', marginBottom: 24 }}>
+          <motion.div initial={{ opacity: 0, x: 50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once:true }} style={{ flex: '1 1 min(400px, 100%)' }}>
+            <h2 style={{ fontSize: 'clamp(24px, 4vw, 44px)', fontWeight: 800, color: C.textD, lineHeight: 1.1, letterSpacing: '-0.03em', marginBottom: 24 }}>
               {isAr ? 'فصول حية بجودة صوت وصورة عالية.' : 'High Quality Video, Audio & Live Class.'}
             </h2>
             <p style={{ color: C.textM, fontSize: 16, lineHeight: 1.7, marginBottom: 40 }}>
@@ -228,7 +264,7 @@ export default function LandingPage() {
           <h2 style={{ fontSize: 36, fontWeight: 800, color: C.textD, marginBottom: 12 }}>{isAr ? 'استكشف أهم المواد' : 'Explore Top Subjects'}</h2>
           <p style={{ color: C.textM, fontSize: 16, marginBottom: 60 }}>{isAr ? 'أتقن مواضيع جديدة مع أفضل المعلمين المصريين' : 'Master new topics from the best Egyptian instructors'}</p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: 32 }}>
+          <div className="landing-course-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: 32 }}>
             {[
               { title: isAr ? 'مفاهيم متقدمة في الفيزياء' : 'Advanced Physics Concept', tutor: isAr ? 'أ. حسن' : 'Prof. Hassan', img: 'showcase-6.jpeg', tag: isAr ? 'فيزياء' : 'Physics' },
               { title: isAr ? 'كيمياء عضوية' : 'Organic Chemistry Masterclass', tutor: isAr ? 'د. رانيا' : 'Dr. Rania', img: 'showcase-7.jpeg', tag: isAr ? 'كيمياء' : 'Chemistry' },
@@ -261,7 +297,7 @@ export default function LandingPage() {
 
       {/* ── FOOTER ── */}
       <footer style={{ backgroundColor: C.navy, padding: '80px 5% 40px', color: '#fff' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', gap: 64, flexWrap: 'wrap' }}>
+        <div className="landing-footer-grid" style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', gap: 64, flexWrap: 'wrap' }}>
           <div style={{ flex: '1 1 300px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', marginBottom: 24 }}>
               <div style={{ width: 32, height: 32, borderRadius: 8, background: C.magenta, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 18 }}>e</div>

@@ -175,12 +175,12 @@ export default function SchoolStudentDashboard() {
   const name  = user?.name?.split(' ')[0] || 'Student';
 
   return (
-    <div style={{ padding: '0 4px', maxWidth: 1100 }}>
+    <div style={{ padding: '0 4px', maxWidth: 1100, width: '100%', boxSizing: 'border-box' }}>
 
       {/* ── Hero card ── */}
       <motion.div variants={fadeUp} initial="hidden" animate="show"
         style={{
-          borderRadius: 24, padding: '28px 32px',
+          borderRadius: 'clamp(16px, 4vw, 24px)', padding: 'clamp(16px, 4vw, 28px) clamp(14px, 4vw, 32px)',
           background: 'linear-gradient(135deg, rgba(124,58,237,0.18) 0%, rgba(16,185,129,0.10) 100%)',
           border: '1px solid rgba(124,58,237,0.25)',
           boxShadow: '0 8px 32px rgba(124,58,237,0.15)',
@@ -245,7 +245,7 @@ export default function SchoolStudentDashboard() {
       {/* ── Grid ── */}
       <motion.div
         variants={stagger} initial="hidden" animate="show"
-        style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}
+        style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: 20 }}
       >
         {/* Today's Schedule */}
         <motion.div variants={fadeUp}

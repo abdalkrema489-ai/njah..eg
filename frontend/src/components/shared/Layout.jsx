@@ -797,7 +797,7 @@ export function Header({ sidebarOpen, onToggle, onOpenNotifs, onOpenWizard }) {
           }}>
             {pageLabel}
           </h1>
-          <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>
+          <p className="header-date-text" style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
         </div>
@@ -907,6 +907,7 @@ export function Header({ sidebarOpen, onToggle, onOpenNotifs, onOpenWizard }) {
                     zIndex: 1000,
                     boxShadow: 'var(--shadow-2xl), var(--glow)',
                   }}
+                  className="profile-dropdown"
                 >
                   {/* User header */}
                   <div style={{
