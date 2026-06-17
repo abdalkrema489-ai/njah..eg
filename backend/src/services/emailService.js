@@ -6,10 +6,11 @@ const logger     = require('../utils/logger');
 let transport;
 function getTransport() {
   if (!transport) {
+    const smtpPort = parseInt(process.env.SMTP_PORT || '587');
     transport = nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT || '465'),
-      secure: (process.env.SMTP_PORT || '465') === '465',
+      port: smtpPort,
+      secure: smtpPort === 465,  // true for 465 (SSL), false for 587 (STARTTLS)
       auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
       connectionTimeout: 10000,
       greetingTimeout: 5000,
@@ -29,7 +30,7 @@ const BASE = `
   <div style="padding:36px">{{CONTENT}}</div>
   <div style="background:#f8f7ff;padding:20px;text-align:center;font-size:12px;color:#888">
     منصة نجاح للتعليم المصري · Najah Egyptian Education Platform<br/>
-    <a href="https://najah.edu.eg" style="color:#6C63FF">najah.edu.eg</a>
+    <a href="https://njaheg-theta.vercel.app" style="color:#6C63FF">njaheg-theta.vercel.app</a>
   </div>
 </div>`;
 

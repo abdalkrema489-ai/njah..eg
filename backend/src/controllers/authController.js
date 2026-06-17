@@ -31,7 +31,10 @@ async function register(req, res) {
 
   // Use the institution field as the "school" column (backwards-compatible)
   const institutionName = institution || school || universityName || null;
-  const subjectsStr = subjects || null;
+  // subjects column is TEXT[] — convert comma-separated string to array if needed
+  const subjectsArr = subjects
+    ? (Array.isArray(subjects) ? subjects : subjects.split(',').map(s => s.trim()).filter(Boolean))
+    : null;
   const hash = await bcrypt.hash(password, ROUNDS);
 
   // Try to set role / institutionType columns if they exist (graceful fallback)
@@ -41,7 +44,7 @@ async function register(req, res) {
       INSERT INTO users (name,email,password_hash,grade,school,language,email_verified,role,institution_type,faculty,university_name,subjects)
       VALUES ($1,$2,$3,$4,$5,$6,false,$7,$8,$9,$10,$11)
       RETURNING id,name,email,grade,level,xp_points,language,avatar_url,role,streak_days,email_verified,faculty,university_name,subjects
-    `, [name, email, hash, grade || null, institutionName, language, role, institutionType, faculty || null, universityName || null, subjectsStr]);
+    `, [name, email, hash, grade || null, institutionName, language, role, institutionType, faculty || null, universityName || null, subjectsArr]);
     rows = result.rows;
   } catch {
     // Fallback: extra columns may not exist in older DB schema
@@ -68,7 +71,7 @@ async function register(req, res) {
   if (!user.role) user.role = role;
   if (!user.faculty && faculty) user.faculty = faculty;
   if (!user.university_name && universityName) user.universityName = universityName;
-  if (!user.subjects && subjectsStr) user.subjects = subjectsStr;
+  if (!user.subjects && subjectsArr) user.subjects = subjectsArr;
 
   const verifyToken = uuid();
   await cacheSet(`verify:${verifyToken}`, user.id, 86400);
@@ -185,8 +188,17 @@ async function refreshToken(req, res) {
     // Blacklist old refresh token (TTL matches original expiry window)
     await cacheSet(`refresh_blacklist:${refresh}`, 1, 30 * 24 * 3600);
 
+    // Fetch fresh user row so role/name/email are preserved in new token
+    const { rows: userRows } = await pool.query(
+      'SELECT id, name, email, role FROM users WHERE id=$1 AND is_active=true',
+      [decoded.id]
+    );
+    if (!userRows[0]) {
+      return res.status(401).json({ error: 'User account not found or deactivated' });
+    }
+
     // Issue new pair
-    const newAccess  = signAccess(decoded.id);
+    const newAccess  = signAccess(userRows[0]);
     const newRefresh = signRefresh(decoded.id);
     res.json({ token: newAccess, refresh: newRefresh });
   } catch {

@@ -46,7 +46,10 @@ async function optionalAuth(req, res, next) {
   try {
     const token   = auth.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const { rows } = await pool.query('SELECT * FROM users WHERE id=$1', [decoded.id]);
+    const { rows } = await pool.query(
+      'SELECT id, name, email, role, is_active, avatar_url, language FROM users WHERE id=$1 AND is_active=true',
+      [decoded.id]
+    );
     if (rows[0]) req.user = rows[0];
   } catch {}
   next();

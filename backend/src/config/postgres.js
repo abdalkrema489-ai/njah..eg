@@ -222,7 +222,7 @@ async function runMigrations(client) {
       user_id     UUID REFERENCES users(id) ON DELETE CASCADE,
       title       VARCHAR(300) NOT NULL,
       description TEXT,
-      file_id     UUID REFERENCES files(id) ON DELETE CASCADE,
+      file_id     UUID REFERENCES files(id) ON DELETE SET NULL,
       subject     VARCHAR(100),
       grade       VARCHAR(20),
       likes_count INTEGER DEFAULT 0,
@@ -403,6 +403,19 @@ async function runMigrations(client) {
 
     CREATE INDEX IF NOT EXISTS idx_teacher_earnings_teacher ON teacher_earnings(teacher_id, earned_at DESC);
     CREATE INDEX IF NOT EXISTS idx_withdrawal_teacher ON withdrawal_requests(teacher_id, status);
+
+    -- Teacher ratings table (for student → teacher rating feature)
+    CREATE TABLE IF NOT EXISTS teacher_ratings (
+      id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      teacher_id  UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      student_id  UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      rating      INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+      comment     TEXT,
+      created_at  TIMESTAMPTZ DEFAULT NOW(),
+      updated_at  TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(teacher_id, student_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_teacher_ratings_teacher ON teacher_ratings(teacher_id);
   `);
   logger.info('✅ DB migrations complete');
 }

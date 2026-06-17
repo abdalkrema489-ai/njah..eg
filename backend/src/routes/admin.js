@@ -296,14 +296,21 @@ router.get('/earnings', adminAuth, async (req, res) => {
   }
 });
 
-// ── POST /api/admin/settle ───────────────────────────────────
+// ── POST /api/admin/settle ──────────────────────────────────────────
 router.post('/settle', adminAuth, async (req, res) => {
   try {
-    const { teacherName } = req.body;
-    if (!teacherName) return res.status(400).json({ error: 'Teacher name required' });
+    const { teacherId, teacherName } = req.body;
+    if (!teacherId && !teacherName)
+      return res.status(400).json({ error: 'teacherId or teacherName required' });
     
-    // Find groups belonging to this teacher
-    const groups = await Group.find({ teacherName });
+    // Prefer teacherId for precision; fall back to teacherName for backward compat
+    let groups;
+    if (teacherId) {
+      groups = await Group.find({ teacherId });
+    } else {
+      logger.warn('[Admin] settle called with teacherName instead of teacherId — may match multiple teachers');
+      groups = await Group.find({ teacherName });
+    }
     const groupIds = groups.map(g => g._id);
     
     // Find all unsettled transactions for this teacher's groups
@@ -607,13 +614,26 @@ router.get('/groups', adminAuth, async (req, res) => {
   }
 });
 
-// ── PATCH /api/admin/settings/fee ────────────────────────────
-router.patch('/settings/fee', adminAuth, (req, res) => {
-  const { feePercent } = req.body;
-  if (typeof feePercent !== 'number' || feePercent < 0 || feePercent > 50)
-    return res.status(400).json({ error: 'Fee must be 0–50%' });
-  process.env.PLATFORM_FEE_PERCENT = String(feePercent);
-  res.json({ success: true, feePercent });
+// ── PATCH /api/admin/settings/fee ──────────────────────────────────────────
+router.patch('/settings/fee', adminAuth, async (req, res) => {
+  try {
+    const { feePercent } = req.body;
+    if (typeof feePercent !== 'number' || feePercent < 0 || feePercent > 50)
+      return res.status(400).json({ error: 'Fee must be 0–50%' });
+    // Persist to DB so it survives server restarts/redeploys
+    await pool.query(
+      `INSERT INTO platform_settings (key, value)
+       VALUES ('platform_fee_percent', $1::jsonb)
+       ON CONFLICT (key) DO UPDATE SET value=$1::jsonb, updated_at=NOW()`,
+      [JSON.stringify(feePercent)]
+    );
+    process.env.PLATFORM_FEE_PERCENT = String(feePercent);
+    logger.info(`[Admin] Platform fee updated to ${feePercent}%`);
+    res.json({ success: true, feePercent });
+  } catch (err) {
+    logger.error('Fee update error:', err);
+    res.status(500).json({ error: 'Failed to update fee: ' + err.message });
+  }
 });
 
 // ── GET /api/admin/withdrawals — كل طلبات السحب ──────────

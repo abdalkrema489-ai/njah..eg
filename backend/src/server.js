@@ -2,7 +2,7 @@
 const dotenv = require('dotenv');
 
 if (process.env.NODE_ENV !== 'production') {
-  const envFile = process.env.ENV_FILE || '.env.development';
+  const envFile = process.env.ENV_FILE || '.env';
   dotenv.config({ path: envFile });
   console.log(`Loaded environment from: ${envFile}`);
 }
@@ -57,6 +57,9 @@ const supportRoutes       = require('./routes/support');
 const app        = express();
 app.set('trust proxy', 1); // Trust first proxy (Railway/Render load balancers)
 const httpServer = createServer(app);
+
+// ── DB Readiness Flag ──
+let dbReady = false;
 const io         = new Server(httpServer, {
   cors: {
     origin: (origin, callback) => {
@@ -160,6 +163,13 @@ app.use(passport.initialize());
 // ── Rate limiter on all /api routes ──
 app.use('/api/', rateLimiter);
 
+// ── DB Readiness Guard — blocks API calls during cold-start ──
+app.use('/api/', (req, res, next) => {
+  if (!dbReady && !req.path.startsWith('/auth/') && req.path !== '/health') {
+    return res.status(503).json({ error: 'Server is starting up, please retry in a few seconds.' });
+  }
+  next();
+});
 
 
 // ── API Routes ──
@@ -209,9 +219,25 @@ async function start() {
       connectPostgres().catch(e => logger.warn('⚠️  Postgres unavailable:', e.message)),
       connectMongo().catch(e => logger.warn('⚠️  MongoDB unavailable:', e.message)),
       connectRedis().catch(e => logger.warn('⚠️  Redis unavailable:', e.message))
-    ]).then(() => {
+    ]).then(async () => {
       logger.info('📢 Database initialization sequence complete');
       
+      // Load persisted platform fee from DB (overrides .env default)
+      try {
+        const { pool } = require('./config/postgres');
+        const { rows: feeRows } = await pool.query(
+          "SELECT value FROM platform_settings WHERE key='platform_fee_percent'"
+        );
+        if (feeRows[0]) {
+          process.env.PLATFORM_FEE_PERCENT = String(feeRows[0].value);
+          logger.info(`💰 Platform fee loaded from DB: ${feeRows[0].value}%`);
+        }
+      } catch (e) { logger.warn('Platform fee DB load skipped:', e.message); }
+
+      // Mark server as ready — unblocks API routes
+      dbReady = true;
+      logger.info('✅ All systems ready — API now accepting requests');
+
       // Start non-critical services
       try { initFirebase(); } catch(e) { logger.warn('⚠️  Firebase unavailable:', e.message); }
       try { setupPassport(); } catch(e) { logger.warn('⚠️  Passport unavailable:', e.message); }
