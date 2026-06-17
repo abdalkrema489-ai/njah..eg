@@ -66,6 +66,8 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
+        // Bump this version string whenever you need to force-clear all user caches
+        cacheId: 'najah-v2',
 
         runtimeCaching: [
           // API → Network-first (serves cache when offline)
@@ -73,7 +75,7 @@ export default defineConfig({
             urlPattern: ({ url }) => url.hostname !== 'localhost' && url.hostname !== '127.0.0.1' && url.pathname.startsWith('/api/'),
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'najah-api-v1',
+              cacheName: 'najah-api-v2',
               networkTimeoutSeconds: 8,
               expiration: { maxEntries: 200, maxAgeSeconds: 86400 },
               cacheableResponse: { statuses: [0, 200] },
