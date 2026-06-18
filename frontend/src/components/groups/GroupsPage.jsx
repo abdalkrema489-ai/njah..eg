@@ -436,9 +436,9 @@ export default function GroupsPage() {
     <div style={{ direction: lang === 'ar' ? 'rtl' : 'ltr', position: 'relative' }}>
       <div ref={indicatorRef} style={{ position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%) rotate(0deg)', fontSize: 24, opacity: 0, transition: 'opacity 0.2s', zIndex: 999, pointerEvents: 'none' }}>🔄</div>
       {/* Header */}
-      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:28, flexWrap:'wrap', gap:16 }}>
-        <div>
-          <h1 style={{ fontSize:28, fontWeight:900, color:'var(--text)', marginBottom:6 }}>
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:28, flexWrap:'wrap', gap:12 }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <h1 style={{ fontSize:'clamp(20px, 5vw, 28px)', fontWeight:900, color:'var(--text)', marginBottom:6 }}>
             {isTeacher ? `🏫 ${t('nav.myClasses')}` : `📚 ${t('groups.title')}`}
           </h1>
           <p style={{ fontSize:14, color:'var(--text3)' }}>
@@ -448,7 +448,7 @@ export default function GroupsPage() {
           </p>
         </div>
 
-        <div style={{ display:'flex', gap:10 }}>
+        <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
           {isTeacher ? (
             <button className="btn btn-primary btn-lg"
               onClick={() => setShowWizard(true)}
@@ -502,11 +502,11 @@ export default function GroupsPage() {
               {lang === 'ar' ? '+ إنشاء أول فصل' : '+ Create First Class'}
             </button>
           ) : (
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-              <button onClick={() => setShowJoin(true)} style={{ padding:'12px 28px', borderRadius:14, background:'linear-gradient(135deg,#3B82F6,#1D4ED8)', color:'#fff', fontWeight:700, fontSize:14, cursor:'pointer', border:'none', fontFamily:'inherit' }}>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button onClick={() => setShowJoin(true)} style={{ padding:'12px 24px', borderRadius:14, background:'linear-gradient(135deg,#3B82F6,#1D4ED8)', color:'#fff', fontWeight:700, fontSize:14, cursor:'pointer', border:'none', fontFamily:'inherit' }}>
                 {lang === 'ar' ? '🔑 انضمام بالكود' : '🔑 Join with Code'}
               </button>
-              <button onClick={() => setShowWizard(true)} style={{ padding:'12px 28px', borderRadius:14, background:'linear-gradient(135deg,var(--primary),var(--brand-600))', color:'#fff', fontWeight:700, fontSize:14, cursor:'pointer', border:'none', fontFamily:'inherit' }}>
+              <button onClick={() => setShowWizard(true)} style={{ padding:'12px 24px', borderRadius:14, background:'linear-gradient(135deg,var(--primary),var(--brand-600))', color:'#fff', fontWeight:700, fontSize:14, cursor:'pointer', border:'none', fontFamily:'inherit' }}>
                 {lang === 'ar' ? '+ إنشاء مجموعة دراسية' : '+ Create Study Group'}
               </button>
             </div>

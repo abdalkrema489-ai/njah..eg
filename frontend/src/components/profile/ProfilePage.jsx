@@ -114,10 +114,10 @@ export default function ProfilePage() {
         gradient
       />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(min(320px, 100%), 360px) 1fr', gap: 32, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: 32, alignItems: 'start' }}>
         {/* Left: Identity Card */}
         <motion.div variants={itemAnim} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-          <div className="floating-panel" style={{ padding: 48, textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+          <div className="floating-panel" style={{ padding: 'clamp(20px, 5vw, 48px)', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', top: -100, left: -100, width: 300, height: 300, background: 'var(--primary)', filter: 'blur(150px)', opacity: 0.1, pointerEvents: 'none' }} />
             
             <div {...getRootProps()} style={{ cursor:'pointer', display:'inline-block', marginBottom:32 }}>
@@ -304,7 +304,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Account Security Insight */}
-          <div className="floating-panel" style={{ padding: '28px 36px', borderRadius: 24, display: 'flex', alignItems: 'center', gap: 24, border: '1px solid rgba(16,185,129,0.25)', background: 'linear-gradient(135deg, rgba(16,185,129,0.06) 0%, transparent 100%)' }}>
+          <div className="floating-panel" style={{ padding: 'clamp(16px, 4vw, 36px)', borderRadius: 24, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 20, border: '1px solid rgba(16,185,129,0.25)', background: 'linear-gradient(135deg, rgba(16,185,129,0.06) 0%, transparent 100%)' }}>
             <div style={{ width: 64, height: 64, borderRadius: 20, background: 'rgba(16,185,129,0.15)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 24px rgba(16,185,129,0.2)' }}>
               <ShieldIcon />
             </div>

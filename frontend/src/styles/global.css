@@ -2048,3 +2048,11 @@ input:focus, textarea:focus, select:focus {
 
 /* Support both [data-theme] and class-based dark mode */
 .dark-mode { color-scheme: dark; }
+
+/* ══ EXAM PAGE — RESPONSIVE ACTIVE GRID ═════════════════════ */
+/* On desktop: show question panel + navigator side-by-side */
+@media (min-width: 769px) {
+  .exam-active-grid {
+    grid-template-columns: 1fr 260px !important;
+  }
+}

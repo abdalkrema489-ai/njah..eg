@@ -176,14 +176,15 @@ function ExamActive({ exam, totalSeconds, onSubmit }) {
 
   return (
     <div>
-      {/* Header bar */}
+      {/* Header bar — responsive: stacks on mobile */}
       <div className="floating-panel" style={{
         display:'flex', alignItems:'center', justifyContent:'space-between',
-        marginBottom:24, padding:'20px 28px',
+        flexWrap:'wrap', gap:12,
+        marginBottom:24, padding:'16px 20px',
         borderRadius: 24,
       }}>
-        <div>
-          <div style={{ fontWeight:900, fontSize:18, fontFamily: 'var(--font-head)', letterSpacing: '-0.02em', color: 'var(--text)' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight:900, fontSize:16, fontFamily: 'var(--font-head)', letterSpacing: '-0.02em', color: 'var(--text)' }}>
             {exam.subject?.replace('_',' ').toUpperCase()} ASSESSMENT
           </div>
           <div style={{ fontSize:12, color:'var(--text4)', marginTop: 4, fontWeight: 700 }}>
@@ -192,7 +193,7 @@ function ExamActive({ exam, totalSeconds, onSubmit }) {
           </div>
         </div>
         <TimerRing seconds={seconds} totalSeconds={totalSeconds} />
-        <Btn variant="aurora" onClick={handleSubmit}>Finalize Submission →</Btn>
+        <Btn variant="aurora" onClick={handleSubmit} style={{ flexShrink: 0 }}>Finalize →</Btn>
       </div>
 
       {/* Progress */}
@@ -200,7 +201,7 @@ function ExamActive({ exam, totalSeconds, onSubmit }) {
         <ProgressBar value={answered} max={questions.length} color="green" height={4} />
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 260px', gap:16, alignItems:'start' }}>
+      <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr)', gap:16, alignItems:'start' }} className="exam-active-grid">
         {/* Question */}
         <div className="floating-panel" style={{ padding: 32 }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
@@ -352,7 +353,7 @@ function ExamResults({ exam, answers, timeTaken, onRetry, onNew }) {
             {correct} correct out of {total} questions
           </div>
 
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:24 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(min(120px,100%),1fr))', gap:12, marginBottom:24 }}>
             {[
               { icon:'✅', val:correct, label:'Correct' },
               { icon:'❌', val:total-correct, label:'Wrong' },
