@@ -101,6 +101,7 @@ export default function MobileBottomNav() {
                   style={{
                     position:     'absolute',
                     top:          6,
+                    left:         'calc(50% - 22px)',
                     width:        44,
                     height:       36,
                     borderRadius: 12,

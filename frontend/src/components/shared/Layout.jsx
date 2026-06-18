@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore, useUIStore, useNotifStore } from '../../context/store';
+import MobileBottomNav from '../pwa/MobileBottomNav';
 import { useSocket } from '../../hooks/index';
 import { useTranslation } from '../../i18n/index';
 import { authAPI, notificationsAPI } from '../../api/index';
@@ -382,8 +383,11 @@ export function Sidebar({ open, onToggle }) {
   const navigate        = useNavigate();
   const { unreadCount } = useNotifStore();
   const { user }        = useAuthStore();
-  const { t }           = useTranslation();
-  const { institutionMode } = useUIStore();
+  const { lang, toggleLang, t } = useTranslation();
+  const { institutionMode, toggleDark, darkMode, language, setLanguage } = useUIStore();
+  const isAr = language === 'ar';
+  const closeX = isAr ? '100%' : '-100%';
+
   const isTeacher    = user?.role === 'teacher';
   const isAdmin      = ['school_admin', 'university_admin', 'admin', 'platform_owner'].includes(user?.role) || !!user?.admin_level;
   const isCenterOwner = user?.role === 'center_owner';
@@ -413,7 +417,7 @@ export function Sidebar({ open, onToggle }) {
               background: 'rgba(3,3,8,0.78)',
               backdropFilter: 'blur(6px)',
               WebkitBackdropFilter: 'blur(6px)',
-              zIndex: 148,
+              zIndex: 999, // raised to stay below sidebar (1000) but above content
             }}
           />
         )}
@@ -421,7 +425,7 @@ export function Sidebar({ open, onToggle }) {
 
       <motion.nav
         animate={isMobile
-          ? { x: open ? 0 : '100%', width: 272 }
+          ? { x: open ? 0 : closeX, width: 272 }
           : { width: open ? 272 : 72, x: 0 }
         }
         transition={{ type: 'spring', stiffness: 340, damping: 34 }}
@@ -436,8 +440,8 @@ export function Sidebar({ open, onToggle }) {
           overflowX: 'hidden',
           position: isMobile ? 'fixed' : 'relative',
           top: isMobile ? 0 : undefined,
-          insetInlineEnd: isMobile ? 0 : undefined,
-          zIndex: 150,
+          insetInlineStart: isMobile ? 0 : undefined,
+          zIndex: isMobile ? 1000 : 150,
         }}
       >
         {/* ── Logo / Toggle ───────────────────────────── */}
@@ -621,6 +625,66 @@ export function Sidebar({ open, onToggle }) {
             </div>
           ))}
         </div>
+
+        {/* ── Theme/Language toggles ───────────────────── */}
+        {open && (
+          <div style={{
+            padding: '8px 16px',
+            borderTop: '1px solid var(--border)',
+            display: 'flex',
+            gap: 8,
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}>
+            {/* Theme Toggle */}
+            <button
+              onClick={(e) => { e.stopPropagation(); toggleDark(); }}
+              style={{
+                flex: 1,
+                height: 36,
+                borderRadius: 10,
+                background: 'var(--surface2)',
+                border: '1px solid var(--border)',
+                color: 'var(--text2)',
+                cursor: 'pointer',
+                fontSize: 12,
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                transition: 'all 0.2s',
+              }}
+            >
+              <span>{darkMode ? '☀️' : '🌙'}</span>
+              <span>{darkMode ? t('settings.light') : t('settings.dark')}</span>
+            </button>
+
+            {/* Language Toggle */}
+            <button
+              onClick={(e) => { e.stopPropagation(); toggleLang(); setLanguage(lang === 'ar' ? 'en' : 'ar'); }}
+              style={{
+                flex: 1,
+                height: 36,
+                borderRadius: 10,
+                background: 'var(--surface2)',
+                border: '1px solid var(--border)',
+                color: 'var(--text2)',
+                cursor: 'pointer',
+                fontSize: 12,
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                transition: 'all 0.2s',
+              }}
+            >
+              <span>🌐</span>
+              <span>{lang === 'ar' ? 'English' : 'عربي'}</span>
+            </button>
+          </div>
+        )}
 
         {/* ── Bottom user strip ────────────────────────── */}
         <SidebarUserStrip open={open} />
@@ -815,7 +879,7 @@ export function Header({ sidebarOpen, onToggle, onOpenNotifs, onOpenWizard }) {
           <motion.button
             whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
             onClick={onOpenWizard}
-            className="new-group-btn"
+            className="new-group-btn hide-mobile"
             style={{
               height: 38, padding: '0 14px', borderRadius: 10,
               background: 'linear-gradient(135deg, var(--primary), var(--blue-600))',
@@ -843,12 +907,12 @@ export function Header({ sidebarOpen, onToggle, onOpenNotifs, onOpenWizard }) {
           {/* Institution mode is now locked at registration — no runtime switcher */}
 
           {/* Theme Toggle */}
-          <HeaderBtn onClick={toggleDark} title={darkMode ? t('settings.light') : t('settings.dark')}>
+          <HeaderBtn onClick={toggleDark} title={darkMode ? t('settings.light') : t('settings.dark')} className="hide-mobile">
             {darkMode ? '☀️' : '🌙'}
           </HeaderBtn>
 
           {/* Language */}
-          <HeaderBtn onClick={() => { toggleLang(); setLanguage(lang === 'ar' ? 'en' : 'ar'); }} title={t('settings.language')}>
+          <HeaderBtn onClick={() => { toggleLang(); setLanguage(lang === 'ar' ? 'en' : 'ar'); }} title={t('settings.language')} className="hide-mobile">
             {lang === 'ar' ? '🇬🇧 EN' : '🇪🇬 AR'}
           </HeaderBtn>
 
@@ -968,13 +1032,13 @@ export function Header({ sidebarOpen, onToggle, onOpenNotifs, onOpenWizard }) {
 }
 
 /* ── Micro components ─────────────────────────────────────── */
-function HeaderBtn({ children, onClick, active, title }) {
+function HeaderBtn({ children, onClick, active, title, className = '' }) {
   return (
     <motion.button
       whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }}
       onClick={onClick}
       title={title}
-      className={`header-btn ${active ? 'active' : ''}`}
+      className={`header-btn ${active ? 'active' : ''} ${className}`}
     >
       {children}
     </motion.button>
@@ -1000,48 +1064,7 @@ function ProfileMenuItem({ Icon, label, onClick }) {
   );
 }
 
-/* ── Mobile Bottom Nav ───────────────────────────────────── */
-function MobileBottomNav() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { unreadCount } = useNotifStore();
 
-  const items = [
-    { icon: '🏠', label: 'Home',    path: '/' },
-    { icon: '🤖', label: 'AI',      path: '/ai' },
-    { icon: '💬', label: 'Chat',    path: '/chat', badge: unreadCount > 0 },
-    { icon: '📅', label: 'Planner', path: '/planner' },
-    { icon: '⚙️', label: 'More',    path: '/settings' },
-  ];
-
-  return (
-    <div className="mobile-bottom-nav">
-      {items.map(item => {
-        const active = location.pathname === item.path ||
-          (item.path !== '/' && location.pathname.startsWith(item.path));
-        return (
-          <button key={item.path}
-            className={`mobile-nav-item${active ? ' active' : ''}`}
-            onClick={() => navigate(item.path)}
-          >
-            <div style={{ fontSize: 20, position: 'relative' }}>
-              {item.icon}
-              {item.badge && (
-                <span style={{
-                  position: 'absolute', top: -4, right: -6,
-                  width: 12, height: 12, borderRadius: '50%',
-                  background: '#EF4444', fontSize: 7, fontWeight: 800,
-                  color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }} />
-              )}
-            </div>
-            <span>{item.label}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 /* ── useIsMobile hook ─────────────────────────────────────── */
 function useIsMobile(breakpoint = 1100) {

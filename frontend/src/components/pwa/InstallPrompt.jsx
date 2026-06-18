@@ -2,18 +2,23 @@
 // "Add to Home Screen" install button + update notification
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useUIStore } from '../../context/store';
+import { useUIStore, useAuthStore } from '../../context/store';
 
 export default function InstallPrompt() {
   const { language } = useUIStore();
+  const { isAuthenticated } = useAuthStore();
   const isAr = language === 'ar';
 
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstall, setShowInstall]       = useState(false);
   const [showUpdate, setShowUpdate]         = useState(false);
   const [installed, setInstalled]           = useState(false);
+  const [isMobile, setIsMobile]             = useState(() => window.innerWidth < 1100);
 
   useEffect(() => {
+    const checkResize = () => setIsMobile(window.innerWidth < 1100);
+    window.addEventListener('resize', checkResize);
+
     // Check if already installed (standalone mode)
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setInstalled(true);
@@ -49,7 +54,10 @@ export default function InstallPrompt() {
       });
     }
 
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('resize', checkResize);
+    };
   }, []);
 
   const handleInstall = async () => {
@@ -74,51 +82,53 @@ export default function InstallPrompt() {
       <AnimatePresence>
         {showInstall && (
           <motion.div
-            initial={{ y: 120, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 120, opacity: 0 }}
+            initial={{ y: 120, x: '-50%', opacity: 0 }}
+            animate={{ y: 0, x: '-50%', opacity: 1 }}
+            exit={{ y: 120, x: '-50%', opacity: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 28 }}
             style={{
-              position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)',
+              position: 'fixed',
+              bottom: (isMobile && isAuthenticated) ? 'calc(84px + env(safe-area-inset-bottom))' : (isMobile ? 32 : 20),
+              left: '50%',
               width: 'calc(100% - 32px)', maxWidth: 440,
               background: 'linear-gradient(135deg, rgba(15,12,41,0.97), rgba(30,27,75,0.97))',
               border: '1px solid rgba(99,102,241,0.35)',
-              borderRadius: 24, padding: 20,
+              borderRadius: isMobile ? 16 : 24, padding: isMobile ? 12 : 20,
               boxShadow: '0 16px 48px rgba(0,0,0,0.5), 0 0 0 1px rgba(99,102,241,0.1)',
               backdropFilter: 'blur(20px)',
               zIndex: 9999,
-              display: 'flex', alignItems: 'center', gap: 16,
+              display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 16,
               direction: isAr ? 'rtl' : 'ltr',
             }}
           >
             {/* App icon */}
             <div style={{
-              width: 56, height: 56, borderRadius: 16, flexShrink: 0,
+              width: isMobile ? 40 : 56, height: isMobile ? 40 : 56, borderRadius: isMobile ? 12 : 16, flexShrink: 0,
               background: 'linear-gradient(135deg, #6366F1, #8B5CF6)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 28, boxShadow: '0 8px 24px rgba(99,102,241,0.4)',
+              fontSize: isMobile ? 22 : 28, boxShadow: '0 8px 24px rgba(99,102,241,0.4)',
             }}>
               🎓
             </div>
 
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', marginBottom: 3 }}>
+              <div style={{ fontSize: isMobile ? 13.5 : 15, fontWeight: 800, color: '#fff', marginBottom: 3 }}>
                 {isAr ? 'ثبّت تطبيق نجاح!' : 'Install Najah App!'}
               </div>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>
+              <div style={{ fontSize: isMobile ? 10.5 : 12, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>
                 {isAr
                   ? 'شاشة رئيسية · يعمل بدون إنترنت · تجربة أسرع'
                   : 'Home screen · Works offline · Faster experience'}
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+            <div style={{ display: 'flex', gap: isMobile ? 6 : 8, flexShrink: 0 }}>
               <button
                 onClick={() => setShowInstall(false)}
                 style={{
-                  padding: '8px 12px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.15)',
+                  padding: isMobile ? '6px 10px' : '8px 12px', borderRadius: isMobile ? 8 : 10, border: '1px solid rgba(255,255,255,0.15)',
                   background: 'transparent', color: 'rgba(255,255,255,0.5)',
-                  fontSize: 12, cursor: 'pointer', fontWeight: 600,
+                  fontSize: isMobile ? 11 : 12, cursor: 'pointer', fontWeight: 600,
                 }}
               >
                 {isAr ? 'لاحقاً' : 'Later'}
@@ -127,9 +137,9 @@ export default function InstallPrompt() {
                 whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                 onClick={handleInstall}
                 style={{
-                  padding: '8px 18px', borderRadius: 10, border: 'none',
+                  padding: isMobile ? '6px 14px' : '8px 18px', borderRadius: isMobile ? 8 : 10, border: 'none',
                   background: 'linear-gradient(135deg, #6366F1, #8B5CF6)',
-                  color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer',
+                  color: '#fff', fontSize: isMobile ? 11.5 : 13, fontWeight: 800, cursor: 'pointer',
                   boxShadow: '0 4px 16px rgba(99,102,241,0.4)',
                 }}
               >

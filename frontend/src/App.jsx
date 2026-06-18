@@ -11,7 +11,6 @@ import { CommandPalette } from './components/shared/CommandPalette';
 import { I18nProvider, useTranslation } from './i18n/index';
 import OfflineBanner  from './components/pwa/OfflineBanner';
 import InstallPrompt  from './components/pwa/InstallPrompt';
-import MobileBottomNav from './components/pwa/MobileBottomNav';
 import { usePushNotifications } from './hooks/usePushNotifications';
 import { useOfflineSync } from './hooks/useOfflineSync';
 import { useAppRating } from './hooks/useAppRating.jsx';
@@ -371,7 +370,6 @@ export default function App() {
             {/* ── 404 ── */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-          <MobileBottomNav />
         </BrowserRouter>
       </QueryClientProvider>
       </I18nProvider>
