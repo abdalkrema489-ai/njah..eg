@@ -114,7 +114,7 @@ function FileCard({ file, onDelete, onAnalyze }) {
     <motion.div layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       whileHover={{ scale: 1.015, x: 4 }}
-      className="floating-card"
+      className="floating-card file-card-item"
       style={{
         padding: '18px 24px', display: 'flex', alignItems: 'center', gap: 16,
         transition: 'all 0.22s var(--ease)',
@@ -183,11 +183,11 @@ export default function FilesPage() {
         subtitle={isAr ? "إدارة مستودعك الأكاديمي. يمكنك الوصول والتحليل وتنظيم المواد الدراسية بسهولة." : "Manage your academic repository. Access, analyze, and organize your study materials with ease."} 
       />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) min(320px, 100%)', gap: 24, marginBottom: 32 }}>
+      <div className="files-layout-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) min(320px, 100%)', gap: 24, marginBottom: 32 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           <UploadDropzone onUploaded={() => qc.invalidateQueries(['files'])} />
           
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', background: 'var(--surface2)', padding: 8, borderRadius: 14, border: '1px solid var(--border)' }}>
+          <div className="files-filter-bar" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', background: 'var(--surface2)', padding: 8, borderRadius: 14, border: '1px solid var(--border)' }}>
             <Btn size="sm" variant={!subject ? 'primary' : 'ghost'} onClick={() => setSubject('')}>{isAr ? 'جميع الملفات' : 'ALL ASSETS'}</Btn>
             {[
               { value: 'mathematics',   label: isAr ? 'الرياضيات' : 'Mathematics' },
@@ -200,7 +200,7 @@ export default function FilesPage() {
                 {SUBJECT_ICONS[s.value]} {s.label.toUpperCase()}
               </Btn>
             ))}
-            <div style={{ marginLeft: 'auto', width: 240 }}>
+            <div className="files-search-wrapper" style={{ marginLeft: 'auto', width: 240 }}>
               <Input placeholder={isAr ? "البحث في المخزن..." : "Search Vault..."} value={search} onChange={e => setSearch(e.target.value)} prefix="🔍" />
             </div>
           </div>

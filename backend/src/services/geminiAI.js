@@ -83,9 +83,91 @@ const SYSTEM_PROMPT = `
 - لا تكتب محتوى مسيء أو خارج إطار التعليم
 `;
 
+function wrapModel(originalModel, options) {
+  return new Proxy(originalModel, {
+    get(target, prop, receiver) {
+      if (prop === 'generateContent') {
+        return async function(...args) {
+          try {
+            return await target.generateContent(...args);
+          } catch (err) {
+            if (err.message?.includes('quota') || err.message?.includes('QUOTA') || err.status === 429) {
+              logger.warn('Quota error on gemini-2.0-flash, falling back to gemini-flash-latest for generateContent');
+              const fallback = genAI.getGenerativeModel({
+                ...options,
+                model: 'gemini-flash-latest'
+              });
+              return await fallback.generateContent(...args);
+            }
+            throw err;
+          }
+        };
+      }
+      if (prop === 'startChat') {
+        return function(chatOptions) {
+          const chatSession = target.startChat(chatOptions);
+          return new Proxy(chatSession, {
+            get(chatTarget, chatProp, chatReceiver) {
+              if (chatProp === 'sendMessage') {
+                return async function(...args) {
+                  try {
+                    return await chatTarget.sendMessage(...args);
+                  } catch (err) {
+                    if (err.message?.includes('quota') || err.message?.includes('QUOTA') || err.status === 429) {
+                      logger.warn('Quota error on gemini-2.0-flash, falling back to gemini-flash-latest for sendMessage');
+                      const fallbackModel = genAI.getGenerativeModel({
+                        ...options,
+                        model: 'gemini-flash-latest'
+                      });
+                      const fallbackChat = fallbackModel.startChat(chatOptions);
+                      return await fallbackChat.sendMessage(...args);
+                    }
+                    throw err;
+                  }
+                };
+              }
+              if (chatProp === 'sendMessageStream') {
+                return async function(...args) {
+                  try {
+                    return await chatTarget.sendMessageStream(...args);
+                  } catch (err) {
+                    if (err.message?.includes('quota') || err.message?.includes('QUOTA') || err.status === 429) {
+                      logger.warn('Quota error on gemini-2.0-flash, falling back to gemini-flash-latest for sendMessageStream');
+                      const fallbackModel = genAI.getGenerativeModel({
+                        ...options,
+                        model: 'gemini-flash-latest'
+                      });
+                      const fallbackChat = fallbackModel.startChat(chatOptions);
+                      return await fallbackChat.sendMessageStream(...args);
+                    }
+                    throw err;
+                  }
+                };
+              }
+              const value = Reflect.get(chatTarget, chatProp, chatReceiver);
+              return typeof value === 'function' ? value.bind(chatTarget) : value;
+            }
+          });
+        };
+      }
+      const value = Reflect.get(target, prop, receiver);
+      return typeof value === 'function' ? value.bind(target) : value;
+    }
+  });
+}
+
 if (process.env.GEMINI_API_KEY) {
   try {
     genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+    const originalGetGenerativeModel = genAI.getGenerativeModel.bind(genAI);
+    genAI.getGenerativeModel = function(options) {
+      const originalModel = originalGetGenerativeModel(options);
+      if (options.model === 'gemini-2.0-flash') {
+        return wrapModel(originalModel, options);
+      }
+      return originalModel;
+    };
 
     const safetySettings = [
       { category: HarmCategory.HARM_CATEGORY_HARASSMENT,        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
@@ -188,14 +270,37 @@ async function chat(message, history = [], language = 'en', userId = null) {
     : model;
 
   const hist = buildHistory(history);
-  const chatSession = dynamicModel.startChat({ history: hist });
-  const result = await chatSession.sendMessage(message);
-  const text   = result.response.text();
+  try {
+    const chatSession = dynamicModel.startChat({ history: hist });
+    const result = await chatSession.sendMessage(message);
+    const text   = result.response.text();
 
-  // 3. Save to memory in background (non-blocking)
-  mem0.saveMemory(userId, message, text).catch(() => {});
+    // 3. Save to memory in background (non-blocking)
+    mem0.saveMemory(userId, message, text).catch(() => {});
 
-  return text;
+    return text;
+  } catch (err) {
+    if (err.message?.includes('quota') || err.message?.includes('QUOTA') || err.message?.includes('429')) {
+      logger.warn('Gemini 2.0 quota error, falling back to gemini-flash-latest');
+      const fallbackModel = genAI.getGenerativeModel({
+        model: 'gemini-flash-latest',
+        systemInstruction: SYSTEM_PROMPT + (memoryContext || ''),
+        safetySettings: [
+          { category: HarmCategory.HARM_CATEGORY_HARASSMENT,        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+          { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,       threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+          { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+          { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+        ],
+        generationConfig: { temperature: 0.72, topK: 50, topP: 0.93, maxOutputTokens: 4096, candidateCount: 1 },
+      });
+      const fallbackChat = fallbackModel.startChat({ history: hist });
+      const result = await fallbackChat.sendMessage(message);
+      const text = result.response.text();
+      mem0.saveMemory(userId, message, text).catch(() => {});
+      return { text, model: 'gemini-flash-latest-fallback' };
+    }
+    throw err;
+  }
 }
 
 // ── Chat (streaming) ──────────────────────────────────────────

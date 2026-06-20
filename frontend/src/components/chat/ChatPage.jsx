@@ -45,6 +45,7 @@ export default function ChatPage() {
   const [input, setInput] = useState('');
   const [search, setSearch] = useState('');
   const [searchResults, setSearchResults] = useState([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [showStickers, setShowStickers] = useState(false);
   const [profileId, setProfileId] = useState(null);
@@ -229,6 +230,7 @@ export default function ChatPage() {
     setSearch('');
     setReplyTo(null);
     setEditingMsg(null);
+    setSidebarOpen(false);
 
     if (!recentChats.find(c => c.id === item.id)) {
       setRecentChats([{ ...item, lastMsgText: '', unreadCount: 0,
@@ -375,22 +377,24 @@ export default function ChatPage() {
 
   return (
     <div
-      className="animate-fade-up"
+      className="animate-fade-up chat-layout-container"
       style={{
-        height: 'calc(100vh - 120px)', display: 'flex', minHeight: 0, overflow: 'hidden',
+        display: 'flex', minHeight: 0, overflow: 'hidden',
         margin: '-12px -24px', position: 'relative', borderRadius: 24,
         border: '1px solid var(--border)',
         boxShadow: '0 8px 40px rgba(0,0,0,0.08)',
       }}
     >
+      {/* Sidebar Backdrop Overlay */}
+      <div className={`sidebar-backdrop ${sidebarOpen ? 'open' : ''}`} onClick={() => setSidebarOpen(false)} />
 
       {/* ══════════════════════════════
           LEFT SIDEBAR — Unified contacts
           ══════════════════════════════ */}
-      <div style={{
-        width: 300, minWidth: 280, display: 'flex', flexDirection: 'column',
+      <div className={`chat-sidebar ${sidebarOpen ? 'open' : ''}`} style={{
+        display: 'flex', flexDirection: 'column',
         background: 'var(--glass)', backdropFilter: 'var(--glass-blur)',
-        borderRight: '1px solid var(--border)', zIndex: 4,
+        borderRight: '1px solid var(--border)',
       }}>
         {/* Sidebar Header */}
         <div style={{
@@ -523,11 +527,28 @@ export default function ChatPage() {
               flexShrink: 0,
               boxShadow: '0 4px 16px rgba(14,165,233,0.2)',
             }}>
-              <div
-                style={{ display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}
-                onClick={() => activePartner?.chatType !== 'group' && setProfileId(activePartner?.id)}
-              >
-                <Avatar src={activePartner?.avatar} name={activePartner?.name} size={42} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {/* Back button to clear active chat (exits chat view on mobile) */}
+                <button
+                  className="chat-sidebar-toggle"
+                  onClick={() => setActivePrivateChat(null)}
+                  style={{ padding: '4px 8px', fontSize: 18 }}
+                >
+                  ←
+                </button>
+                {/* Toggle button to open contacts drawer on mobile */}
+                <button
+                  className="chat-sidebar-toggle"
+                  onClick={() => setSidebarOpen(true)}
+                  style={{ marginRight: 4 }}
+                >
+                  👥 {isAr ? 'القائمة' : 'Menu'}
+                </button>
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}
+                  onClick={() => activePartner?.chatType !== 'group' && setProfileId(activePartner?.id)}
+                >
+                  <Avatar src={activePartner?.avatar} name={activePartner?.name} size={42} />
                 <div>
                   <div style={{ fontSize: 15, fontWeight: 800, color: '#fff' }}>
                     {activePartner?.name}
@@ -541,8 +562,9 @@ export default function ChatPage() {
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* Header Actions */}
+            {/* Header Actions */}
               <div style={{ display: 'flex', gap: 8 }}>
                 {activePartner?.chatType !== 'group' && (
                   <>
@@ -560,7 +582,7 @@ export default function ChatPage() {
             </div>
 
             {/* Messages */}
-            <div className="scroll-y" style={{ ...CHAT_BG, flex: 1, padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 10, background: 'var(--surface)' }}>
+            <div className="scroll-y" style={{ ...CHAT_BG, flex: 1, padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 10, background: 'var(--surface)', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
               <AnimatePresence initial={false}>
                 {loadingHistory ? (
                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
@@ -626,9 +648,12 @@ export default function ChatPage() {
 
             {/* Input Bar */}
             <div style={{
-              padding: '12px 16px 16px', background: 'var(--glass)',
+              padding: '12px 16px',
+              paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
+              background: 'var(--glass)',
               backdropFilter: 'var(--glass-blur)', borderTop: '1px solid var(--border)',
-              display: 'flex', alignItems: 'center', gap: 10, position: 'relative',
+              display: 'flex', alignItems: 'center', gap: 10, position: 'sticky',
+              bottom: 0, zIndex: 10,
             }}>
               {/* Sticker Picker */}
               <AnimatePresence>

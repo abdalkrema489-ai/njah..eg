@@ -1,0 +1,858 @@
+From 28e53e7ad30f0af70747536077c3053cd738db74 Mon Sep 17 00:00:00 2001
+From: Ahmed AbdEl-Kareem <ahmed1abdalkrem1@gmail.com>
+Date: Wed, 17 Jun 2026 23:31:38 +0000
+Subject: [PATCH] fix: remove offline page blocking login + complete mobile
+ responsiveness
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+CRITICAL FIXES (login & navigation):
+- Removed navigateFallback offline.html — this was intercepting Google OAuth
+  callback navigation and showing 'you are offline' even when connected
+- Deleted frontend/public/offline.html entirely (no longer used)
+- Removed offline.html from PWA includeAssets
+- Added skipWaiting + clientsClaim so all users get the fix immediately
+- Excluded /auth/google paths from API response caching (was interfering
+  with OAuth redirect flow)
+- Fixed API cache urlPattern to exclude localhost explicitly
+
+FONT FIX:
+- Removed dead Cairo v28 font preload link (404, Google moved to v31+)
+  This was the source of the 'preloaded but not used' console warning
+
+MOBILE RESPONSIVENESS — COMPLETE OVERHAUL:
+- Sidebar: now uses Framer Motion x-axis slide + fixed positioning on mobile
+  (was using width-only animation that never worked on small screens)
+- Sidebar: added isMobile state with resize listener for correct behavior
+- Sidebar: added dark backdrop overlay that closes sidebar on tap
+- Sidebar: dynamic 'open' className so CSS rules apply correctly
+- Fixed 29 grid layout instances across 21 component files — all
+  minmax(Xpx, 1fr) patterns now use minmax(min(Xpx,100%), 1fr) so grids
+  properly collapse to 1 column on narrow screens instead of overflowing
+- Fixed 3 two-column 'sidebar+content' layouts (Files, Profile, Notes)
+  that used fixed pixel widths — now stack vertically below 768px
+- Rewrote global.css mobile media queries: removed conflicting transform
+  rules, added complete mobile system (overflow prevention, 16px inputs
+  to prevent iOS zoom, touch target sizing, modal sizing, responsive
+  typography with clamp())
+- main-content now properly fills 100% width on mobile/tablet regardless
+  of sidebar state (was shifting/shrinking before)
+
+Verified with production build: 'vite build' completes with zero errors,
+generated service worker confirmed to have zero references to offline.html
+---
+ frontend/index.html                           |   5 -
+ frontend/public/offline.html                  | 184 ------------------
+ .../src/components/admin/AdminDashboard.jsx   |   4 +-
+ .../admin/AdminOverviewDashboard.jsx          |   4 +-
+ frontend/src/components/ai/NajahAI.jsx        |   2 +-
+ .../components/analytics/AnalyticsPage.jsx    |   2 +-
+ frontend/src/components/board/BoardPage.jsx   |   4 +-
+ .../src/components/center/CenterDashboard.jsx |   4 +-
+ .../src/components/dashboard/Dashboard.jsx    |   2 +-
+ .../dashboard/SchoolStudentDashboard.jsx      |   2 +-
+ .../dashboard/UniversityStudentDashboard.jsx  |   2 +-
+ frontend/src/components/files/FilesPage.jsx   |   2 +-
+ .../src/components/groups/GroupDetailPage.jsx |   2 +-
+ frontend/src/components/groups/GroupsPage.jsx |   2 +-
+ frontend/src/components/help/HelpCenter.jsx   |   2 +-
+ .../src/components/landing/LandingPage.jsx    |   2 +-
+ frontend/src/components/notes/NotesPage.jsx   |   2 +-
+ .../src/components/profile/ProfilePage.jsx    |   8 +-
+ .../src/components/settings/SettingsPage.jsx  |   2 +-
+ frontend/src/components/shared/Layout.jsx     |  35 +++-
+ .../components/teacher/AffiliateDashboard.jsx |   2 +-
+ .../src/components/teacher/ExamBuilder.jsx    |   2 +-
+ .../components/teacher/StudentsOverview.jsx   |   2 +-
+ .../components/teacher/TeacherDashboard.jsx   |   4 +-
+ .../src/components/teacher/TeacherWallet.jsx  |   2 +-
+ frontend/src/styles/global.css                |  87 ++++++++-
+ frontend/vite.config.js                       |  12 +-
+ 27 files changed, 143 insertions(+), 240 deletions(-)
+ delete mode 100644 frontend/public/offline.html
+
+diff --git a/frontend/index.html b/frontend/index.html
+index d91fdf8..f831b5c 100644
+--- a/frontend/index.html
++++ b/frontend/index.html
+@@ -36,11 +36,6 @@
+     <link rel="preconnect" href="https://fonts.googleapis.com" />
+     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+ 
+-    <!-- Preload critical Arabic font (Cairo 700 Latin+Arabic subset) -->
+-    <link rel="preload" as="font" type="font/woff2"
+-      href="https://fonts.gstatic.com/s/cairo/v28/SLXgc1nY6HkvalIhTp2mxdt0UX8.woff2"
+-      crossorigin />
+-
+     <!-- Fonts -->
+     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@400;500&family=Noto+Kufi+Arabic:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+ 
+diff --git a/frontend/public/offline.html b/frontend/public/offline.html
+deleted file mode 100644
+index 5fa4bec..0000000
+--- a/frontend/public/offline.html
++++ /dev/null
+@@ -1,184 +0,0 @@
+-<!DOCTYPE html>
+-<html lang="ar" dir="rtl">
+-<head>
+-  <meta charset="utf-8" />
+-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+-  <title>نجاح — غير متصل بالإنترنت</title>
+-  <style>
+-    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+-    body {
+-      background: #030308;
+-      color: #fff;
+-      font-family: 'Noto Kufi Arabic', 'Plus Jakarta Sans', system-ui, sans-serif;
+-      min-height: 100dvh;
+-      display: flex;
+-      align-items: center;
+-      justify-content: center;
+-      overflow: hidden;
+-    }
+-
+-    /* Animated background */
+-    body::before {
+-      content: '';
+-      position: fixed;
+-      inset: 0;
+-      background:
+-        radial-gradient(ellipse at 20% 20%, rgba(99,102,241,0.15) 0%, transparent 55%),
+-        radial-gradient(ellipse at 80% 80%, rgba(139,92,246,0.12) 0%, transparent 55%);
+-      z-index: 0;
+-    }
+-
+-    .card {
+-      position: relative;
+-      z-index: 1;
+-      background: rgba(255,255,255,0.04);
+-      border: 1px solid rgba(255,255,255,0.1);
+-      border-radius: 28px;
+-      padding: 48px 40px;
+-      max-width: 440px;
+-      width: 90%;
+-      text-align: center;
+-      backdrop-filter: blur(20px);
+-      box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+-    }
+-
+-    .icon {
+-      font-size: 72px;
+-      margin-bottom: 24px;
+-      display: block;
+-      animation: float 3s ease-in-out infinite;
+-    }
+-
+-    @keyframes float {
+-      0%, 100% { transform: translateY(0); }
+-      50%       { transform: translateY(-10px); }
+-    }
+-
+-    h1 {
+-      font-size: 26px;
+-      font-weight: 800;
+-      margin-bottom: 12px;
+-      background: linear-gradient(135deg, #A78BFA, #6366F1);
+-      -webkit-background-clip: text;
+-      -webkit-text-fill-color: transparent;
+-      background-clip: text;
+-    }
+-
+-    p {
+-      color: rgba(255,255,255,0.55);
+-      font-size: 15px;
+-      line-height: 1.8;
+-      margin-bottom: 32px;
+-    }
+-
+-    .features {
+-      display: grid;
+-      grid-template-columns: 1fr 1fr;
+-      gap: 12px;
+-      margin-bottom: 32px;
+-    }
+-
+-    .feature {
+-      background: rgba(99,102,241,0.08);
+-      border: 1px solid rgba(99,102,241,0.2);
+-      border-radius: 14px;
+-      padding: 14px 12px;
+-      font-size: 13px;
+-      color: rgba(255,255,255,0.7);
+-    }
+-
+-    .feature span { display: block; font-size: 22px; margin-bottom: 6px; }
+-
+-    .btn {
+-      display: inline-flex;
+-      align-items: center;
+-      gap: 8px;
+-      padding: 14px 32px;
+-      border-radius: 14px;
+-      background: linear-gradient(135deg, #6366F1, #8B5CF6);
+-      color: #fff;
+-      font-size: 15px;
+-      font-weight: 700;
+-      border: none;
+-      cursor: pointer;
+-      text-decoration: none;
+-      box-shadow: 0 8px 24px rgba(99,102,241,0.4);
+-      transition: transform 0.15s, box-shadow 0.15s;
+-    }
+-
+-    .btn:active { transform: scale(0.97); }
+-
+-    .status {
+-      margin-top: 24px;
+-      font-size: 12px;
+-      color: rgba(255,255,255,0.3);
+-      display: flex;
+-      align-items: center;
+-      justify-content: center;
+-      gap: 6px;
+-    }
+-
+-    .dot {
+-      width: 8px; height: 8px;
+-      border-radius: 50%;
+-      background: #EF4444;
+-      animation: pulse 1.5s ease-in-out infinite;
+-    }
+-
+-    @keyframes pulse {
+-      0%, 100% { opacity: 1; transform: scale(1); }
+-      50%       { opacity: 0.5; transform: scale(0.8); }
+-    }
+-  </style>
+-</head>
+-<body>
+-  <div class="card">
+-    <span class="icon">📡</span>
+-    <h1>أنت غير متصل بالإنترنت</h1>
+-    <p>
+-      لا تقلق! منصة نجاح تعمل بدون إنترنت.<br/>
+-      يمكنك الوصول إلى المحتوى المحفوظ أدناه.
+-    </p>
+-
+-    <div class="features">
+-      <div class="feature">
+-        <span>📚</span>
+-        ملاحظاتك المحفوظة
+-      </div>
+-      <div class="feature">
+-        <span>📅</span>
+-        جدولك الدراسي
+-      </div>
+-      <div class="feature">
+-        <span>🧠</span>
+-        الاختبارات المحفوظة
+-      </div>
+-      <div class="feature">
+-        <span>⏱️</span>
+-        مؤقت التركيز
+-      </div>
+-    </div>
+-
+-    <a href="/" class="btn" onclick="window.location.reload(); return false;">
+-      🔄 حاول مرة أخرى
+-    </a>
+-
+-    <div class="status">
+-      <div class="dot"></div>
+-      غير متصل — محتوى مخزن مؤقتاً متاح
+-    </div>
+-  </div>
+-
+-  <script>
+-    // Auto-reload when connection is restored
+-    window.addEventListener('online', () => {
+-      window.location.href = '/';
+-    });
+-
+-    // Check connectivity every 5 seconds
+-    setInterval(() => {
+-      if (navigator.onLine) window.location.href = '/';
+-    }, 5000);
+-  </script>
+-</body>
+-</html>
+diff --git a/frontend/src/components/admin/AdminDashboard.jsx b/frontend/src/components/admin/AdminDashboard.jsx
+index e56369e..8607e13 100644
+--- a/frontend/src/components/admin/AdminDashboard.jsx
++++ b/frontend/src/components/admin/AdminDashboard.jsx
+@@ -543,7 +543,7 @@ export default function AdminDashboard() {
+             {/* ── OVERVIEW ── */}
+             {activeTab === 'overview' && stats && (
+               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
++                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: 16 }}>
+                   <StatCard icon="👥" label={isAr ? 'إجمالي المستخدمين' : 'Total Users'}   value={parseInt(stats.total_users || 0).toLocaleString()} sub={`${stats.new_this_week || 0} ${isAr ? 'جديد هذا الأسبوع' : 'new this week'}`} color={COLORS.blue} />
+                   <StatCard icon="🎓" label={isAr ? 'الطلاب' : 'Students'}                  value={parseInt(stats.students || 0).toLocaleString()}    color={COLORS.indigo} />
+                   <StatCard icon="👨‍🏫" label={isAr ? 'المعلمون' : 'Teachers'}               value={parseInt(stats.teachers || 0).toLocaleString()}    color={COLORS.purple} />
+@@ -776,7 +776,7 @@ export default function AdminDashboard() {
+               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                 <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 24, padding: 24 }}>
+                   <h3 style={{ color: '#fff', marginTop: 0, fontSize: 18, fontWeight: 800 }}>🎟️ Create New Coupon</h3>
+-                  <form onSubmit={generateCoupon} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 16, alignItems: 'flex-end', marginTop: 16 }}>
++                  <form onSubmit={generateCoupon} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(150px, 100%), 1fr))', gap: 16, alignItems: 'flex-end', marginTop: 16 }}>
+                     <div>
+                       <label style={{ display: 'block', color: 'rgba(255,255,255,0.6)', fontSize: 12, marginBottom: 8 }}>Coupon Code</label>
+                       <input name="code" type="text" required placeholder="e.g. VIP50" style={{ width: '100%', padding: '12px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(0,0,0,0.2)', color: '#fff', outline: 'none' }} />
+diff --git a/frontend/src/components/admin/AdminOverviewDashboard.jsx b/frontend/src/components/admin/AdminOverviewDashboard.jsx
+index ec1a1d9..31b8739 100644
+--- a/frontend/src/components/admin/AdminOverviewDashboard.jsx
++++ b/frontend/src/components/admin/AdminOverviewDashboard.jsx
+@@ -56,7 +56,7 @@ export default function AdminOverviewDashboard() {
+ 
+       {/* Stat Cards */}
+       <motion.div variants={stagger.item} style={{
+-        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
++        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))',
+         gap: 16, marginBottom: 28,
+       }}>
+         <StatCard icon="👥" label={isAr ? 'إجمالي المستخدمين' : 'Total Users'}       value={stats?.totalUsers ?? '—'} />
+@@ -70,7 +70,7 @@ export default function AdminOverviewDashboard() {
+         <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>
+           {isAr ? '⚡ إجراءات سريعة' : '⚡ Quick Actions'}
+         </h2>
+-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14 }}>
++        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: 14 }}>
+           {[
+             { icon: '👥', label: isAr ? 'إدارة المستخدمين' : 'Manage Users',    path: '/students' },
+             { icon: '📊', label: isAr ? 'التحليلات' : 'Analytics',              path: '/analytics' },
+diff --git a/frontend/src/components/ai/NajahAI.jsx b/frontend/src/components/ai/NajahAI.jsx
+index 25d7453..23003d8 100644
+--- a/frontend/src/components/ai/NajahAI.jsx
++++ b/frontend/src/components/ai/NajahAI.jsx
+@@ -272,7 +272,7 @@ export default function NajahAI() {
+         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+           {/* Quick prompts when empty */}
+           {messages.length === 1 && (
+-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10, marginBottom: 8 }}>
++            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(200px, 100%), 1fr))', gap: 10, marginBottom: 8 }}>
+               {QUICK_PROMPTS.map(p => (
+                 <button key={p} onClick={() => { setInput(p); inputRef.current?.focus(); }} style={{
+                   padding: '10px 14px', borderRadius: 12, border: '1px solid var(--border)',
+diff --git a/frontend/src/components/analytics/AnalyticsPage.jsx b/frontend/src/components/analytics/AnalyticsPage.jsx
+index ca9b27b..aaca536 100644
+--- a/frontend/src/components/analytics/AnalyticsPage.jsx
++++ b/frontend/src/components/analytics/AnalyticsPage.jsx
+@@ -26,7 +26,7 @@ export default function AnalyticsPage() {
+         subtitle={isAr ? "استخدم البيانات لتحسين مسار تعلمك وإتقان موادك." : "Harness data to optimize your learning trajectory and master your subjects."} 
+       />
+ 
+-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 24, marginBottom: 32 }}>
++      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(400px, 100%), 1fr))', gap: 24, marginBottom: 32 }}>
+         <div className="floating-panel" style={{ padding: 28 }}>
+           <h3 style={{ fontSize: 18, fontWeight: 900, fontFamily: 'var(--font-head)', marginBottom: 20 }}>{isAr ? 'إتقان المعرفة' : 'Knowledge Mastery'}</h3>
+           {!(d.subjectBreakdown?.length) ? <EmptyState icon="📖" title={isAr ? "في انتظار البيانات" : "Awaiting Data"} subtitle={isAr ? "أكمل جلسات الدراسة لبدء تعيين المواد." : "Complete study sessions to begin subject mapping."} /> :
+diff --git a/frontend/src/components/board/BoardPage.jsx b/frontend/src/components/board/BoardPage.jsx
+index 71601ef..1178072 100644
+--- a/frontend/src/components/board/BoardPage.jsx
++++ b/frontend/src/components/board/BoardPage.jsx
+@@ -131,7 +131,7 @@ export default function BoardPage() {
+       </div>
+ 
+       {isLoading ? (
+-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 28 }}>
++        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))', gap: 28 }}>
+           {[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="skeleton" style={{ height: 420, borderRadius: 24 }} />)}
+         </div>
+       ) : posts.length === 0 ? (
+@@ -144,7 +144,7 @@ export default function BoardPage() {
+           />
+         </div>
+       ) : (
+-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 28 }}>
++        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))', gap: 28 }}>
+           <AnimatePresence>
+             {posts.map(p => <PostCard key={p.id} post={p} onLike={like} onSave={save_} />)}
+           </AnimatePresence>
+diff --git a/frontend/src/components/center/CenterDashboard.jsx b/frontend/src/components/center/CenterDashboard.jsx
+index 4cde6c6..0285420 100644
+--- a/frontend/src/components/center/CenterDashboard.jsx
++++ b/frontend/src/components/center/CenterDashboard.jsx
+@@ -61,7 +61,7 @@ export default function CenterDashboard() {
+ 
+       {/* Stat Cards */}
+       <motion.div variants={stagger.item}
+-        style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
++        style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: 16, marginBottom: 28 }}>
+         {isLoading ? (
+           <div style={{ gridColumn: '1/-1', display: 'flex', justifyContent: 'center', padding: 40 }}><Spinner /></div>
+         ) : statCards.map((s, i) => (
+@@ -84,7 +84,7 @@ export default function CenterDashboard() {
+         <h3 style={{ fontSize: 15, fontWeight: 800, marginBottom: 18, fontFamily: 'var(--font-head)', letterSpacing: '-0.02em' }}>
+           ⚡ {isAr ? 'إجراءات سريعة' : 'Quick Actions'}
+         </h3>
+-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
++        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))', gap: 12 }}>
+           {quickActions.map((a, i) => (
+             <motion.button key={a.path}
+               onClick={() => navigate(a.path)}
+diff --git a/frontend/src/components/dashboard/Dashboard.jsx b/frontend/src/components/dashboard/Dashboard.jsx
+index 468895b..128a383 100644
+--- a/frontend/src/components/dashboard/Dashboard.jsx
++++ b/frontend/src/components/dashboard/Dashboard.jsx
+@@ -471,7 +471,7 @@ function StudentDashboard() {
+       {/* Groups widget */}
+       <GroupsWidget navigate={navigate} />
+ 
+-      <motion.div variants={stagger.item} style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(190px,1fr))', gap:16, marginBottom:28 }}>
++      <motion.div variants={stagger.item} style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(190px, 100%), 1fr))', gap:16, marginBottom:28 }}>
+         <StatCard icon="👥" value={studentCount.toLocaleString()} label={isAr ? 'طلاب نشطون' : 'Students Online'} color="#10B981" sub={isAr ? 'متواجدون الآن' : 'Active right now'} />
+         <StatCard icon="📅" value={stats.sessions_done || 0} label={isAr ? 'جلسات مكتملة' : 'Sessions Done'} color="#7C3AED" change={stats.sessions_done > 5 ? (isAr ? '+معدل ممتاز' : '+Great pace') : undefined} />
+         <StatCard icon="🎯" value={stats.quizzes_taken || 0} label={isAr ? 'اختبارات منجزة' : 'Quizzes Taken'} color="#06B6D4" sub={`${stats.avg_score || 0}% ${isAr ? 'متوسط الدرجات' : 'avg score'}`} />
+diff --git a/frontend/src/components/dashboard/SchoolStudentDashboard.jsx b/frontend/src/components/dashboard/SchoolStudentDashboard.jsx
+index 87ad7fd..ca1bb78 100644
+--- a/frontend/src/components/dashboard/SchoolStudentDashboard.jsx
++++ b/frontend/src/components/dashboard/SchoolStudentDashboard.jsx
+@@ -245,7 +245,7 @@ export default function SchoolStudentDashboard() {
+       {/* ── Grid ── */}
+       <motion.div
+         variants={stagger} initial="hidden" animate="show"
+-        style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}
++        style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: 20 }}
+       >
+         {/* Today's Schedule */}
+         <motion.div variants={fadeUp}
+diff --git a/frontend/src/components/dashboard/UniversityStudentDashboard.jsx b/frontend/src/components/dashboard/UniversityStudentDashboard.jsx
+index b6b3881..0db9c2b 100644
+--- a/frontend/src/components/dashboard/UniversityStudentDashboard.jsx
++++ b/frontend/src/components/dashboard/UniversityStudentDashboard.jsx
+@@ -179,7 +179,7 @@ export default function UniversityStudentDashboard() {
+       {/* ── Stats row ── */}
+       <motion.div
+         variants={stagger} initial="hidden" animate="show"
+-        style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}
++        style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: 16, marginBottom: 24 }}
+       >
+         <StatCard icon="⏱️" label={isAr ? 'ساعات هذا الأسبوع' : 'Hours This Week'} value={`${totalHoursWeek.toFixed(1)}h`} sub={isAr ? 'الهدف: ٢٠ ساعة' : 'Goal: 20h'} color="#6366F1" />
+         <StatCard icon="✅" label={isAr ? 'جلسات مكتملة' : 'Sessions Done'} value={completedSessions} sub={isAr ? 'إجمالي' : 'All time'} color="#10B981" />
+diff --git a/frontend/src/components/files/FilesPage.jsx b/frontend/src/components/files/FilesPage.jsx
+index 17bdbad..ea59c48 100644
+--- a/frontend/src/components/files/FilesPage.jsx
++++ b/frontend/src/components/files/FilesPage.jsx
+@@ -183,7 +183,7 @@ export default function FilesPage() {
+         subtitle={isAr ? "إدارة مستودعك الأكاديمي. يمكنك الوصول والتحليل وتنظيم المواد الدراسية بسهولة." : "Manage your academic repository. Access, analyze, and organize your study materials with ease."} 
+       />
+ 
+-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: 24, marginBottom: 32 }}>
++      <div className="files-two-col" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) min(320px, 100%)', gap: 24, marginBottom: 32 }}>
+         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+           <UploadDropzone onUploaded={() => qc.invalidateQueries(['files'])} />
+           
+diff --git a/frontend/src/components/groups/GroupDetailPage.jsx b/frontend/src/components/groups/GroupDetailPage.jsx
+index c999896..948d400 100644
+--- a/frontend/src/components/groups/GroupDetailPage.jsx
++++ b/frontend/src/components/groups/GroupDetailPage.jsx
+@@ -542,7 +542,7 @@ export default function GroupDetailPage() {
+         )}
+ 
+         {tab === 'insights' && isOwner && (
+-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:16 }}>
++          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(200px, 100%), 1fr))', gap:16 }}>
+             {[
+               { label: isAr ? 'إجمالي الطلاب' : 'Total Students',   value: insights?.totalStudents || 0,    icon:'👥', color:'#6366f1' },
+               { label: isAr ? 'التكاليف' : 'Assignments',       value: insights?.totalAssignments || 0, icon:'📝', color:'#6366f1' },
+diff --git a/frontend/src/components/groups/GroupsPage.jsx b/frontend/src/components/groups/GroupsPage.jsx
+index 05d745d..03611d3 100644
+--- a/frontend/src/components/groups/GroupsPage.jsx
++++ b/frontend/src/components/groups/GroupsPage.jsx
+@@ -516,7 +516,7 @@ export default function GroupsPage() {
+ 
+       {/* Groups grid */}
+       {!isLoading && groups.length > 0 && (
+-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:20 }}>
++        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(min(300px, 100%), 1fr))', gap:20 }}>
+           {groups.map((g, i) => (
+           <GroupCard
+               key={g._id}
+diff --git a/frontend/src/components/help/HelpCenter.jsx b/frontend/src/components/help/HelpCenter.jsx
+index a481287..e0d9709 100644
+--- a/frontend/src/components/help/HelpCenter.jsx
++++ b/frontend/src/components/help/HelpCenter.jsx
+@@ -97,7 +97,7 @@ export default function HelpCenter() {
+       </div>
+ 
+       {/* Categories Grid */}
+-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12, marginBottom: 40 }}>
++      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(240px, 100%), 1fr))', gap: 12, marginBottom: 40 }}>
+         {CATEGORIES.map((cat, i) => (
+           <motion.div key={cat.id}
+             initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+diff --git a/frontend/src/components/landing/LandingPage.jsx b/frontend/src/components/landing/LandingPage.jsx
+index 5e21c2f..4337ff4 100644
+--- a/frontend/src/components/landing/LandingPage.jsx
++++ b/frontend/src/components/landing/LandingPage.jsx
+@@ -228,7 +228,7 @@ export default function LandingPage() {
+           <h2 style={{ fontSize: 36, fontWeight: 800, color: C.textD, marginBottom: 12 }}>{isAr ? 'استكشف أهم المواد' : 'Explore Top Subjects'}</h2>
+           <p style={{ color: C.textM, fontSize: 16, marginBottom: 60 }}>{isAr ? 'أتقن مواضيع جديدة مع أفضل المعلمين المصريين' : 'Master new topics from the best Egyptian instructors'}</p>
+ 
+-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 32 }}>
++          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: 32 }}>
+             {[
+               { title: isAr ? 'مفاهيم متقدمة في الفيزياء' : 'Advanced Physics Concept', tutor: isAr ? 'أ. حسن' : 'Prof. Hassan', img: 'showcase-6.jpeg', tag: isAr ? 'فيزياء' : 'Physics' },
+               { title: isAr ? 'كيمياء عضوية' : 'Organic Chemistry Masterclass', tutor: isAr ? 'د. رانيا' : 'Dr. Rania', img: 'showcase-7.jpeg', tag: isAr ? 'كيمياء' : 'Chemistry' },
+diff --git a/frontend/src/components/notes/NotesPage.jsx b/frontend/src/components/notes/NotesPage.jsx
+index 3d63744..af51775 100644
+--- a/frontend/src/components/notes/NotesPage.jsx
++++ b/frontend/src/components/notes/NotesPage.jsx
+@@ -142,7 +142,7 @@ export default function NotesPage() {
+         </Btn>
+       </div>
+ 
+-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 320px) 1fr', gap: 24, flex: 1, minHeight: 0 }}>
++      <div className="notes-two-col" style={{ display: 'grid', gridTemplateColumns: 'minmax(min(280px, 100%), 320px) 1fr', gap: 24, flex: 1, minHeight: 0 }}>
+         
+         {/* Left: Notes Sidebar */}
+         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
+diff --git a/frontend/src/components/profile/ProfilePage.jsx b/frontend/src/components/profile/ProfilePage.jsx
+index b257112..8765f28 100644
+--- a/frontend/src/components/profile/ProfilePage.jsx
++++ b/frontend/src/components/profile/ProfilePage.jsx
+@@ -114,7 +114,7 @@ export default function ProfilePage() {
+         gradient
+       />
+ 
+-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 360px) 1fr', gap: 32, alignItems: 'start' }}>
++      <div className="profile-two-col" style={{ display: 'grid', gridTemplateColumns: 'minmax(min(320px, 100%), 360px) 1fr', gap: 32, alignItems: 'start' }}>
+         {/* Left: Identity Card */}
+         <motion.div variants={itemAnim} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+           <div className="floating-panel" style={{ padding: 48, textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+@@ -260,19 +260,19 @@ export default function ProfilePage() {
+             </h3>
+             
+             <form onSubmit={handleSubmit(onSubmit)} style={{ display:'flex', flexDirection:'column', gap:28 }}>
+-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
++              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: 20 }}>
+                 <Input label={isAr ? 'الاسم الكامل' : 'Full Name'} {...register('name', { required:"Name is required" })} />
+                 <Input label={isAr ? 'تاريخ الميلاد' : 'Date of Birth'} type="date" {...register('dob')} />
+               </div>
+               
+-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
++              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: 20 }}>
+                 <Input label={isAr ? 'رقم الهاتف' : 'Phone Number'} placeholder="+20..." {...register('phone')} />
+                 <Select label={isAr ? 'الصف الدراسي' : 'Academic Grade'} {...register('grade')}>
+                   {GRADES.map(g=><option key={g} value={g}>{g.toUpperCase()}</option>)}
+                 </Select>
+               </div>
+ 
+-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
++              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: 20 }}>
+                 <Input label={isAr ? 'المدرسة / الجامعة' : 'School / University'} placeholder={isAr ? 'اسم المؤسسة...' : 'Institution name...'} {...register('school')} />
+                 <Select label={isAr ? 'اللغة' : 'Language'} {...register('language')}>
+                   {LANGUAGES.map(l=><option key={l.value} value={l.value}>{l.label.toUpperCase()}</option>)}
+diff --git a/frontend/src/components/settings/SettingsPage.jsx b/frontend/src/components/settings/SettingsPage.jsx
+index 3bf1fe4..cfc06fa 100644
+--- a/frontend/src/components/settings/SettingsPage.jsx
++++ b/frontend/src/components/settings/SettingsPage.jsx
+@@ -240,7 +240,7 @@ export default function SettingsPage() {
+                 error={errors.currentPassword?.message} 
+               />
+               
+-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 }}>
++              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: 20 }}>
+                 <div>
+                   <Input 
+                     label={isAr ? 'كلمة المرور الجديدة' : 'New Password'} type={showNew ? 'text' : 'password'} 
+diff --git a/frontend/src/components/shared/Layout.jsx b/frontend/src/components/shared/Layout.jsx
+index e8faf9a..c3c3021 100644
+--- a/frontend/src/components/shared/Layout.jsx
++++ b/frontend/src/components/shared/Layout.jsx
+@@ -383,6 +383,12 @@ export function Sidebar({ open, onToggle }) {
+   const { user }        = useAuthStore();
+   const { t }           = useTranslation();
+   const { institutionMode } = useUIStore();
++  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 1100);
++  useEffect(() => {
++    const onResize = () => setIsMobile(window.innerWidth < 1100);
++    window.addEventListener('resize', onResize);
++    return () => window.removeEventListener('resize', onResize);
++  }, []);
+   const isTeacher    = user?.role === 'teacher';
+   const isAdmin      = ['school_admin', 'university_admin', 'admin', 'platform_owner'].includes(user?.role) || !!user?.admin_level;
+   const isCenterOwner = user?.role === 'center_owner';
+@@ -416,18 +422,25 @@ export function Sidebar({ open, onToggle }) {
+       </AnimatePresence>
+ 
+       <motion.nav
+-        animate={{ width: open ? 272 : 72 }}
++        animate={
++          isMobile
++            ? { x: open ? 0 : '110%' }
++            : { width: open ? 272 : 72 }
++        }
+         transition={{ type: 'spring', stiffness: 340, damping: 34 }}
+-        className="main-sidebar floating-panel"
++        className={`main-sidebar floating-panel${open ? ' open' : ''}`}
+         style={{
+-          height: 'calc(100vh - 24px)',
+-          margin: '12px',
++          height: isMobile ? '100dvh' : 'calc(100vh - 24px)',
++          margin: isMobile ? 0 : '12px',
+           display: 'flex',
+           flexDirection: 'column',
+           overflowY: 'auto',
+           overflowX: 'hidden',
+-          position: 'relative',
+-          zIndex: 150,
++          position: isMobile ? 'fixed' : 'relative',
++          top: 0,
++          insetInlineEnd: isMobile ? 0 : undefined,
++          width: isMobile ? '270px' : undefined,
++          zIndex: isMobile ? 999 : 150,
+         }}
+       >
+         {/* ── Logo / Toggle ───────────────────────────── */}
+@@ -1064,7 +1077,15 @@ export function AppShell({ children }) {
+       </AnimatePresence>
+ 
+       <Sidebar open={open} onToggle={() => setOpen(v => !v)} />
+-      
++
++      {window.innerWidth < 1100 && (
++        <div
++          className={`sidebar-backdrop${open ? ' open' : ''}`}
++          onClick={() => setOpen(false)}
++          aria-hidden="true"
++        />
++      )}
++
+       <div className="main-content">
+         <Header 
+           sidebarOpen={open} 
+diff --git a/frontend/src/components/teacher/AffiliateDashboard.jsx b/frontend/src/components/teacher/AffiliateDashboard.jsx
+index 2c83386..d5a0088 100644
+--- a/frontend/src/components/teacher/AffiliateDashboard.jsx
++++ b/frontend/src/components/teacher/AffiliateDashboard.jsx
+@@ -59,7 +59,7 @@ export default function AffiliateDashboard() {
+         subtitle={isAr ? "قم بإنشاء روابط ترويجية واربح عمولات عند انضمام طلاب جدد." : "Create promotional links and earn commissions when new students join."} 
+       />
+ 
+-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(240px, 1fr))', gap:20, marginBottom:32 }}>
++      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap:20, marginBottom:32 }}>
+         <StatCard icon="🖱️" label={isAr ? "إجمالي النقرات" : "Total Clicks"} value={totalClicks} color="var(--primary)" />
+         <StatCard icon="🎯" label={isAr ? "التحويلات" : "Conversions"} value={totalConversions} color="var(--success)" />
+         <StatCard icon="💰" label={isAr ? "الأرباح" : "Earnings"} value={`${totalEarnings} EGP`} color="var(--warning)" />
+diff --git a/frontend/src/components/teacher/ExamBuilder.jsx b/frontend/src/components/teacher/ExamBuilder.jsx
+index 19469fa..5900d96 100644
+--- a/frontend/src/components/teacher/ExamBuilder.jsx
++++ b/frontend/src/components/teacher/ExamBuilder.jsx
+@@ -237,7 +237,7 @@ export default function ExamBuilder() {
+                 </motion.button>
+               </div>
+             </div>
+-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(380px, 1fr))', gap:14 }}>
++            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(min(380px, 100%), 1fr))', gap:14 }}>
+               {questions.map((q, i) => (
+                 <QuestionCard key={i} q={q} index={i} selected={selected.has(i)} onToggle={toggleQuestion} />
+               ))}
+diff --git a/frontend/src/components/teacher/StudentsOverview.jsx b/frontend/src/components/teacher/StudentsOverview.jsx
+index 88d0249..6aa9194 100644
+--- a/frontend/src/components/teacher/StudentsOverview.jsx
++++ b/frontend/src/components/teacher/StudentsOverview.jsx
+@@ -120,7 +120,7 @@ export default function StudentsOverview() {
+       </div>
+ 
+       {/* Stats Cards */}
+-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
++      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: 12 }}>
+         {[
+           { label: isAr ? 'إجمالي' : 'Total', value: students.length, icon: '👥', color: '#6366F1' },
+           { label: isAr ? 'نشط' : 'Active', value: students.filter(s => s.status === 'Active').length, icon: '✅', color: '#10B981' },
+diff --git a/frontend/src/components/teacher/TeacherDashboard.jsx b/frontend/src/components/teacher/TeacherDashboard.jsx
+index 9ce8b57..57b5ea8 100644
+--- a/frontend/src/components/teacher/TeacherDashboard.jsx
++++ b/frontend/src/components/teacher/TeacherDashboard.jsx
+@@ -216,7 +216,7 @@ export default function TeacherDashboard() {
+       {/* ── Quick Actions ── */}
+       <motion.div variants={stagger.item} style={{ marginBottom:28 }}>
+         <h3 style={{ fontSize:15, fontWeight:800, fontFamily:'var(--font-head)', marginBottom:14, letterSpacing:'-0.02em' }}>{isAr ? 'وصول سريع' : 'Quick Actions'}</h3>
+-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(170px,1fr))', gap:12 }}>
++        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(min(170px, 100%), 1fr))', gap:12 }}>
+           {QUICK_ACTIONS.map(a => (
+             <QuickAction key={a.label} {...a} onClick={() => navigate(a.path)} />
+           ))}
+@@ -247,7 +247,7 @@ export default function TeacherDashboard() {
+             </button>
+           </div>
+         ) : (
+-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))', gap:14 }}>
++          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(min(260px, 100%), 1fr))', gap:14 }}>
+             {groups.slice(0,6).map(g => <MiniGroupCard key={g._id} group={g} navigate={navigate} />)}
+           </div>
+         )}
+diff --git a/frontend/src/components/teacher/TeacherWallet.jsx b/frontend/src/components/teacher/TeacherWallet.jsx
+index e5d92af..22b542f 100644
+--- a/frontend/src/components/teacher/TeacherWallet.jsx
++++ b/frontend/src/components/teacher/TeacherWallet.jsx
+@@ -104,7 +104,7 @@ export default function TeacherWallet() {
+       </div>
+ 
+       {/* ── Stats Cards ── */}
+-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
++      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: 16 }}>
+         {[
+           { label: isAr ? 'الرصيد المتاح' : 'Available Balance',    value: `${balance.available.toFixed(2)} EGP`, icon: '💰', color: '#10B981', bg: 'rgba(16,185,129,0.08)' },
+           { label: isAr ? 'إجمالي المكتسب' : 'Total Earned',         value: `${balance.totalEarned.toFixed(2)} EGP`, icon: '📈', color: '#6366F1', bg: 'rgba(99,102,241,0.08)' },
+diff --git a/frontend/src/styles/global.css b/frontend/src/styles/global.css
+index 678d96e..3c0aceb 100644
+--- a/frontend/src/styles/global.css
++++ b/frontend/src/styles/global.css
+@@ -460,10 +460,12 @@ code, pre {
+   display: flex;
+   flex-direction: column;
+   min-width: 0;
++  width: 100%;
++  max-width: 100%;
++  overflow-x: hidden;
+   min-height: 100vh;
+   min-height: 100dvh;
+   background: var(--page-bg);
+-  /* Premium Subtle Background */
+   background-image: 
+     radial-gradient(circle at 15% 15%, rgba(99,102,241, 0.04) 0%, transparent 50%),
+     radial-gradient(circle at 85% 85%, rgba(168,85,247, 0.03) 0%, transparent 50%);
+@@ -476,27 +478,92 @@ code, pre {
+   max-width: 1600px;
+   margin: 0 auto;
+   width: 100%;
++  box-sizing: border-box;
+   animation: fadeUp 0.4s var(--ease) both;
+ }
+ 
++/* ── Sidebar backdrop overlay (mobile only) ── */
++.sidebar-backdrop {
++  position: fixed;
++  inset: 0;
++  z-index: 998;
++  background: rgba(0,0,0,0.55);
++  backdrop-filter: blur(2px);
++  -webkit-backdrop-filter: blur(2px);
++  opacity: 0;
++  pointer-events: none;
++  transition: opacity 0.3s ease;
++}
++.sidebar-backdrop.open {
++  opacity: 1;
++  pointer-events: all;
++}
++
+ @media (max-width: 1280px) {
+   .page-container { padding: 32px 32px 48px; }
+ }
++
++/* ── Tablet/Mobile: sidebar becomes a fixed overlay ── */
+ @media (max-width: 1100px) {
+-  .page-container { padding: 24px 20px 100px; }
++  .page-container { padding: 20px 16px 100px; }
++
++  .main-content {
++    width: 100% !important;
++    max-width: 100% !important;
++    margin: 0 !important;
++  }
++
+   .main-sidebar {
+-    position: fixed;
+-    transform: translateX(100%);
+-    width: 280px !important;
+-    height: 100vh;
+-    height: 100dvh;
++    box-shadow: -8px 0 40px rgba(0,0,0,0.5);
++    border-radius: 0 !important;
+   }
+-  [dir="ltr"] .main-sidebar { transform: translateX(-100%); }
+-  .main-sidebar.open { transform: translateX(0) !important; }
+ }
++
++/* ── Mobile phones ── */
+ @media (max-width: 768px) {
+-  .page-container { padding: 20px 16px 96px; }
++  html { font-size: 15px; }
++
++  body, #root { overflow-x: hidden !important; max-width: 100vw !important; }
++
++  .page-container {
++    padding: 14px 14px 92px;
++    width: 100%;
++    max-width: 100vw;
++    overflow-x: hidden;
++    box-sizing: border-box;
++  }
++
++  * { box-sizing: border-box; }
++  img, video, iframe, svg { max-width: 100%; height: auto; }
++
++  input, textarea, select { font-size: 16px !important; }
++
++  table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
++
++  [role="dialog"], .modal {
++    width: calc(100vw - 24px) !important;
++    max-width: calc(100vw - 24px) !important;
++    max-height: 90dvh !important;
++    overflow-y: auto !important;
++    margin: 12px !important;
++    border-radius: 20px !important;
++  }
++
++  button, a[href], [role="button"] { min-height: 44px; min-width: 44px; }
++
++  h1 { font-size: clamp(1.4rem, 5vw, 2rem) !important; }
++  h2 { font-size: clamp(1.2rem, 4vw, 1.6rem) !important; }
++  h3 { font-size: clamp(1rem, 3.5vw, 1.3rem) !important; }
++
++  .files-two-col, .profile-two-col, .notes-two-col {
++    grid-template-columns: 1fr !important;
++  }
++}
++
++/* ── Small phones (iPhone SE etc.) ── */
++@media (max-width: 390px) {
+   html { font-size: 14px; }
++  .page-container { padding: 10px 12px 88px; }
+ }
+ 
+ 
+diff --git a/frontend/vite.config.js b/frontend/vite.config.js
+index 95f1922..5b79594 100644
+--- a/frontend/vite.config.js
++++ b/frontend/vite.config.js
+@@ -13,7 +13,6 @@ export default defineConfig({
+       includeAssets: [
+         'favicon.ico', 'apple-touch-icon.png',
+         'pwa-192x192.png', 'pwa-512x512.png',
+-        'offline.html',
+       ],
+ 
+       // ── Web App Manifest ──────────────────────────────────────
+@@ -61,14 +60,19 @@ export default defineConfig({
+       // ── Workbox Strategies ────────────────────────────────────
+       workbox: {
+         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,webp,json}'],
+-        navigateFallback: '/offline.html',
+-        navigateFallbackDenylist: [/^\/api\//, /^\/socket\.io\//],
++        navigateFallback: null,
+         cleanupOutdatedCaches: true,
++        skipWaiting: true,
++        clientsClaim: true,
+ 
+         runtimeCaching: [
+           // API → Network-first (serves cache when offline)
+           {
+-            urlPattern: /^https?:\/\/.*\/api\/.*/i,
++            urlPattern: ({ url }) =>
++              url.hostname !== 'localhost' &&
++              url.hostname !== '127.0.0.1' &&
++              url.pathname.startsWith('/api/') &&
++              !url.pathname.includes('/auth/google'),
+             handler: 'NetworkFirst',
+             options: {
+               cacheName: 'najah-api-v1',
+-- 
+2.43.0
+

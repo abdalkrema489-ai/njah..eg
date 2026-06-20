@@ -55,6 +55,14 @@ export function useSocket() {
       });
 
       socketInstance.on('connect_error', (err) => console.warn('🔌 Socket error:', err.message));
+      
+      // Keep socket auth token in sync with the latest access token
+      socketInstance.io.on('reconnect_attempt', () => {
+        const freshToken = localStorage.getItem('token') || localStorage.getItem('accessToken');
+        if (freshToken) socketInstance.auth.token = freshToken;
+      });
+
+      window.__najahSocket = socketInstance;
     }
 
     // Group room messages handler (only)

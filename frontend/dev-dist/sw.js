@@ -67,8 +67,11 @@ if (!self.define) {
     });
   };
 }
-define(['./workbox-237f2c1f'], (function (workbox) { 'use strict';
+define(['./workbox-8c896b8c'], (function (workbox) { 'use strict';
 
+  workbox.setCacheNameDetails({
+    prefix: "najah-v2"
+  });
   self.skipWaiting();
   workbox.clientsClaim();
 
@@ -80,17 +83,12 @@ define(['./workbox-237f2c1f'], (function (workbox) { 'use strict';
   workbox.precacheAndRoute([{
     "url": "suppress-warnings.js",
     "revision": "d41d8cd98f00b204e9800998ecf8427e"
-  }, {
-    "url": "/offline.html",
-    "revision": "0.elflqeph0kc"
   }], {});
   workbox.cleanupOutdatedCaches();
-  workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("/offline.html"), {
-    allowlist: [/^\/$/],
-    denylist: [/^\/api\//, /^\/socket\.io\//]
-  }));
-  workbox.registerRoute(/^https?:\/\/.*\/api\/.*/i, new workbox.NetworkFirst({
-    "cacheName": "najah-api-v1",
+  workbox.registerRoute(({
+    url
+  }) => url.hostname !== "localhost" && url.hostname !== "127.0.0.1" && url.pathname.startsWith("/api/"), new workbox.NetworkFirst({
+    "cacheName": "najah-api-v2",
     "networkTimeoutSeconds": 8,
     plugins: [new workbox.ExpirationPlugin({
       maxEntries: 200,

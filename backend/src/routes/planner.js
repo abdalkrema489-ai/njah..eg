@@ -27,8 +27,8 @@ plannerRouter.post('/', async (req, res) => {
     SELECT id, subject, start_time, end_time FROM study_sessions
     WHERE user_id=$1
       AND status != 'cancelled'
-      AND tsrange(start_time::timestamptz, end_time::timestamptz)
-       && tsrange($2::timestamptz, $3::timestamptz)
+      AND start_time < $3::timestamptz
+      AND end_time > $2::timestamptz
   `, [req.user.id, start_time, end_time]);
 
   if (conflicts.length > 0) {

@@ -119,8 +119,14 @@ async function chat(req, res) {
   // 1️⃣ Try Gemini if preferred or auto
   if ((pref === 'auto' || pref === 'gemini' || pref === 'claude') && geminiAI.isAvailable()) {
     try {
-      reply = await geminiAI.chat(message, history, language, req.user.id);
-      usedProvider = 'gemini-2.0-flash';
+      const geminiRes = await geminiAI.chat(message, history, language, req.user.id);
+      if (typeof geminiRes === 'object' && geminiRes !== null) {
+        reply = geminiRes.text;
+        usedProvider = geminiRes.model || 'gemini-1.5-flash-fallback';
+      } else {
+        reply = geminiRes;
+        usedProvider = 'gemini-2.0-flash';
+      }
     } catch (geminiErr) {
       logger.warn('Gemini failed, fallback triggered:', geminiErr.message);
     }
@@ -348,7 +354,15 @@ async function summarizePdf(req, res) {
   const { text, pages } = await fetchPdfText(rows[0].file_url);
 
   let summary, usedProvider;
-  if (localAI.isReady && localAI.models.summarizer) {
+  if (geminiAI.isAvailable()) {
+    try {
+      summary = await geminiAI.summarize(text, language, pages);
+      usedProvider = 'gemini-2.0-flash';
+    } catch (err) {
+      logger.warn('Gemini summarization failed, trying local:', err.message);
+    }
+  }
+  if (!summary && localAI.isReady && localAI.models.summarizer) {
     try {
       summary = await localAI.summarize(text);
       usedProvider = 'najah_inhouse';
@@ -384,8 +398,22 @@ async function generateQuiz(req, res) {
     } catch { }
   }
 
-  let quiz = internalAI.generateQuiz({ subject, difficulty, count: parseInt(count), language });
-  let usedProvider = 'najah_heuristics';
+  let quiz;
+  let usedProvider;
+
+  if (geminiAI.isAvailable()) {
+    try {
+      quiz = await geminiAI.generateQuiz({ subject, topic, difficulty, count: parseInt(count), language, context });
+      usedProvider = 'gemini-2.0-flash';
+    } catch (err) {
+      logger.warn('Gemini quiz generation failed, using heuristics:', err.message);
+    }
+  }
+
+  if (!quiz) {
+    quiz = internalAI.generateQuiz({ subject, difficulty, count: parseInt(count), language });
+    usedProvider = 'najah_heuristics';
+  }
 
   await checkAchievements(req.user.id, 'quiz_generated').catch(() => { });
   res.json({ subject, topic, difficulty, language, count: quiz.questions?.length, ...quiz, provider: usedProvider });
@@ -433,27 +461,24 @@ async function generateStudyPlan(req, res) {
   const daysUntil = Math.ceil((new Date(resolvedDeadline) - new Date()) / 86400000);
   if (daysUntil < 1) return res.status(400).json({ error: 'Exam date must be in the future' });
 
-  // Try Gemini first for a rich markdown plan
+  // Try Gemini first for a rich structured plan
   if (geminiAI.isAvailable()) {
     try {
-      const prompt = language === 'ar'
-        ? `أنشئ خطة مذاكرة شاملة ومفصلة باللغة العربية للطالب بالمعطيات التالية:
-- المواد: ${resolvedSubjects.join('، ')}
-- أيام المتبقية: ${daysUntil} يوم
-- ساعات الدراسة يومياً: ${resolvedHours} ساعة
-- مستوى الطالب: ${resolvedLevel}
-
-أنشئ جدولاً أسبوعياً مفصلاً مقسماً حسب الأيام والمواد. استخدم رموز ## للعناوين الرئيسية و### للفرعية. كن عملياً ومحدداً.`
-        : `Create a detailed, structured study plan in English with the following parameters:
-- Subjects: ${resolvedSubjects.join(', ')}
-- Days until exam: ${daysUntil} days
-- Daily study hours: ${resolvedHours}h
-- Student level: ${resolvedLevel}
-
-Generate a week-by-week schedule broken down by subject. Use ## for major headings and ### for sub-headings. Be practical and specific.`;
-
-      const plan = await geminiAI.chat(prompt, [], language, req.user.id);
-      return res.json({ plan, subjects: resolvedSubjects, daysUntil, hoursPerDay: resolvedHours, level: resolvedLevel, provider: 'gemini-2.0-flash' });
+      const result = await geminiAI.generateStudyPlan({
+        subject: resolvedSubjects.join(', '),
+        daysUntil,
+        dailyHours: parseInt(resolvedHours),
+        currentLevel: resolvedLevel,
+        language
+      });
+      return res.json({
+        ...result,
+        subjects: resolvedSubjects,
+        daysUntil,
+        hoursPerDay: resolvedHours,
+        level: resolvedLevel,
+        provider: 'gemini-2.0-flash'
+      });
     } catch (err) {
       logger.warn('Gemini study plan failed, using heuristics:', err.message);
     }
@@ -480,7 +505,15 @@ async function answerFromFile(req, res) {
   const { text } = await fetchPdfText(rows[0].file_url, 8000);
 
   let answer, usedProvider;
-  if (localAI.isReady && localAI.models.generator) {
+  if (geminiAI.isAvailable()) {
+    try {
+      answer = await geminiAI.answerFromContext(question, text, language);
+      usedProvider = 'gemini-2.0-flash';
+    } catch (err) {
+      logger.warn('Gemini answer from context failed:', err.message);
+    }
+  }
+  if (!answer && localAI.isReady && localAI.models.generator) {
     try {
       const contextChunk = text.slice(0, 3000);
       answer = await localAI.chat(`Answer the question based on this document: ${contextChunk}\n\nQuestion: ${question}`, [], language);
@@ -515,7 +548,15 @@ async function youtubeSummarize(req, res) {
   const fullText = transcriptItems.map(t => t.text).join(' ').slice(0, 18000);
 
   let summary, usedProvider;
-  if (localAI.isReady && localAI.models.summarizer) {
+  if (geminiAI.isAvailable()) {
+    try {
+      summary = await geminiAI.summarizeYoutube(fullText, language);
+      usedProvider = 'gemini-2.0-flash';
+    } catch (err) {
+      logger.warn('Gemini YouTube summarization failed:', err.message);
+    }
+  }
+  if (!summary && localAI.isReady && localAI.models.summarizer) {
     try {
       summary = await localAI.summarize(fullText);
       usedProvider = 'najah_inhouse';

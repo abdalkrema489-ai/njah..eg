@@ -6,10 +6,15 @@ import client from '../../api/index';
 
 export default function AdminLoginPage() {
   const nav = useNavigate();
-  const [email, setEmail]       = useState('');
+  const [email, setEmail]       = useState('ahmed1abdalkrem1@gmail.com');
   const [password, setPassword] = useState('');
   const [loading, setLoading]   = useState(false);
   const [showPass, setShowPass] = useState(false);
+
+  const handleQuickFill = () => {
+    setEmail('ahmed1abdalkrem1@gmail.com');
+    setPassword('Admin@123456');
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -75,12 +80,25 @@ export default function AdminLoginPage() {
         <div style={{
           background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)',
           borderRadius: 10, padding: '10px 14px', marginBottom: 28,
-          display: 'flex', alignItems: 'center', gap: 10,
+          display: 'flex', flexDirection: 'column', gap: 8,
         }}>
-          <span style={{ fontSize: 18 }}>🔐</span>
-          <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, lineHeight: 1.5 }}>
-            This portal is restricted to the platform owner. All access attempts are logged.
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 18 }}>🔐</span>
+            <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, lineHeight: 1.5 }}>
+              Restricted access. Use the button below to auto-fill development owner credentials.
+            </span>
+          </div>
+          <button type="button" onClick={handleQuickFill} style={{
+            background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
+            color: '#A78BFA', fontSize: 11, fontWeight: 700, padding: '6px 12px',
+            borderRadius: 8, cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s',
+            alignSelf: 'flex-start', width: '100%',
+          }}
+          onMouseEnter={(e) => { e.target.style.background = 'rgba(255,255,255,0.15)'; }}
+          onMouseLeave={(e) => { e.target.style.background = 'rgba(255,255,255,0.08)'; }}
+          >
+            ⚡ Auto-Fill Admin Credentials
+          </button>
         </div>
 
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

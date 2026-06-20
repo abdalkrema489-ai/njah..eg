@@ -32,7 +32,7 @@ const fadeInUp = {
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const { lang } = useTranslation();
+  const { lang, toggleLang } = useTranslation();
   const isAr = lang === 'ar';
   const { scrollY } = useScroll();
   const yHero = useTransform(scrollY, [0, 500], [0, 100]);
@@ -59,7 +59,7 @@ export default function LandingPage() {
       }} className="landing-nav">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => navigate('/')}>
           <div style={{ width: 32, height: 32, borderRadius: 8, background: C.magenta, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 18 }}>e</div>
-          <span style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>Najah<span style={{color: C.magenta}}>.</span></span>
+          <span className="landing-nav-logo-text" style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>Najah<span style={{color: C.magenta}}>.</span></span>
         </div>
 
         {/* Desktop nav links */}
@@ -71,6 +71,9 @@ export default function LandingPage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button onClick={toggleLang} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', minHeight: 44, minWidth: 44 }}>
+            {lang === 'ar' ? 'EN' : 'عربي'}
+          </button>
           <button onClick={() => navigate('/login')} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', minHeight: 44, minWidth: 44 }}>{isAr ? 'دخول' : 'Login'}</button>
           <button onClick={() => navigate('/register')} style={{ 
             background: C.white, color: C.navy, border: 'none', padding: '10px 20px', borderRadius: 99, 

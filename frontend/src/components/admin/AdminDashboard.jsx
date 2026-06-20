@@ -123,7 +123,7 @@ function EarningsCard({ revenue }) {
         }}>Platform Fee: {feePercent}%</span>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 28 }}>
+      <div className="admin-earnings-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 28 }}>
         {[
           { label: 'Gross Revenue', val: `EGP ${total?.toLocaleString() || '0'}`, color: COLORS.blue, icon: '💳' },
           { label: 'Your Earnings (Platform)', val: `EGP ${platformEarnings?.toFixed(0) || '0'}`, color: COLORS.green, icon: '🏦' },
@@ -479,7 +479,7 @@ export default function AdminDashboard() {
   return (
     <div style={bgStyle}>
       {/* Header */}
-      <div style={{
+      <div className="admin-header" style={{
         background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.08)',
         padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         height: 64, backdropFilter: 'blur(12px)', position: 'sticky', top: 0, zIndex: 100,
@@ -524,7 +524,7 @@ export default function AdminDashboard() {
 
       <div style={{ padding: '28px 32px', maxWidth: 1400, margin: '0 auto' }}>
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: 6, marginBottom: 28 }}>
+        <div className="admin-tabs scroll-x" style={{ display: 'flex', gap: 6, marginBottom: 28 }}>
           {TABS.map(t => (
             <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
               padding: '10px 18px', borderRadius: 10, border: 'none', cursor: 'pointer',
@@ -560,7 +560,7 @@ export default function AdminDashboard() {
                 <EarningsCard revenue={stats.revenue} />
 
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                <div className="admin-overview-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                   <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 24, padding: 24 }}>
                     <h3 style={{ color: '#fff', marginTop: 0, fontSize: 16, fontWeight: 800 }}>💳 Payment Gateways Used</h3>
                     <div style={{ width: '100%', minWidth: 0, marginTop: 20 }}>
@@ -618,7 +618,7 @@ export default function AdminDashboard() {
 
                 <EarningsCard revenue={{ ...earnings.summary, monthly: stats?.revenue?.monthly || [] }} />
                 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                <div className="admin-overview-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                   {/* Teacher Payouts Table */}
                   <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 24, padding: 24, overflowX: 'auto' }}>
                     <h3 style={{ color: '#fff', marginTop: 0, fontSize: 16, fontWeight: 800 }}>👨‍🏫 Teacher Payouts</h3>

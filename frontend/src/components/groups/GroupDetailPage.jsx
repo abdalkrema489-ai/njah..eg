@@ -354,7 +354,7 @@ export default function GroupDetailPage() {
         </div>
 
         <div style={{ padding: '0 32px 24px', position: 'relative' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 24, marginTop: -50 }}>
+          <div className="group-detail-header-flex" style={{ display: 'flex', alignItems: 'flex-end', gap: 24, marginTop: -50 }}>
             <div style={{ 
               width: 100, height: 100, borderRadius: 24, background: 'var(--surface2)', 
               border: '5px solid var(--surface)', display: 'flex', alignItems: 'center', 
@@ -372,7 +372,7 @@ export default function GroupDetailPage() {
               </div>
             </div>
             
-            <div style={{ display: 'flex', gap: 10, paddingBottom: 8 }}>
+            <div className="group-detail-actions-flex" style={{ display: 'flex', gap: 10, paddingBottom: 8 }}>
               {isOwner && (
                 <>
                   <button onClick={() => setShowEdit(true)}
@@ -404,7 +404,7 @@ export default function GroupDetailPage() {
         </div>
 
         {/* Unified Tab Bar */}
-        <div style={{ display: 'flex', borderTop: '1px solid var(--border)', padding: '0 20px' }}>
+        <div className="group-detail-tabs scroll-x" style={{ display: 'flex', borderTop: '1px solid var(--border)', padding: '0 20px' }}>
           {visibleTabs.map(t => (
             <button
               key={t.key}
@@ -426,7 +426,7 @@ export default function GroupDetailPage() {
 
       <div style={{ flex: 1 }}>
         {tab === 'feed' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 24, alignItems: 'start' }}>
+          <div className="group-detail-feed-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 24, alignItems: 'start' }}>
             {/* Main Feed */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: 6 }}>

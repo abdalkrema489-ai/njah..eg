@@ -26,7 +26,10 @@ function setupSocketIO(io) {
       if (!rows[0]) return next(new Error('User not found'));
       socket.user = rows[0];
       next();
-    } catch { next(new Error('Invalid token')); }
+    } catch (err) {
+      if (err.name === 'TokenExpiredError') next(new Error('Token expired — please refresh'));
+      else next(new Error('Invalid token'));
+    }
   });
 
   io.on('connection', socket => {

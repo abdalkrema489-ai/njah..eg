@@ -49,6 +49,10 @@ client.interceptors.response.use(r => r, async err => {
     try {
       const { data } = await axios.post(`${API}/auth/refresh`, { refresh: ref });
       localStorage.setItem('token', data.token);
+      if (window.__najahSocket) {
+        window.__najahSocket.auth.token = data.token;
+        if (!window.__najahSocket.connected) window.__najahSocket.connect();
+      }
       client.defaults.headers.Authorization = `Bearer ${data.token}`;
       flush(null, data.token);
       orig.headers.Authorization = `Bearer ${data.token}`;
@@ -97,6 +101,10 @@ aiClient.interceptors.response.use(r => r, async err => {
     try {
       const { data } = await axios.post(`${API}/auth/refresh`, { refresh: ref });
       localStorage.setItem('token', data.token);
+      if (window.__najahSocket) {
+        window.__najahSocket.auth.token = data.token;
+        if (!window.__najahSocket.connected) window.__najahSocket.connect();
+      }
       client.defaults.headers.Authorization = `Bearer ${data.token}`;
       aiClient.defaults.headers.Authorization = `Bearer ${data.token}`;
       flush(null, data.token);

@@ -128,11 +128,11 @@ export default function NajahAI() {
 
   return (
     <div style={{
-      display: 'flex', height: 'calc(100vh - 60px)', overflow: 'hidden',
+      display: 'flex', height: '100dvh', maxHeight: '100dvh', overflow: 'hidden',
       background: 'var(--ink)', fontFamily: "'Inter', sans-serif",
     }}>
       {/* ── Sidebar ──────────────────────────────────── */}
-      <div style={{
+      <div className="ai-sidebar" style={{
         width: 260, borderRight: '1px solid var(--border)', background: 'var(--surface)',
         display: 'flex', flexDirection: 'column', padding: '20px 0', flexShrink: 0,
       }}>
@@ -245,36 +245,51 @@ export default function NajahAI() {
         {/* Top bar */}
         <div style={{
           padding: '14px 24px', borderBottom: '1px solid var(--border)',
-          background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 12,
+          background: 'var(--surface)', display: 'flex', flexDirection: 'column', gap: 12,
         }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)' }}>
-              {MODES.find(m => m.id === mode)?.icon} {MODES.find(m => m.id === mode)?.label}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)' }}>
+                {MODES.find(m => m.id === mode)?.icon} {MODES.find(m => m.id === mode)?.label}
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text3)' }}>
+                {mode === 'chat' && useWebSearch && '🌐 Web search enabled — responses include live internet data'}
+                {mode === 'chat' && !useWebSearch && 'Powered by Google Gemini 2.0 Flash'}
+                {mode === 'search' && '🌐 Searching the real-time web and synthesizing results'}
+                {mode === 'explain' && `📖 Detailed ${level} level explanations`}
+                {mode === 'homework' && '📝 Step-by-step solutions with learning focus'}
+                {mode === 'news' && '📰 Latest news from the internet'}
+              </div>
             </div>
-            <div style={{ fontSize: 12, color: 'var(--text3)' }}>
-              {mode === 'chat' && useWebSearch && '🌐 Web search enabled — responses include live internet data'}
-              {mode === 'chat' && !useWebSearch && 'Powered by Google Gemini 2.0 Flash'}
-              {mode === 'search' && '🌐 Searching the real-time web and synthesizing results'}
-              {mode === 'explain' && `📖 Detailed ${level} level explanations`}
-              {mode === 'homework' && '📝 Step-by-step solutions with learning focus'}
-              {mode === 'news' && '📰 Latest news from the internet'}
-            </div>
+            {useWebSearch && mode === 'chat' && (
+              <div style={{
+                background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)',
+                color: '#34D399', padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+              }}>🌐 LIVE</div>
+            )}
           </div>
-          {useWebSearch && mode === 'chat' && (
-            <div style={{
-              background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)',
-              color: '#34D399', padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700,
-            }}>🌐 LIVE</div>
-          )}
+          {/* Mobile Mode selector tabs */}
+          <div className="ai-mobile-modes" style={{ display: 'none' }}>
+            {MODES.map(m => (
+              <button
+                key={m.id}
+                onClick={() => setMode(m.id)}
+                className={`ai-mobile-mode-btn ${mode === m.id ? 'active' : ''}`}
+              >
+                <span>{m.icon}</span>
+                <span>{m.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Messages */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', paddingBottom: '80px', display: 'flex', flexDirection: 'column', gap: 16, WebkitOverflowScrolling: 'touch' }}>
           {/* Quick prompts when empty */}
           {messages.length === 1 && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(200px, 100%), 1fr))', gap: 10, marginBottom: 8 }}>
+            <div className="ai-quick-prompts" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(200px, 100%), 1fr))', gap: 10, marginBottom: 8 }}>
               {QUICK_PROMPTS.map(p => (
-                <button key={p} onClick={() => { setInput(p); inputRef.current?.focus(); }} style={{
+                <button key={p} onClick={() => { setInput(p); inputRef.current?.focus(); }} className="ai-quick-prompt-btn" style={{
                   padding: '10px 14px', borderRadius: 12, border: '1px solid var(--border)',
                   background: 'var(--surface)', color: 'var(--text2)', cursor: 'pointer',
                   fontSize: 12, textAlign: 'left', lineHeight: 1.4,
@@ -301,7 +316,7 @@ export default function NajahAI() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
                 }}>{msg.role === 'user' ? '👤' : '🤖'}</div>
 
-                <div style={{ maxWidth: '75%' }}>
+                <div style={{ maxWidth: 'min(85%, calc(100vw - 32px))' }}>
                   <div style={{
                     padding: '14px 16px', borderRadius: 16,
                     background: msg.role === 'user' ? 'rgba(16,185,129,0.15)' : 'var(--surface)',
@@ -365,10 +380,9 @@ export default function NajahAI() {
           <div ref={bottomRef} />
         </div>
 
-        {/* Input */}
         <div style={{
-          padding: '16px 24px',
-          paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
+          padding: '12px 16px',
+          paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
           borderTop: '1px solid var(--border)',
           background: 'var(--surface)',
           position: 'sticky',

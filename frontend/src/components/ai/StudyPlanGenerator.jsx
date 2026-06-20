@@ -80,6 +80,7 @@ export default function StudyPlanGenerator({ isAr }) {
   const [hoursPerDay, setHoursPerDay] = useState(4);
   const [level, setLevel]             = useState('intermediate');
   const [plan, setPlan]               = useState(null);
+  const [applying, setApplying]       = useState(false);
 
   const toggleSubject = (key) =>
     setSubjects(s => s.includes(key) ? s.filter(k => k !== key) : [...s, key]);
@@ -89,7 +90,7 @@ export default function StudyPlanGenerator({ isAr }) {
       examDate, subjects, hoursPerDay, level,
     }).then(r => r.data),
     onSuccess: (data) => {
-      setPlan(data.plan || data.content || data.response || JSON.stringify(data));
+      setPlan(data);
       haptic.success();
     },
     onError: (err) => {
@@ -98,10 +99,69 @@ export default function StudyPlanGenerator({ isAr }) {
   });
 
   const handleAddToPlanner = async () => {
-    if (!plan) return;
-    // Navigate to planner with a hint
-    navigate('/planner', { state: { fromPlan: true, plan } });
-    toast.success(isAr ? 'تم نقلك للمخطط، يمكنك إضافة الجلسات يدوياً' : 'Redirected to planner — add sessions manually');
+    if (!plan || !Array.isArray(plan.plan)) return;
+    setApplying(true);
+    try {
+      const sessions = [];
+      plan.plan.forEach((day) => {
+        const dayOffset = parseInt(day.day) || 1;
+        let dateObj = new Date();
+        if (day.date) {
+          const cleanDate = day.date.replace(/\//g, '-');
+          const match = cleanDate.match(/(\d{4})-(\d{2})-(\d{2})/);
+          if (match) {
+            dateObj = new Date(cleanDate);
+          } else {
+            const parsed = new Date(day.date);
+            if (!isNaN(parsed.getTime())) {
+              dateObj = parsed;
+            } else {
+              dateObj.setDate(dateObj.getDate() + dayOffset);
+            }
+          }
+        } else {
+          dateObj.setDate(dateObj.getDate() + dayOffset);
+        }
+
+        (day.sessions || []).forEach((s, si) => {
+          if (s.type === 'rest') return;
+          
+          let hour = 9 + (si * 2);
+          let minute = 0;
+          if (s.time) {
+            const timeStr = String(s.time).trim();
+            const match = timeStr.match(/(\d{1,2}):(\d{2})/);
+            if (match) {
+              hour = parseInt(match[1], 10);
+              minute = parseInt(match[2], 10);
+              if (timeStr.toLowerCase().includes('pm') && hour < 12) {
+                hour += 12;
+              } else if (timeStr.toLowerCase().includes('am') && hour === 12) {
+                hour = 0;
+              }
+            }
+          }
+
+          const start = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), hour, minute, 0);
+          const end = new Date(start.getTime() + (parseInt(s.duration) || 60) * 60000);
+
+          sessions.push({
+            subject: plan.subject || plan.subjects?.[0] || 'mathematics',
+            topic: s.topic || 'Study Session',
+            start_time: start.toISOString(),
+            end_time: end.toISOString(),
+            notes: s.goal || '',
+          });
+        });
+      });
+
+      await Promise.all(sessions.map(s => client.post('/planner', s)));
+      toast.success(isAr ? '📅 تم إضافة الجلسات للمخطط بنجاح!' : `📅 Added ${sessions.length} sessions to your planner!`);
+    } catch (err) {
+      toast.error(err.response?.data?.error || (isAr ? 'فشل إضافة الجلسات للمخطط' : 'Failed to apply sessions'));
+    } finally {
+      setApplying(false);
+    }
   };
 
   const isValid = examDate && subjects.length > 0;
@@ -242,26 +302,76 @@ export default function StudyPlanGenerator({ isAr }) {
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="glass-panel" style={{ padding: 28 }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', margin: 0 }}>
-                📋 {isAr ? 'خطتك الدراسية المُولَّدة' : 'Your Generated Study Plan'}
-              </h3>
+            {/* Header section with futuristic design */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 20,
+              padding: '16px 20px',
+              borderRadius: 16,
+              background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(139,92,246,0.08))',
+              border: '1.5px solid rgba(99,102,241,0.2)',
+              boxShadow: '0 8px 32px 0 rgba(99, 102, 241, 0.1)',
+              flexWrap: 'wrap',
+              gap: 16
+            }}>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 18, color: '#FFF', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span>🔮</span>
+                  <span>{isAr ? 'خطة المذاكرة الذكية' : 'AI Study Plan'}</span>
+                  <span style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: 99,
+                    background: 'rgba(14, 205, 168, 0.15)',
+                    color: 'var(--accent2)',
+                    border: '1px solid rgba(14, 205, 168, 0.3)',
+                    letterSpacing: '0.05em'
+                  }}>{plan.provider === 'gemini-2.0-flash' ? 'GEMINI 2.0' : 'HEURISTICS'}</span>
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text3)', marginTop: 4, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                  <span>📅 <strong>{plan.daysUntil}</strong> {isAr ? 'أيام' : 'days'}</span>
+                  <span>⏱️ <strong>{plan.totalHours || (plan.daysUntil * (plan.hoursPerDay || 4))}h</strong> {isAr ? 'إجمالي' : 'total'}</span>
+                  <span>🎯 <strong>{(plan.dailyHours || plan.hoursPerDay || 4)}h</strong>/{isAr ? 'يوم' : 'day'}</span>
+                </div>
+              </div>
+
               <div style={{ display: 'flex', gap: 8 }}>
-                <motion.button
-                  whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
-                  onClick={handleAddToPlanner}
-                  style={{
-                    padding: '9px 18px', borderRadius: 10, border: 'none',
-                    background: 'linear-gradient(135deg, #10B981, #059669)',
-                    color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer',
-                  }}
-                >
-                  📅 {isAr ? 'أضف للمخطط' : 'Add to Planner'}
-                </motion.button>
+                {Array.isArray(plan.plan) && (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleAddToPlanner}
+                    disabled={applying}
+                    style={{
+                      padding: '10px 20px',
+                      borderRadius: 12,
+                      border: 'none',
+                      background: 'linear-gradient(135deg, #10B981, #059669)',
+                      color: '#fff',
+                      fontWeight: 800,
+                      fontSize: 13,
+                      cursor: applying ? 'not-allowed' : 'pointer',
+                      boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      animation: 'pulseGlow 2s infinite'
+                    }}
+                  >
+                    {applying ? (
+                      <><Spinner size="sm" /> {isAr ? 'جاري التطبيق...' : 'Applying...'}</>
+                    ) : (
+                      <><span style={{ fontSize: 16 }}>📅</span> {isAr ? 'تطبيق على المخطط' : 'Apply to Planner'}</>
+                    )}
+                  </motion.button>
+                )}
                 <button
-                  onClick={() => navigator.clipboard.writeText(plan).then(() => toast.success(isAr ? 'تم النسخ' : 'Copied!'))}
+                  onClick={() => navigator.clipboard.writeText(typeof plan.plan === 'string' ? plan.plan : JSON.stringify(plan.plan, null, 2)).then(() => toast.success(isAr ? 'تم النسخ' : 'Copied!'))}
                   style={{
-                    padding: '9px 14px', borderRadius: 10,
+                    padding: '10px 14px', borderRadius: 12,
                     border: '1px solid var(--border)', background: 'var(--surface2)',
                     color: 'var(--text3)', fontWeight: 700, fontSize: 13, cursor: 'pointer',
                   }}
@@ -271,12 +381,181 @@ export default function StudyPlanGenerator({ isAr }) {
               </div>
             </div>
 
-            <div style={{
-              padding: 20, borderRadius: 14, background: 'var(--surface2)',
-              border: '1px solid var(--border)', maxHeight: 500, overflowY: 'auto',
-            }}>
-              <MarkdownPlan content={plan} isAr={isAr} />
+            {/* Plan Display Area */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxHeight: 450, overflowY: 'auto', paddingRight: 6 }} className="scroll-y">
+              {Array.isArray(plan.plan) ? (
+                plan.plan.map((day, idx) => (
+                  <motion.div
+                    key={day.day}
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                    style={{
+                      padding: '16px 20px',
+                      background: 'rgba(255, 255, 255, 0.02)',
+                      borderRadius: 16,
+                      border: '1px solid var(--border)',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      boxShadow: 'inset 0 0 12px rgba(255,255,255,0.01)'
+                    }}
+                    whileHover={{ scale: 1.01, borderColor: 'rgba(99,102,241,0.3)' }}
+                  >
+                    {/* Futuristic Day Header */}
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      borderBottom: '1px solid var(--border2)',
+                      paddingBottom: 10,
+                      marginBottom: 14
+                    }}>
+                      <span style={{
+                        fontSize: 14,
+                        fontWeight: 800,
+                        background: 'linear-gradient(135deg, #6366F1, #A78BFA)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        textTransform: 'uppercase'
+                      }}>
+                        🚀 {isAr ? 'اليوم' : 'Day'} {day.day}
+                      </span>
+                      <span style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 600 }}>
+                        {day.date}
+                      </span>
+                    </div>
+
+                    {/* Day's Sessions */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {(day.sessions || []).map((s, si) => {
+                        let badgeBg = 'rgba(99,102,241,0.08)';
+                        let badgeColor = '#818CF8';
+                        let borderColor = 'rgba(99,102,241,0.2)';
+                        let borderLeftStyle = '4px solid #6366F1';
+                        
+                        const typeLower = (s.type || '').toLowerCase();
+                        if (typeLower === 'rest') {
+                          badgeBg = 'rgba(14,205,168,0.08)';
+                          badgeColor = '#0ECDA8';
+                          borderColor = 'rgba(14,205,168,0.2)';
+                          borderLeftStyle = '4px solid #0ECDA8';
+                        } else if (typeLower === 'review') {
+                          badgeBg = 'rgba(247,183,49,0.08)';
+                          badgeColor = '#F7B731';
+                          borderColor = 'rgba(247,183,49,0.2)';
+                          borderLeftStyle = '4px solid #F7B731';
+                        } else if (typeLower === 'practice') {
+                          badgeBg = 'rgba(255,84,112,0.08)';
+                          badgeColor = '#FF5470';
+                          borderColor = 'rgba(255,84,112,0.2)';
+                          borderLeftStyle = '4px solid #FF5470';
+                        }
+
+                        return (
+                          <div
+                            key={si}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 12,
+                              padding: '12px 16px',
+                              background: 'var(--surface)',
+                              borderRadius: 12,
+                              border: '1px solid var(--border2)',
+                              borderLeft: borderLeftStyle,
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            <div style={{
+                              minWidth: 60,
+                              fontSize: 12,
+                              fontWeight: 700,
+                              color: 'var(--text2)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              background: 'rgba(255,255,255,0.02)',
+                              padding: '6px 8px',
+                              borderRadius: 8,
+                              border: '1px solid var(--border2)'
+                            }}>
+                              <span style={{ fontSize: 10, color: 'var(--text4)', textTransform: 'uppercase' }}>{isAr ? 'يبدأ' : 'Starts'}</span>
+                              <span style={{ color: 'var(--primary-light)' }}>{s.time}</span>
+                            </div>
+
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: '#FFF' }}>
+                                {s.topic}
+                              </div>
+                              {s.goal && (
+                                <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                  <span>🎯</span>
+                                  <span>{s.goal}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)' }}>
+                                ⏱️ {s.duration} {isAr ? 'دقيقة' : 'min'}
+                              </span>
+                              <span style={{
+                                padding: '2px 8px',
+                                borderRadius: 8,
+                                fontSize: 10,
+                                fontWeight: 800,
+                                background: badgeBg,
+                                color: badgeColor,
+                                border: `1px solid ${borderColor}`,
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.03em'
+                              }}>
+                                {isAr ? (
+                                  typeLower === 'rest' ? 'استراحة' :
+                                  typeLower === 'review' ? 'مراجعة' :
+                                  typeLower === 'practice' ? 'تدريب' : 'دراسة'
+                                ) : s.type}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                ))
+              ) : (
+                <div style={{ padding: '16px 20px', background: 'var(--surface2)', borderRadius: 16, border: '1px solid var(--border)' }}>
+                  <MarkdownPlan content={plan.plan} isAr={isAr} />
+                </div>
+              )}
             </div>
+
+            {/* AI Tips Section */}
+            {plan.tips?.length > 0 && (
+              <div style={{
+                marginTop: 20,
+                padding: '16px 20px',
+                background: 'linear-gradient(135deg, rgba(99,102,241,0.04), rgba(99,102,241,0.01))',
+                borderRadius: 16,
+                border: '1.5px solid rgba(99,102,241,0.15)',
+                borderLeft: '4px solid var(--primary)',
+                boxShadow: '0 4px 20px rgba(99,102,241,0.05)'
+              }}>
+                <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 10, color: 'var(--primary-light)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>💡</span>
+                  <span>{isAr ? 'نصائح الذكاء الاصطناعي الذكية' : 'Smart AI Tips'}</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {plan.tips.map((t, i) => (
+                    <div key={i} style={{ fontSize: 12, color: 'var(--text2)', display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                      <span style={{ color: 'var(--primary-light)' }}>✨</span>
+                      <span>{t}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

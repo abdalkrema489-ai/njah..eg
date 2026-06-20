@@ -93,7 +93,7 @@ export default function WalletPage() {
       </motion.div>
 
       {/* ── Quick Stats ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+      <div className="wallet-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
         {[
           { icon: '💸', label: isAr ? 'إجمالي الإنفاق' : 'Total Spent',       value: `${totalSpent.toFixed(2)} ${isAr ? 'ج' : 'EGP'}` },
           { icon: '📚', label: isAr ? 'اشتراكات مدفوعة' : 'Paid Subscriptions', value: paidSubs },

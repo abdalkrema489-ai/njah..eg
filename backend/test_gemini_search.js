@@ -1,4 +1,4 @@
-require('dotenv').config({ path: '.env.development' });
+require('dotenv').config({ path: '.env' });
 const geminiAI = require('./src/services/geminiAI');
 
 async function test() {

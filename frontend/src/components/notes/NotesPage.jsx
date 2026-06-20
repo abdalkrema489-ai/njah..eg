@@ -98,7 +98,7 @@ export default function NotesPage() {
   });
 
   const { mutate: deleteNote } = useMutation({
-    mutationFn: notesAPI.delete,
+    mutationFn: notesAPI.remove,
     onSuccess: () => { qc.invalidateQueries(['notes']); setSelectedNote(null); toast.success('Document obliterated'); haptic.medium(); },
   });
 
@@ -142,10 +142,10 @@ export default function NotesPage() {
         </Btn>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(min(280px, 100%), 320px) 1fr', gap: 24, flex: 1, minHeight: 0 }}>
+      <div className="notes-container-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(min(280px, 100%), 320px) 1fr', gap: 24, flex: 1, minHeight: 0 }}>
         
         {/* Left: Notes Sidebar */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
+        <div className={`notes-sidebar ${selectedNote ? 'hide-mobile' : ''}`} style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
           {/* Filters */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <Input 
@@ -215,6 +215,7 @@ export default function NotesPage() {
           {selectedNote ? (
             <motion.div 
               key="editor"
+              className="notes-editor"
               initial={{ opacity: 0, scale: 0.98, x: 20 }} animate={{ opacity: 1, scale: 1, x: 0 }} exit={{ opacity: 0, scale: 0.98, x: 20 }} transition={transitionBase}
               style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
             >
@@ -222,6 +223,17 @@ export default function NotesPage() {
                 
                 {/* Header (Title & Meta) */}
                 <div style={{ padding: '24px 32px', borderBottom: '1px solid var(--border)', background: 'var(--surface2)', display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
+                  <button 
+                    className="show-mobile-flex"
+                    onClick={() => setSelectedNote(null)}
+                    style={{
+                      background: 'var(--surface3)', border: '1px solid var(--border)', color: 'var(--text)',
+                      cursor: 'pointer', padding: '8px 16px', borderRadius: 12, marginRight: 8,
+                      alignItems: 'center', gap: 6, fontWeight: 700
+                    }}
+                  >
+                    {isAr ? '← رجوع' : '← Back'}
+                  </button>
                   <div style={{ flex: 1, display: 'flex', gap: 14, alignItems: 'center', minWidth: 200 }}>
                     <input 
                       value={editTitle} 
@@ -308,6 +320,7 @@ export default function NotesPage() {
           ) : (
             <motion.div 
               key="empty"
+              className="notes-editor-empty hide-mobile"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
             >
