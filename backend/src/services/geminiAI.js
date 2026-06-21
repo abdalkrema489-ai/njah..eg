@@ -92,10 +92,10 @@ function wrapModel(originalModel, options) {
             return await target.generateContent(...args);
           } catch (err) {
             if (err.message?.includes('quota') || err.message?.includes('QUOTA') || err.status === 429) {
-              logger.warn('Quota error on gemini-2.0-flash, falling back to gemini-flash-latest for generateContent');
+              logger.warn('Quota error on gemini-2.0-flash, falling back to gemini-1.5-flash for generateContent');
               const fallback = genAI.getGenerativeModel({
                 ...options,
-                model: 'gemini-flash-latest'
+                model: 'gemini-1.5-flash'
               });
               return await fallback.generateContent(...args);
             }
@@ -114,10 +114,10 @@ function wrapModel(originalModel, options) {
                     return await chatTarget.sendMessage(...args);
                   } catch (err) {
                     if (err.message?.includes('quota') || err.message?.includes('QUOTA') || err.status === 429) {
-                      logger.warn('Quota error on gemini-2.0-flash, falling back to gemini-flash-latest for sendMessage');
+                      logger.warn('Quota error on gemini-2.0-flash, falling back to gemini-1.5-flash for sendMessage');
                       const fallbackModel = genAI.getGenerativeModel({
                         ...options,
-                        model: 'gemini-flash-latest'
+                        model: 'gemini-1.5-flash'
                       });
                       const fallbackChat = fallbackModel.startChat(chatOptions);
                       return await fallbackChat.sendMessage(...args);
@@ -132,10 +132,10 @@ function wrapModel(originalModel, options) {
                     return await chatTarget.sendMessageStream(...args);
                   } catch (err) {
                     if (err.message?.includes('quota') || err.message?.includes('QUOTA') || err.status === 429) {
-                      logger.warn('Quota error on gemini-2.0-flash, falling back to gemini-flash-latest for sendMessageStream');
+                      logger.warn('Quota error on gemini-2.0-flash, falling back to gemini-1.5-flash for sendMessageStream');
                       const fallbackModel = genAI.getGenerativeModel({
                         ...options,
-                        model: 'gemini-flash-latest'
+                        model: 'gemini-1.5-flash'
                       });
                       const fallbackChat = fallbackModel.startChat(chatOptions);
                       return await fallbackChat.sendMessageStream(...args);
@@ -281,23 +281,33 @@ async function chat(message, history = [], language = 'en', userId = null) {
     return text;
   } catch (err) {
     if (err.message?.includes('quota') || err.message?.includes('QUOTA') || err.message?.includes('429')) {
-      logger.warn('Gemini 2.0 quota error, falling back to gemini-flash-latest');
-      const fallbackModel = genAI.getGenerativeModel({
-        model: 'gemini-flash-latest',
-        systemInstruction: SYSTEM_PROMPT + (memoryContext || ''),
-        safetySettings: [
-          { category: HarmCategory.HARM_CATEGORY_HARASSMENT,        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-          { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,       threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-          { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-          { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-        ],
-        generationConfig: { temperature: 0.72, topK: 50, topP: 0.93, maxOutputTokens: 4096, candidateCount: 1 },
-      });
-      const fallbackChat = fallbackModel.startChat({ history: hist });
-      const result = await fallbackChat.sendMessage(message);
-      const text = result.response.text();
-      mem0.saveMemory(userId, message, text).catch(() => {});
-      return { text, model: 'gemini-flash-latest-fallback' };
+      logger.warn('Gemini 2.0 quota error, falling back to gemini-1.5-flash');
+      const safetySettings = [
+        { category: HarmCategory.HARM_CATEGORY_HARASSMENT,        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,       threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+      ];
+      const generationConfig = { temperature: 0.72, topK: 50, topP: 0.93, maxOutputTokens: 4096, candidateCount: 1 };
+      // Try gemini-1.5-flash first, then gemini-1.5-flash-8b as last resort
+      const fallbackModels = ['gemini-1.5-flash', 'gemini-1.5-flash-8b'];
+      for (const fallbackName of fallbackModels) {
+        try {
+          const fallbackModel = genAI.getGenerativeModel({
+            model: fallbackName,
+            systemInstruction: SYSTEM_PROMPT + (memoryContext || ''),
+            safetySettings,
+            generationConfig,
+          });
+          const fallbackChat = fallbackModel.startChat({ history: hist });
+          const result = await fallbackChat.sendMessage(message);
+          const text = result.response.text();
+          mem0.saveMemory(userId, message, text).catch(() => {});
+          return { text, model: `${fallbackName}-fallback` };
+        } catch (fallbackErr) {
+          logger.warn(`Fallback ${fallbackName} also failed:`, fallbackErr.message);
+        }
+      }
     }
     throw err;
   }
@@ -314,39 +324,57 @@ async function chatStream(message, history = [], res, userId = null) {
   // 1. Retrieve student memories
   const memoryContext = await mem0.getRelevantMemories(userId, message);
 
-  // 2. Build dynamic model with memory context
-  const dynamicModelStream = memoryContext
-    ? genAI.getGenerativeModel({
-        model: 'gemini-2.0-flash',
-        systemInstruction: SYSTEM_PROMPT + memoryContext,
-        safetySettings: [
-          { category: HarmCategory.HARM_CATEGORY_HARASSMENT,        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-          { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,       threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-          { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-          { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-        ],
-        generationConfig: { temperature: 0.72, topK: 50, topP: 0.93, maxOutputTokens: 4096, candidateCount: 1 },
-      })
-    : modelStream;
-
+  const safetySettings = [
+    { category: HarmCategory.HARM_CATEGORY_HARASSMENT,        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+    { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,       threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+    { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+    { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+  ];
+  const generationConfig = { temperature: 0.72, topK: 50, topP: 0.93, maxOutputTokens: 4096, candidateCount: 1 };
+  const systemInstruction = SYSTEM_PROMPT + (memoryContext || '');
   const hist = buildHistory(history);
-  const chatSession = dynamicModelStream.startChat({ history: hist });
-  const result = await chatSession.sendMessageStream(message);
 
-  let fullText = '';
-  for await (const chunk of result.stream) {
-    const chunkText = chunk.text();
-    fullText += chunkText;
-    res.write(`data: ${JSON.stringify({ chunk: chunkText })}\n\n`);
+  // Waterfall: try each model in order until one streams successfully
+  const modelsToTry = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-8b'];
+
+  for (const modelName of modelsToTry) {
+    try {
+      // Use genAI directly to avoid proxy recursion
+      const GoogleGenerativeAI = genAI.constructor;
+      const rawGenAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      const tryModel = rawGenAI.getGenerativeModel({ model: modelName, systemInstruction, safetySettings, generationConfig });
+
+      // Pre-flight call — if quota error occurs, it will throw BEFORE we start iterating chunks
+      const result = await tryModel.startChat({ history: hist }).sendMessageStream(message);
+
+      let fullText = '';
+      for await (const chunk of result.stream) {
+        const chunkText = chunk.text();
+        fullText += chunkText;
+        res.write(`data: ${JSON.stringify({ chunk: chunkText })}\n\n`);
+      }
+
+      res.write(`data: ${JSON.stringify({ done: true, fullText, provider: modelName })}\n\n`);
+      res.end();
+      mem0.saveMemory(userId, message, fullText).catch(() => {});
+      return fullText;
+
+    } catch (err) {
+      const isQuota = err.message?.includes('quota') || err.message?.includes('QUOTA') ||
+                      err.status === 429 || err.message?.includes('429') ||
+                      err.message?.includes('RESOURCE_EXHAUSTED');
+      if (isQuota) {
+        logger.warn(`Quota error on ${modelName} stream, trying next fallback...`);
+        if (res.writableEnded) return; // already finished — bail
+        continue;
+      }
+      // Non-quota error — rethrow so the controller's catch block handles it
+      throw err;
+    }
   }
 
-  res.write(`data: ${JSON.stringify({ done: true, fullText, provider: 'gemini-2.0-flash' })}\n\n`);
-  res.end();
-
-  // 3. Save conversation to memory after stream completes
-  mem0.saveMemory(userId, message, fullText).catch(() => {});
-
-  return fullText;
+  // All Gemini models exhausted — throw so controller falls back to internalAI
+  throw new Error('GEMINI_ALL_QUOTA_EXCEEDED');
 }
 
 // ── Summarize text ────────────────────────────────────────────
