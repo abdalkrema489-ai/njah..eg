@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
+import DOMPurify from 'dompurify';
 import { notesAPI } from '../../api/index';
 import { Card, Button, Input, Select, Tag, EmptyState, SectionHeader, Btn, Spinner } from '../shared/UI';
 import { useTranslation } from '../../i18n/index';
@@ -109,7 +110,7 @@ export default function NotesPage() {
     setIsDirty(false);
     setTimeout(() => {
       const ed = document.getElementById('note-editor');
-      if (ed) ed.innerHTML = note.content || '';
+      if (ed) ed.innerHTML = DOMPurify.sanitize(note.content || '');
     }, 50);
   };
 

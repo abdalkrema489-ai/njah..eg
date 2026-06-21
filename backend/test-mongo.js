@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const uri = "mongodb://najah_user:NajahUser2026Password!@ac-flgptfc-shard-00-00.wedambh.mongodb.net:27017,ac-flgptfc-shard-00-01.wedambh.mongodb.net:27017,ac-flgptfc-shard-00-02.wedambh.mongodb.net:27017/najah_chat?ssl=true&authSource=admin";
+const uri = "mongodb+srv://najah_user:NajahUser2026Password!@najah-cluster.wedambh.mongodb.net/najah_chat?retryWrites=true&w=majority&appName=najah-cluster";
 
 async function test() {
   console.log("Connecting directly without replicaSet option...");

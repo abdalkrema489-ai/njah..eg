@@ -154,7 +154,32 @@ app.use(cors({
   credentials: true,
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
 }));
+
+// ── Explicit OPTIONS pre-flight handler (must be before rateLimiter) ──
+// Browsers send a preflight OPTIONS for DELETE/PATCH/POST+Authorization.
+// Without this, the rate limiter or DB guard blocks them and CORS fails.
+app.options('*', cors({
+  origin: (origin, callback) => {
+    const fromEnv = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+    const prodList = [
+      process.env.CLIENT_URL,
+      'https://njaheg-theta.vercel.app',
+      'https://njaheg-backend-production.up.railway.app',
+      ...fromEnv,
+    ].filter(Boolean);
+    const isVercelOrigin = origin && origin.endsWith('.vercel.app');
+    if (!origin || prodList.includes(origin) || isVercelOrigin) return callback(null, true);
+    callback(null, true); // permissive for preflight
+  },
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization'],
+  credentials: true,
+  optionsSuccessStatus: 204,
+}));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(morgan('combined', { stream: { write: m => logger.info(m.trim()) } }));
@@ -164,7 +189,9 @@ app.use(passport.initialize());
 app.use('/api/', rateLimiter);
 
 // ── DB Readiness Guard — blocks API calls during cold-start ──
+// OPTIONS (CORS preflight) must always pass through — never block them.
 app.use('/api/', (req, res, next) => {
+  if (req.method === 'OPTIONS') return next();
   if (!dbReady && !req.path.startsWith('/auth/') && req.path !== '/health') {
     return res.status(503).json({ error: 'Server is starting up, please retry in a few seconds.' });
   }

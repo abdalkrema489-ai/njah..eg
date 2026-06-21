@@ -100,8 +100,24 @@ async function saveToConversation(convId, userId, userMsg, replyMsg, language, t
 
 // ── Chat ─────────────────────────────────────────────────────
 async function chat(req, res) {
-  const { message, conversationId, language = 'ar', withFollowUps = true } = req.body;
+  const { message, conversationId, language = 'ar', withFollowUps = true, fileId } = req.body;
   if (!message?.trim()) return res.status(400).json({ error: 'Message is required' });
+
+  let contextMessage = message;
+  if (fileId) {
+    try {
+      const { rows } = await pool.query(
+        `SELECT file_url, original_name FROM files WHERE id = $1 AND (user_id = $2 OR is_public = true) AND mime_type = 'application/pdf'`,
+        [fileId, req.user.id]
+      );
+      if (rows[0]) {
+        const { text } = await fetchPdfText(rows[0].file_url, 4000);
+        contextMessage = `السياق من الملف المرفوع (${rows[0].original_name}):\n---\n${text}\n---\n\nسؤال الطالب: ${message}`;
+      }
+    } catch (err) {
+      logger.error('Error attaching file context to chat:', err.message);
+    }
+  }
 
   let history = [];
   if (conversationId) {
@@ -119,7 +135,7 @@ async function chat(req, res) {
   // 1️⃣ Try Gemini if preferred or auto
   if ((pref === 'auto' || pref === 'gemini' || pref === 'claude') && geminiAI.isAvailable()) {
     try {
-      const geminiRes = await geminiAI.chat(message, history, language, req.user.id);
+      const geminiRes = await geminiAI.chat(contextMessage, history, language, req.user.id);
       if (typeof geminiRes === 'object' && geminiRes !== null) {
         reply = geminiRes.text;
         usedProvider = geminiRes.model || 'gemini-1.5-flash-fallback';
@@ -137,7 +153,7 @@ async function chat(req, res) {
     try {
       const ollamaAvail = await ollamaAI.isAvailable();
       if (ollamaAvail) {
-        reply = await ollamaAI.chat(message, history, language);
+        reply = await ollamaAI.chat(contextMessage, history, language);
         usedProvider = 'ollama-' + ollamaAI.OLLAMA_MODEL;
       } else if (pref === 'ollama') {
         logger.warn('User prefers Ollama but it is unavailable.');
@@ -155,7 +171,7 @@ async function chat(req, res) {
   // 4️⃣ Last resort: internal pattern engine
   if (!reply) {
     try {
-      reply = internalAI.generateChatResponse(message, history, language);
+      reply = internalAI.generateChatResponse(contextMessage, history, language);
       usedProvider = 'internal-fallback';
     } catch {
       return res.status(500).json({ error: 'AI service temporarily unavailable' });
@@ -192,8 +208,24 @@ async function chat(req, res) {
 
 // ── Streaming Chat ────────────────────────────────────────────
 async function chatStream(req, res) {
-  const { message, conversationId, language = 'ar' } = req.body;
+  const { message, conversationId, language = 'ar', fileId } = req.body;
   if (!message?.trim()) return res.status(400).json({ error: 'Message is required' });
+
+  let contextMessage = message;
+  if (fileId) {
+    try {
+      const { rows } = await pool.query(
+        `SELECT file_url, original_name FROM files WHERE id = $1 AND (user_id = $2 OR is_public = true) AND mime_type = 'application/pdf'`,
+        [fileId, req.user.id]
+      );
+      if (rows[0]) {
+        const { text } = await fetchPdfText(rows[0].file_url, 4000);
+        contextMessage = `السياق من الملف المرفوع (${rows[0].original_name}):\n---\n${text}\n---\n\nسؤال الطالب: ${message}`;
+      }
+    } catch (err) {
+      logger.error('Error attaching file context to chatStream:', err.message);
+    }
+  }
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -216,7 +248,7 @@ async function chatStream(req, res) {
     // 1️⃣ Primary: Gemini streaming
     if ((pref === 'auto' || pref === 'gemini' || pref === 'claude') && geminiAI.isAvailable() && typeof geminiAI.chatStream === 'function') {
       try {
-        await geminiAI.chatStream(message, history, res, req.user.id);
+        await geminiAI.chatStream(contextMessage, history, res, req.user.id);
         saveToConversation(conversationId, req.user.id, message, '', language, null).catch(() => {});
         pool.query('UPDATE users SET xp_points = xp_points + 5 WHERE id = $1', [req.user.id]).catch(() => {});
         streamed = true;
@@ -232,7 +264,7 @@ async function chatStream(req, res) {
       const ollamaAvail = await ollamaAI.isAvailable();
       if (ollamaAvail) {
         try {
-          await ollamaAI.chatStream(message, history, res);
+          await ollamaAI.chatStream(contextMessage, history, res);
           saveToConversation(conversationId, req.user.id, message, '', language, null).catch(() => {});
           pool.query('UPDATE users SET xp_points = xp_points + 5 WHERE id = $1', [req.user.id]).catch(() => {});
           streamed = true;
@@ -246,7 +278,7 @@ async function chatStream(req, res) {
 
     // 3️⃣ Last resort: internal AI as single chunk
     if (!streamed) {
-      const fallback = internalAI.generateChatResponse(message, history, language);
+      const fallback = internalAI.generateChatResponse(contextMessage, history, language);
       res.write(`data: ${JSON.stringify({ chunk: fallback })}\n\n`);
       res.write(`data: ${JSON.stringify({ done: true, fullText: fallback, provider: 'internal-fallback' })}\n\n`);
       res.end();
@@ -256,7 +288,7 @@ async function chatStream(req, res) {
     logger.error('Stream error:', err.message);
     if (!res.writableEnded) {
       try {
-        const fallback = internalAI.generateChatResponse(message, history, language);
+        const fallback = internalAI.generateChatResponse(contextMessage, history, language);
         res.write(`data: ${JSON.stringify({ chunk: fallback })}\n\n`);
         res.write(`data: ${JSON.stringify({ done: true, fullText: fallback, provider: 'internal-fallback' })}\n\n`);
       } catch { }
@@ -382,20 +414,33 @@ async function summarizePdf(req, res) {
 
 // ── Generate Quiz ─────────────────────────────────────────────
 async function generateQuiz(req, res) {
-  const { subject, topic, difficulty = 'medium', count = 10, language = 'en', fileId } = req.body;
+  const { subject, topic, difficulty = 'medium', count = 10, language = 'en', fileId, fileIds } = req.body;
 
   let context = '';
-  if (fileId) {
+  let resolvedFileIds = [];
+  if (fileIds && Array.isArray(fileIds)) {
+    resolvedFileIds = fileIds;
+  } else if (fileId) {
+    resolvedFileIds = [fileId];
+  }
+
+  if (resolvedFileIds.length > 0) {
     try {
       const { rows } = await pool.query(
-        `SELECT file_url FROM files WHERE id = $1 AND (user_id = $2 OR is_public = true) AND mime_type = 'application/pdf'`,
-        [fileId, req.user.id]
+        `SELECT file_url, original_name FROM files WHERE id = ANY($1) AND (user_id = $2 OR is_public = true) AND mime_type = 'application/pdf'`,
+        [resolvedFileIds, req.user.id]
       );
-      if (rows[0]) {
-        const { text } = await fetchPdfText(rows[0].file_url, 4000);
-        context = text;
+      if (rows.length > 0) {
+        const texts = [];
+        for (const row of rows) {
+          const { text } = await fetchPdfText(row.file_url, Math.floor(8000 / rows.length));
+          texts.push(`--- File: ${row.original_name} ---\n${text}`);
+        }
+        context = texts.join('\n\n');
       }
-    } catch { }
+    } catch (err) {
+      logger.error('Error fetching texts for multi-file quiz:', err.message);
+    }
   }
 
   let quiz;

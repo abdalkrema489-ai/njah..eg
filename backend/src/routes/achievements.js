@@ -24,6 +24,8 @@ router.get('/leaderboard', async (_req, res) => {
            RANK() OVER (ORDER BY xp_points DESC) AS rank
     FROM users
     WHERE is_active = true
+      AND email NOT LIKE '%@guest.najah.local'
+      AND role != 'admin'
     ORDER BY xp_points DESC
     LIMIT 50
   `);
