@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import DOMPurify from 'dompurify';
-import { aiAPI, filesAPI } from '../../api/index';
+import { aiAPI, filesAPI, aiClient } from '../../api/index';
 import { useUIStore, useAuthStore } from '../../context/store';
 import { Spinner } from '../shared/UI';
 import HomeworkCorrector from './HomeworkCorrector';
@@ -346,17 +346,44 @@ function AIChat() {
         rawAPI = '/api';
       }
       const API = rawAPI || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
-      const token = useAuthStore.getState().token;
 
-      const resp = await fetch(`${API}/ai/chat/stream`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ message: msg, conversationId: convId, language, withFollowUps: true }),
-      });
+      // Helper: run the SSE fetch; if 401, refresh token once and retry
+      const doStreamFetch = async () => {
+        let token = useAuthStore.getState().token || localStorage.getItem('token');
+        let resp = await fetch(`${API}/ai/chat/stream`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ message: msg, conversationId: convId, language, withFollowUps: true }),
+        });
+        if (resp.status === 401) {
+          const ref = localStorage.getItem('refresh');
+          if (!ref) { useAuthStore.getState().logout(); throw new Error('Session expired'); }
+          try {
+            const r = await fetch(`${API}/auth/refresh`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ refresh: ref }),
+            });
+            const refreshData = await r.json();
+            if (!r.ok) throw new Error('Refresh failed');
+            token = refreshData.token;
+            localStorage.setItem('token', token);
+            useAuthStore.setState({ token });
+            if (window.__najahSocket) {
+              window.__najahSocket.auth.token = token;
+              if (!window.__najahSocket.connected) window.__najahSocket.connect();
+            }
+          } catch { useAuthStore.getState().logout(); throw new Error('Session expired — please log in again'); }
+          resp = await fetch(`${API}/ai/chat/stream`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ message: msg, conversationId: convId, language, withFollowUps: true }),
+          });
+        }
+        return resp;
+      };
 
+      const resp = await doStreamFetch();
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
       const reader = resp.body.getReader();
@@ -558,16 +585,7 @@ function AIChat() {
             whileTap={{ scale: 0.96 }}
             onClick={async () => {
               try {
-                let rawAPI = import.meta.env.VITE_API_URL;
-                if (import.meta.env.PROD && rawAPI && rawAPI.includes('localhost')) {
-                  rawAPI = '/api';
-                }
-                const API = rawAPI || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
-                const token = localStorage.getItem('token');
-                await fetch(`${API}/ai/clear-memory`, {
-                  method: 'POST',
-                  headers: { 'Authorization': `Bearer ${token}` },
-                });
+                await aiClient.post('/ai/clear-memory');
                 toast.success(isAr ? '🗑️ تم مسح ذاكرة AI بنجاح' : '🗑️ AI memory cleared');
               } catch {
                 toast.error(isAr ? 'فشل مسح الذاكرة' : 'Failed to clear memory');

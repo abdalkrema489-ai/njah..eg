@@ -140,16 +140,13 @@ app.use(cors({
     const isDevOrigin = !origin || devPattern.test(origin);
     const isVercelOrigin = origin && origin.endsWith('.vercel.app');
 
-    if (process.env.NODE_ENV !== 'production') {
-      // Development: allow all localhost ports + same-origin requests
-      if (isDevOrigin || prodList.includes(origin) || isVercelOrigin) return callback(null, true);
-    } else {
-      // Production: only explicitly listed origins or vercel.app domains
-      if (!origin || prodList.includes(origin) || isVercelOrigin) return callback(null, true);
-      logger.warn(`[CORS] Blocked request from unlisted origin: ${origin}`);
-      return callback(new Error(`CORS policy: ${origin} not allowed`));
+    // Allow localhost in all environments (safe: localhost cannot be spoofed from the internet)
+    // and Vercel deploys + explicitly listed production origins
+    if (!origin || isDevOrigin || prodList.includes(origin) || isVercelOrigin) {
+      return callback(null, true);
     }
-    callback(null, true);
+    logger.warn(`[CORS] Blocked request from unlisted origin: ${origin}`);
+    return callback(new Error(`CORS policy: ${origin} not allowed`));
   },
   credentials: true,
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
