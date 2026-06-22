@@ -65,20 +65,9 @@ export default defineConfig({
         skipWaiting: true,
         clientsClaim: true,
         // Bump this version string whenever you need to force-clear all user caches
-        cacheId: 'najah-v2',
+        cacheId: 'najah-v3',
 
         runtimeCaching: [
-          // API → Network-first (serves cache when offline)
-          {
-            urlPattern: ({ url }) => url.hostname !== 'localhost' && url.hostname !== '127.0.0.1' && url.pathname.startsWith('/api/'),
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'najah-api-v2',
-              networkTimeoutSeconds: 8,
-              expiration: { maxEntries: 200, maxAgeSeconds: 86400 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
           // Google Fonts → Cache-first (works offline)
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
