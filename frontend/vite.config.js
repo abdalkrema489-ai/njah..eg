@@ -92,8 +92,9 @@ export default defineConfig({
             urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i,
             handler: 'StaleWhileRevalidate',
             options: {
-              cacheName: 'najah-images-v1',
+              cacheName: 'najah-images-v2',
               expiration: { maxEntries: 150, maxAgeSeconds: 2592000 },
+              cacheableResponse: { statuses: [0, 200] },
             },
           },
           // Firebase Storage files → Cache-first
@@ -101,7 +102,7 @@ export default defineConfig({
             urlPattern: /^https:\/\/firebasestorage\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'firebase-storage-v1',
+              cacheName: 'firebase-storage-v2',
               expiration: { maxEntries: 100, maxAgeSeconds: 604800 },
               cacheableResponse: { statuses: [0, 200] },
             },
@@ -111,11 +112,24 @@ export default defineConfig({
             urlPattern: /\.(?:js|css)$/i,
             handler: 'StaleWhileRevalidate',
             options: {
-              cacheName: 'najah-static-v1',
+              cacheName: 'najah-static-v2',
               expiration: { maxEntries: 60, maxAgeSeconds: 86400 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
+          // Railway API → NetworkFirst, only cache 200s, timeout 8s
+          {
+            urlPattern: /^https:\/\/njaheg-backend-production\.up\.railway\.app\/api\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'najah-api-v2',
+              networkTimeoutSeconds: 8,
+              expiration: { maxEntries: 30, maxAgeSeconds: 300 },
+              cacheableResponse: { statuses: [200] },
             },
           },
         ],
+
       },
     }),
   ],
