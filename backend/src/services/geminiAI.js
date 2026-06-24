@@ -372,15 +372,19 @@ async function chatStream(message, history = [], res, userId = null) {
       return fullText;
 
     } catch (err) {
-      const isQuota = err.message?.includes('quota') || err.message?.includes('QUOTA') ||
-                      err.status === 429 || err.message?.includes('429') ||
-                      err.message?.includes('RESOURCE_EXHAUSTED');
-      if (isQuota) {
-        logger.warn(`Quota error on ${modelName} stream, trying next fallback...`);
+      const errMsg = err.message || '';
+      const isRetryable =
+        !errMsg ||                                       // empty message = transient network hiccup
+        err.status === 429 || err.status === 503 ||
+        errMsg.includes('429') || errMsg.includes('quota') || errMsg.includes('QUOTA') ||
+        errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('overloaded');
+      if (isRetryable) {
+        logger.warn(`Retryable error on ${modelName} stream (status=${err.status ?? 'n/a'} msg='${errMsg || 'empty'}'), trying next fallback...`);
         if (res.writableEnded) return; // already finished — bail
         continue;
       }
-      // Non-quota error — rethrow so the controller's catch block handles it
+      // Non-retryable error — log full details then rethrow
+      logger.error(`Gemini stream non-retryable error on ${modelName}: status=${err.status ?? 'n/a'} msg=${errMsg}`);
       throw err;
     }
   }

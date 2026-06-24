@@ -65,7 +65,13 @@ async function getRelevantMemories(userId, query) {
       ? `\n\n## ما تعرفه عن هذا الطالب من محادثات سابقة:\n- ${facts}`
       : '';
   } catch (err) {
-    logger.warn('Mem0 search error:', err.message);
+    const msg = err.message || String(err);
+    // Suppress repeated auth/key errors — log once at warn level
+    if (msg.includes('401') || msg.includes('Unauthorized') || msg.includes('api_key')) {
+      logger.warn('Mem0 search skipped: invalid or missing MEM0_API_KEY (set MEM0_ENABLED=false to silence)');
+    } else {
+      logger.warn('Mem0 search error:', msg);
+    }
     return '';
   }
 }

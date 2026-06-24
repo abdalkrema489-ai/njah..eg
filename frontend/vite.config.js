@@ -65,7 +65,7 @@ export default defineConfig({
         skipWaiting: true,
         clientsClaim: true,
         // Bump this version string whenever you need to force-clear all user caches
-        cacheId: 'najah-v4',
+        cacheId: 'najah-v5',
 
         runtimeCaching: [
           // Google Fonts → Cache-first (works offline)

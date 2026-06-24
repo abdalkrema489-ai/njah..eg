@@ -11,6 +11,7 @@ const localAI = require('../services/localAI');
 const internalAI = require('../services/internalAI');
 const deepTutor = require('../services/deepTutorService');
 const geminiAI  = require('../services/geminiAI');
+const groqAI    = require('../services/groqAI');
 const ollamaAI  = require('../services/ollamaAI');
 const { clearUserMemory } = require('../services/mem0Service');
 const CognitiveEngine = require('../ai/core/CognitiveEngine');
@@ -148,7 +149,17 @@ async function chat(req, res) {
     }
   }
 
-  // 2️⃣ Try Ollama if preferred, or if Gemini failed (in auto mode)
+  // 2️⃣ Try Groq (fast free LLM) if Gemini failed or unavailable
+  if (!reply && groqAI.isAvailable()) {
+    try {
+      reply = await groqAI.chat(contextMessage, history, language);
+      usedProvider = `groq-${groqAI.model}`;
+    } catch (groqErr) {
+      logger.warn('Groq chat failed:', groqErr.message);
+    }
+  }
+
+  // 3️⃣ Try Ollama if preferred, or if Gemini+Groq both failed (in auto mode)
   if (!reply && (pref === 'ollama' || pref === 'auto' || pref === 'gemini')) {
     try {
       const ollamaAvail = await ollamaAI.isAvailable();
@@ -170,6 +181,11 @@ async function chat(req, res) {
 
   // 4️⃣ Last resort: internal pattern engine
   if (!reply) {
+    logger.error(
+      'AI FALLBACK TO STATIC ENGINE — chat(). Reason: ' +
+      (!geminiAI.isAvailable() ? 'GEMINI_API_KEY missing/model not initialized' : 'Gemini call threw an error (see warning above)') +
+      `. usedProvider was empty before fallback.`
+    );
     try {
       reply = internalAI.generateChatResponse(contextMessage, history, language);
       usedProvider = 'internal-fallback';
@@ -254,12 +270,26 @@ async function chatStream(req, res) {
         streamed = true;
         return;
       } catch (geminiErr) {
-        logger.warn('Gemini stream failed:', geminiErr.message);
+        logger.warn(`Gemini stream failed (status=${geminiErr.status ?? 'n/a'}): ${geminiErr.message || 'no message'} — falling back to Ollama/internal`);
         if (res.writableEnded) return;
       }
     }
 
-    // 2️⃣ Secondary: Ollama streaming
+    // 2️⃣ Secondary: Groq streaming
+    if (!streamed && groqAI.isAvailable()) {
+      try {
+        await groqAI.chatStream(contextMessage, history, res);
+        saveToConversation(conversationId, req.user.id, message, '', language, null).catch(() => {});
+        pool.query('UPDATE users SET xp_points = xp_points + 5 WHERE id = $1', [req.user.id]).catch(() => {});
+        streamed = true;
+        return;
+      } catch (groqErr) {
+        logger.warn('Groq stream failed:', groqErr.message);
+        if (res.writableEnded) return;
+      }
+    }
+
+    // 3️⃣ Tertiary: Ollama streaming
     if (!streamed && (pref === 'ollama' || pref === 'auto' || pref === 'gemini')) {
       const ollamaAvail = await ollamaAI.isAvailable();
       if (ollamaAvail) {
@@ -278,6 +308,7 @@ async function chatStream(req, res) {
 
     // 3️⃣ Last resort: internal AI as single chunk
     if (!streamed) {
+      logger.warn('AI stream: all Gemini models exhausted or unavailable — responding via internal-fallback');
       const fallback = internalAI.generateChatResponse(contextMessage, history, language);
       res.write(`data: ${JSON.stringify({ chunk: fallback })}\n\n`);
       res.write(`data: ${JSON.stringify({ done: true, fullText: fallback, provider: 'internal-fallback' })}\n\n`);
@@ -394,6 +425,14 @@ async function summarizePdf(req, res) {
       logger.warn('Gemini summarization failed, trying local:', err.message);
     }
   }
+  if (!summary && groqAI.isAvailable()) {
+    try {
+      summary = await groqAI.summarize(text, language, pages);
+      usedProvider = `groq-${groqAI.model}`;
+    } catch (err) {
+      logger.warn('Groq summarization failed:', err.message);
+    }
+  }
   if (!summary && localAI.isReady && localAI.models.summarizer) {
     try {
       summary = await localAI.summarize(text);
@@ -403,6 +442,8 @@ async function summarizePdf(req, res) {
     }
   }
   if (!summary) {
+    logger.error('AI FALLBACK TO STATIC ENGINE — summarizeFile(). Reason: ' +
+      (!geminiAI.isAvailable() ? 'GEMINI_API_KEY missing/model not initialized' : 'Gemini and local AI both failed (see warnings above)'));
     summary = internalAI.summarizeText(text, language, pages);
     usedProvider = 'najah_heuristics';
   }
@@ -455,7 +496,18 @@ async function generateQuiz(req, res) {
     }
   }
 
+  if (!quiz && groqAI.isAvailable()) {
+    try {
+      quiz = await groqAI.generateQuiz({ subject, topic, difficulty, count: parseInt(count), language, context });
+      usedProvider = `groq-${groqAI.model}`;
+    } catch (err) {
+      logger.warn('Groq quiz generation failed:', err.message);
+    }
+  }
+
   if (!quiz) {
+    logger.error('AI FALLBACK TO STATIC ENGINE — generateQuiz(). Reason: ' +
+      (!geminiAI.isAvailable() ? 'GEMINI_API_KEY missing/model not initialized' : 'Gemini quiz generation threw an error (see warning above)'));
     quiz = internalAI.generateQuiz({ subject, difficulty, count: parseInt(count), language });
     usedProvider = 'najah_heuristics';
   }
@@ -529,7 +581,31 @@ async function generateStudyPlan(req, res) {
     }
   }
 
+  if (groqAI.isAvailable()) {
+    try {
+      const result = await groqAI.generateStudyPlan({
+        subject: resolvedSubjects.join(', '),
+        daysUntil,
+        dailyHours: parseInt(resolvedHours),
+        currentLevel: resolvedLevel,
+        language
+      });
+      return res.json({
+        ...result,
+        subjects: resolvedSubjects,
+        daysUntil,
+        hoursPerDay: resolvedHours,
+        level: resolvedLevel,
+        provider: `groq-${groqAI.model}`
+      });
+    } catch (err) {
+      logger.warn('Groq study plan failed, using heuristics:', err.message);
+    }
+  }
+
   // Fallback: internal heuristic plan (single subject)
+  logger.error('AI FALLBACK TO STATIC ENGINE — generateStudyPlan(). Reason: ' +
+    (!geminiAI.isAvailable() ? 'GEMINI_API_KEY missing/model not initialized' : 'Gemini study plan threw an error (see warning above)'));
   const plan = internalAI.generateStudyPlan({ subject: resolvedSubjects[0], daysUntil, dailyHours: parseInt(resolvedHours), currentLevel: resolvedLevel, language });
   res.json({ ...plan, subjects: resolvedSubjects, daysUntil, hoursPerDay: resolvedHours, level: resolvedLevel, provider: 'najah_heuristics' });
 }

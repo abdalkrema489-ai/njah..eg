@@ -23,10 +23,16 @@ async function connectRedis() {
   try {
     client = createClient(redisOptions);
     client.on('error', e => {
-      // Only log non-reconnection errors or severe ones to avoid spam
-      if (e.message?.includes('ENOTFOUND')) return; 
-      logger.error('Redis error:', e);
+      if (e.message?.includes('ENOTFOUND')) return; // DNS failure — already logged on connect
+      if (e.code === 'ECONNRESET' || e.message?.includes('ECONNRESET')) {
+        // TCP reset from idle proxy — auto-reconnect handles it, downgrade to warn
+        logger.warn('Redis: connection reset by peer (ECONNRESET) — reconnecting...');
+        return;
+      }
+      logger.error('Redis error:', e.message || e);
     });
+    client.on('reconnecting', () => logger.warn('Redis: reconnecting...'));
+    client.on('ready',        () => logger.info('✅ Redis reconnected'));
     
     await client.connect();
     logger.info('✅ Redis connected');

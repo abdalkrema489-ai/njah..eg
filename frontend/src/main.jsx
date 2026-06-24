@@ -4,15 +4,29 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { registerSW } from 'virtual:pwa-register';
 
-// ── Purge any stale localhost:5000 cache entries left by old service workers ──
-// This runs once on every page load and silently removes bad cached responses.
+// ── In DEV mode: unregister any stale service worker from old production builds.
+// This prevents cached Railway-URL assets from being served when running locally.
+if (import.meta.env.DEV && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+    registrations.forEach(reg => {
+      console.log('[Dev] Unregistering stale SW:', reg.scope);
+      reg.unregister();
+    });
+  });
+}
+
+// ── Purge stale cache entries that reference old API hosts ──
 if ('caches' in window) {
   caches.keys().then(names => {
     names.forEach(cacheName => {
       caches.open(cacheName).then(cache => {
         cache.keys().then(requests => {
           requests.forEach(req => {
-            if (req.url.includes('localhost:5000') || req.url.includes('127.0.0.1:5000')) {
+            if (
+              req.url.includes('localhost:5000') ||
+              req.url.includes('127.0.0.1:5000') ||
+              (import.meta.env.DEV && req.url.includes('njaheg-backend-production.up.railway.app'))
+            ) {
               cache.delete(req);
             }
           });

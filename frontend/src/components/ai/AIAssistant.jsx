@@ -401,25 +401,34 @@ function AIChat() {
 
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
-          try {
-            const data = JSON.parse(line.slice(6));
-            if (data.chunk) {
-              fullText += data.chunk;
-              setMessages(prev => prev.map(m =>
-                m.id === placeholderIdx ? { ...m, content: fullText } : m
-              ));
-            }
-            if (data.done) {
-              setMessages(prev => prev.map(m =>
-                m.id === placeholderIdx
-                  ? { ...m, content: data.fullText || fullText, streaming: false }
-                  : m
-              ));
-            }
-            if (data.error) throw new Error(data.error);
-          } catch {}
+          // Separate JSON parse errors from data logic errors
+          let data;
+          try { data = JSON.parse(line.slice(6)); } catch { continue; }
+
+          if (data.chunk) {
+            fullText += data.chunk;
+            setMessages(prev => prev.map(m =>
+              m.id === placeholderIdx ? { ...m, content: fullText } : m
+            ));
+          }
+          if (data.done) {
+            setMessages(prev => prev.map(m =>
+              m.id === placeholderIdx
+                ? { ...m, content: data.fullText || fullText, streaming: false }
+                : m
+            ));
+          }
+          // Propagate server-side errors to the outer catch → triggers fallback
+          if (data.error) throw new Error(data.error);
         }
       }
+
+      // Safety: ensure placeholder is always resolved even if 'done' event never fired
+      setMessages(prev => prev.map(m =>
+        m.id === placeholderIdx && m.streaming
+          ? { ...m, streaming: false }
+          : m
+      ));
 
       // Fetch follow-up suggestions
       if (geminiOk) {
@@ -560,7 +569,11 @@ function AIChat() {
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 800, fontSize: 17, fontFamily: 'var(--font-head)' }}>Najah AI</div>
             <div style={{ fontSize: 11, color: geminiOk ? '#10B981' : '#F59E0B', fontWeight: 600 }}>
-              {geminiOk === null ? '⏳ Connecting...' : '● Najah Massive In-House AI · Online'}
+              {geminiOk === null
+                ? '⏳ Connecting...'
+                : geminiOk
+                  ? '● Gemini 2.0 Flash · Online'
+                  : '● Najah In-House AI · Online'}
             </div>
           </div>
 
