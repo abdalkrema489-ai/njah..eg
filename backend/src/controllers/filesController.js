@@ -85,7 +85,9 @@ async function listFiles(req, res) {
 // ── Get single ──────────────────────────────────────────
 async function getFile(req, res) {
   const { rows } = await pool.query(
-    'SELECT * FROM files WHERE id = $1 AND (user_id = $2 OR is_public = true)',
+    `SELECT id, user_id, name, original_name, file_url, firebase_path, size_bytes,
+            mime_type, subject, tags, is_public, description, download_count, created_at, updated_at
+     FROM files WHERE id = $1 AND (user_id = $2 OR is_public = true)`,
     [req.params.id, req.user.id]
   );
   if (!rows[0]) return res.status(404).json({ error: 'File not found' });
@@ -115,7 +117,10 @@ async function updateFile(req, res) {
 // ── Delete ──────────────────────────────────────────────
 async function deleteFile(req, res) {
   const { rows } = await pool.query(
-    'SELECT * FROM files WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]
+    `SELECT id, user_id, name, original_name, firebase_path, size_bytes, mime_type,
+            subject, tags, is_public, description, download_count, created_at, updated_at
+     FROM files WHERE id = $1 AND user_id = $2`,
+    [req.params.id, req.user.id]
   );
   if (!rows[0]) return res.status(404).json({ error: 'File not found' });
   if (rows[0].firebase_path) {
@@ -128,7 +133,8 @@ async function deleteFile(req, res) {
 // ── Extract file text (PDF + Word + PPT via markitdown) ──────
 async function extractFileText(req, res) {
   const { rows } = await pool.query(
-    `SELECT * FROM files WHERE id = $1
+    `SELECT id, user_id, original_name, file_url, mime_type, size_bytes, subject
+     FROM files WHERE id = $1
      AND (user_id = $2 OR is_public = true)`,
     [req.params.id, req.user.id]
   );

@@ -409,7 +409,8 @@ async function summarizePdf(req, res) {
   if (cached) return res.json(cached);
 
   const { rows } = await pool.query(
-    `SELECT * FROM files WHERE id = $1 AND (user_id = $2 OR is_public = true) AND mime_type = 'application/pdf'`,
+    `SELECT id, file_url, original_name, mime_type, subject
+     FROM files WHERE id = $1 AND (user_id = $2 OR is_public = true) AND mime_type = 'application/pdf'`,
     [fileId, req.user.id]
   );
   if (!rows[0]) return res.status(404).json({ error: 'PDF not found' });
@@ -618,7 +619,8 @@ async function answerFromFile(req, res) {
   if (!fileId) return res.status(400).json({ error: 'fileId is required' });
 
   const { rows } = await pool.query(
-    `SELECT * FROM files WHERE id = $1 AND (user_id = $2 OR is_public = true)`,
+    `SELECT id, file_url, original_name, mime_type, subject
+     FROM files WHERE id = $1 AND (user_id = $2 OR is_public = true)`,
     [fileId, req.user.id]
   );
   if (!rows[0]) return res.status(404).json({ error: 'File not found' });

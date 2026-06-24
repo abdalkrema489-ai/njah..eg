@@ -114,7 +114,14 @@ async function login(req, res) {
   if (!email || !password)
     return res.status(400).json({ error: 'Email and password required' });
 
-  const { rows } = await pool.query('SELECT * FROM users WHERE email=$1 AND is_active=true', [email]);
+  const { rows } = await pool.query(
+    `SELECT id, name, email, password_hash, grade, school, level, xp_points, language,
+            avatar_url, role, streak_days, email_verified, is_active, last_active,
+            institution_type, faculty, university_name, subjects, preferred_ai_provider,
+            teacher_status, approval_status, admin_level
+     FROM users WHERE email=$1 AND is_active=true`,
+    [email]
+  );
   const user = rows[0];
   if (!user || !user.password_hash)
     return res.status(401).json({ error: 'Invalid credentials' });
@@ -245,15 +252,16 @@ async function resetPassword(req, res) {
 
 async function getMe(req, res) {
   const { rows } = await pool.query(
-    `SELECT u.*,
+    `SELECT id, name, email, grade, school, level, xp_points, language, avatar_url, role,
+            streak_days, email_verified, institution_type, faculty, university_name, subjects,
+            preferred_ai_provider, teacher_status, approval_status, last_active, created_at,
       (SELECT COUNT(*) FROM study_sessions WHERE user_id=u.id AND status='completed') AS sessions_completed,
       (SELECT COUNT(*) FROM files WHERE user_id=u.id) AS files_count,
       (SELECT COUNT(*) FROM user_achievements WHERE user_id=u.id) AS achievements_count
      FROM users u WHERE u.id=$1`,
     [req.user.id]
   );
-  const { password_hash, ...safe } = rows[0];
-  res.json({ user: safe });
+  res.json({ user: rows[0] });
 }
 
 module.exports = { register, guestRegister, login, googleCallback, exchangeCode, refreshToken, logout, verifyEmail, forgotPassword, resetPassword, getMe };
