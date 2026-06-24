@@ -901,51 +901,36 @@ function QuizPanel() {
 function SummarizePanel() {
   const { language } = useUIStore();
   const isAr = language === 'ar';
-  const [files, setFiles] = useState([]);
-  const [selectedId, setSelectedId] = useState('');
-  const [summary, setSummary] = useState('');
-  const [loading, setLoading] = useState(false);
-  useQuery({
-    queryKey: ['files-for-ai'],
-    queryFn: async () => {
-      const { filesAPI } = await import('../../api/index');
-      const { data } = await filesAPI.list({ limit: 50 });
-      setFiles((data?.files || []).filter(f => f.mime_type === 'application/pdf'));
-      return data;
-    },
-  });
-  const doSummarize = async () => {
-    if (!selectedId) return toast.error(isAr ? 'اختر ملف PDF أولاً' : 'Please select a PDF file');
-    setLoading(true); setSummary('');
-    try { const { data } = await aiAPI.summarize({ fileId: selectedId, language }); setSummary(data.summary || ''); }
-    catch { toast.error(isAr ? 'فشل التلخيص' : 'Summarization failed'); }
-    finally { setLoading(false); }
-  };
   return (
     <div style={{ padding: 24, maxWidth: 800, margin: '0 auto' }}>
       <div style={{ marginBottom: 24 }}>
         <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>📄 {isAr ? 'تلخيص ملف PDF' : 'Summarize PDF'}</h2>
-        <p style={{ color: 'var(--text3)', fontSize: 14 }}>{isAr ? 'اختر ملف PDF من مكتبتك وسأقوم بتلخيصه بالكامل فوراً' : 'Select any PDF from your library and get an instant structured summary'}</p>
+        <p style={{ color: 'var(--text3)', fontSize: 14 }}>
+          {isAr
+            ? 'لتلخيص ملف PDF بواجهة مُحسّنة، توجّه لصفحة الملفات واضغط زر "تحليل AI" على أي ملف.'
+            : 'For the best PDF summarization experience, go to the Files page and click "AI ANALYZE" on any PDF file.'}
+        </p>
       </div>
-      <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 20, padding: 24, marginBottom: 20 }}>
-        <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text3)', display: 'block', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-          {isAr ? 'اختر ملف PDF' : 'Select PDF File'}
-        </label>
-        <select value={selectedId} onChange={e => setSelectedId(e.target.value)}
-          style={{ width: '100%', padding: '12px 16px', borderRadius: 12, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: 14, marginBottom: 16 }}>
-          <option value="">{isAr ? '-- اختر ملفاً --' : '-- Choose a PDF --'}</option>
-          {files.map(f => <option key={f.id} value={f.id}>{f.original_name}</option>)}
-        </select>
-        {files.length === 0 && <p style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12 }}>{isAr ? 'لا توجد ملفات PDF. قم بتحميل ملفات من قسم الملفات أولاً.' : 'No PDF files yet. Upload some in the Files section first.'}</p>}
-        <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-          onClick={doSummarize} disabled={loading || !selectedId}
-          style={{ padding: '11px 28px', borderRadius: 14, background: selectedId ? 'linear-gradient(135deg,#7C3AED,#5B21B6)' : 'var(--surface3)', color: '#fff', border: 'none', cursor: selectedId ? 'pointer' : 'not-allowed', fontWeight: 700, fontSize: 14, boxShadow: selectedId ? '0 4px 16px rgba(124,58,237,0.35)' : 'none' }}>
-          {loading ? <Spinner size="sm" /> : (isAr ? '✨ تلخيص الآن' : '✨ Summarize Now')}
-        </motion.button>
+      <div style={{ padding: 20, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 16, textAlign: 'center', color: 'var(--text3)', fontSize: 14, lineHeight: 1.8 }}>
+        <div style={{ fontSize: 36, marginBottom: 12 }}>📁</div>
+        {isAr
+          ? '💡 لتلخيص ملف PDF، اذهب إلى صفحة الملفات واضغط "تحليل AI" على أي ملف'
+          : '💡 To summarize a PDF, go to the Files page and click "AI ANALYZE" on any file'}
+        <div style={{ marginTop: 16 }}>
+          <a href="/files" style={{
+            display: 'inline-block', padding: '10px 24px', borderRadius: 12,
+            background: 'linear-gradient(135deg,#7C3AED,#5B21B6)', color: '#fff',
+            textDecoration: 'none', fontWeight: 700, fontSize: 14,
+            boxShadow: '0 4px 16px rgba(124,58,237,0.35)',
+          }}>
+            {isAr ? '← اذهب إلى صفحة الملفات' : '← Go to Files Page'}
+          </a>
+        </div>
       </div>
     </div>
   );
 }
+
 
 // ── Study Plan Panel ──────────────────────────────────────────
 function StudyPlanPanel() {

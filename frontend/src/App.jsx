@@ -30,7 +30,6 @@ const NotesPage         = lazy(() => import('./components/notes/NotesPage'));
 const BoardPage         = lazy(() => import('./components/board/BoardPage'));
 const ChatPage          = lazy(() => import('./components/chat/ChatPage'));
 const AIAssistant       = lazy(() => import('./components/ai/AIAssistant'));
-const NajahAI           = lazy(() => import('./components/ai/NajahAI'));
 const AdminLoginPage    = lazy(() => import('./components/admin/AdminLoginPage'));
 const AdminDashboard    = lazy(() => import('./components/admin/AdminDashboard'));
 const AchievementsPage  = lazy(() => import('./components/achievements/AchievementsPage'));
@@ -357,7 +356,7 @@ export default function App() {
             <Route path="/payment"        element={<Protected><PaymentPage /></Protected>} />
             <Route path="/help"           element={<Protected><HelpCenter /></Protected>} />
             <Route path="/support"        element={<Protected><SupportPage /></Protected>} />
-            <Route path="/ai-search"      element={<Protected><NajahAI /></Protected>} />
+            {/* /ai-search was removed — NajahAI.jsx was dead code with no nav entry, superseded by AIAssistant */}
 
             {/* ── Teacher AI Tools ── */}
             <Route path="/lesson-planner" element={<Protected><LessonPlanner /></Protected>} />

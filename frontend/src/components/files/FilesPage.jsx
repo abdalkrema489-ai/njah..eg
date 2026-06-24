@@ -268,26 +268,40 @@ function AIFileAnalysis({ file }) {
   const { lang } = useTranslation();
   const isAr = lang === 'ar';
   const [question, setQuestion] = useState('');
-  const [answer, setAnswer] = useState('');
+  const [askAnswer, setAskAnswer] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Structured result state (replaces the single raw `answer` string)
+  const [summaryResult, setSummaryResult] = useState(null);
+  const [quizResult, setQuizResult] = useState(null);
+  const [quizAnswers, setQuizAnswers] = useState({});
+  const [quizScore, setQuizScore] = useState(null);
 
   const ask = async () => {
     if (!question.trim()) return;
     setLoading(true);
     try {
       const res = await aiAPI.askFile({ question: question.trim(), fileId: file.id });
-      setAnswer(res.data.answer);
+      setAskAnswer(res.data.answer);
     } catch (err) { toast.error(err.response?.data?.error || 'Analysis engine failed'); }
     finally { setLoading(false); }
   };
 
   const runAction = async (action) => {
     setLoading(true);
+    setSummaryResult(null);
+    setQuizResult(null);
+    setQuizAnswers({});
+    setQuizScore(null);
+    setAskAnswer('');
     try {
-      const res = action === 'summarize' 
-        ? await aiAPI.summarize({ fileId: file.id })
-        : await aiAPI.generateQuiz({ subject: file.subject || 'general', topic: file.original_name, fileId: file.id });
-      setAnswer(action === 'summarize' ? res.data.summary : JSON.stringify(res.data, null, 2));
+      if (action === 'summarize') {
+        const res = await aiAPI.summarize({ fileId: file.id });
+        setSummaryResult(res.data.summary || '');
+      } else {
+        const res = await aiAPI.generateQuiz({ subject: file.subject || 'general', topic: file.original_name, fileId: file.id });
+        setQuizResult(res.data.questions || res.data || []);
+      }
     } catch (err) { toast.error(err.response?.data?.error || 'Action failed'); }
     finally { setLoading(false); }
   };
@@ -300,7 +314,7 @@ function AIFileAnalysis({ file }) {
       </div>
 
       <div style={{ display: 'flex', gap: 10 }}>
-        <Input 
+        <Input
           value={question} onChange={e => setQuestion(e.target.value)}
           placeholder={isAr ? "استفسر من هذا المستند..." : "Query this document..."}
           onKeyDown={e => e.key === 'Enter' && ask()}
@@ -309,20 +323,118 @@ function AIFileAnalysis({ file }) {
       </div>
 
       <AnimatePresence>
-        {answer && (
-          <motion.div 
+        {/* Ask-a-question result */}
+        {askAnswer && (
+          <motion.div
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-            style={{ 
+            style={{
               background: 'var(--surface2)', border: '1px solid var(--border)',
               borderRadius: 14, padding: 20, fontSize: 14, lineHeight: 1.8, color: 'var(--text)',
               maxHeight: 400, overflowY: 'auto', whiteSpace: 'pre-wrap',
               boxShadow: 'var(--shadow-inner)'
             }}
           >
-            {String(answer)}
+            {String(askAnswer)}
+          </motion.div>
+        )}
+
+        {/* Summary result panel */}
+        {summaryResult !== null && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            style={{
+              background: 'var(--surface2)', border: '1px solid var(--border)',
+              borderRadius: 16, padding: 24, boxShadow: 'var(--shadow-inner)',
+            }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, paddingBottom: 12, borderBottom: '2px solid var(--primary)' }}>
+              <span style={{ fontSize: 22 }}>📄</span>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', margin: 0 }}>
+                {isAr ? 'ملخص الملف' : 'File Summary'}
+              </h3>
+            </div>
+            <div style={{ fontSize: 14, lineHeight: 1.9, color: 'var(--text)', whiteSpace: 'pre-wrap' }}>
+              {summaryResult}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Quiz result panel */}
+        {quizResult && Array.isArray(quizResult) && quizResult.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            style={{
+              background: 'var(--surface2)', border: '1px solid var(--border)',
+              borderRadius: 16, padding: 24, boxShadow: 'var(--shadow-inner)',
+            }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, paddingBottom: 12, borderBottom: '2px solid #A78BFA' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 22 }}>📝</span>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', margin: 0 }}>
+                  {isAr ? 'اختبار من الملف' : 'File Quiz'}
+                </h3>
+              </div>
+              {quizScore === null && (
+                <span style={{ fontSize: 13, color: 'var(--text3)' }}>
+                  {Object.keys(quizAnswers).length}/{quizResult.length} {isAr ? 'مُجاب' : 'answered'}
+                </span>
+              )}
+            </div>
+
+            {quizScore !== null ? (
+              <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                <div style={{ fontSize: 40 }}>{quizScore >= 70 ? '🎉' : '📚'}</div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--primary)', marginTop: 8 }}>
+                  {quizScore}%
+                </div>
+                <button onClick={() => { setQuizResult(null); setQuizAnswers({}); setQuizScore(null); }}
+                  style={{ marginTop: 16, padding: '10px 24px', minHeight: 44, background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 700 }}>
+                  {isAr ? '✕ إغلاق' : '✕ Close'}
+                </button>
+              </div>
+            ) : (
+              <>
+                {quizResult.map((q, qi) => (
+                  <div key={qi} style={{ marginBottom: 16, padding: 14, background: 'var(--surface)', borderRadius: 12 }}>
+                    <p style={{ fontWeight: 700, color: 'var(--text)', marginBottom: 10, fontSize: 14 }}>
+                      {qi + 1}. {q.question}
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: 8 }}>
+                      {(q.options || []).map((opt, oi) => (
+                        <button key={oi}
+                          onClick={() => setQuizAnswers(prev => ({ ...prev, [qi]: oi }))}
+                          style={{
+                            padding: '10px 14px', minHeight: 44, borderRadius: 10,
+                            border: `2px solid ${quizAnswers[qi] === oi ? 'var(--primary)' : 'var(--border)'}`,
+                            background: quizAnswers[qi] === oi ? 'rgba(99,102,241,0.1)' : 'var(--surface2)',
+                            color: 'var(--text)', cursor: 'pointer', textAlign: 'start', fontSize: 13,
+                            fontWeight: quizAnswers[qi] === oi ? 700 : 400,
+                          }}>
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                <button
+                  onClick={() => {
+                    let correct = 0;
+                    quizResult.forEach((q, qi) => {
+                      if (quizAnswers[qi] === q.correct) correct++;
+                    });
+                    setQuizScore(Math.round((correct / quizResult.length) * 100));
+                  }}
+                  disabled={Object.keys(quizAnswers).length < quizResult.length}
+                  style={{
+                    width: '100%', padding: 14, minHeight: 48, background: 'var(--primary)', color: '#fff',
+                    border: 'none', borderRadius: 12, cursor: 'pointer', fontWeight: 700, fontSize: 15,
+                    opacity: Object.keys(quizAnswers).length < quizResult.length ? 0.5 : 1,
+                  }}>
+                  {isAr ? '✅ إرسال الإجابات' : '✅ Submit Answers'}
+                </button>
+              </>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
     </div>
   );
 }
+
