@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      devOptions: { enabled: true, suppressWarnings: true },
+      devOptions: { enabled: false },
       injectRegister: 'auto',
       includeAssets: [
         'favicon.ico', 'apple-touch-icon.png',
@@ -65,7 +65,7 @@ export default defineConfig({
         skipWaiting: true,
         clientsClaim: true,
         // Bump this version string whenever you need to force-clear all user caches
-        cacheId: 'najah-v3',
+        cacheId: 'najah-v4',
 
         runtimeCaching: [
           // Google Fonts → Cache-first (works offline)
