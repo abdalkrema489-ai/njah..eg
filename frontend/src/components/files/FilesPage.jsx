@@ -9,8 +9,10 @@ import { filesAPI, aiAPI } from '../../api/index';
 import { Card, Button, Tag, Modal, Input, Select, Spinner, EmptyState, SectionHeader, Btn, ProgressBar } from '../shared/UI';
 import { useTranslation } from '../../i18n/index';
 
-const SUBJECTS = ['mathematics','science','arabic','english','social_studies'];
-const SUBJECT_ICONS = { mathematics:'📐', science:'🔬', arabic:'📚', english:'🌐', social_studies:'🌍' };
+const SUBJECTS = ['mathematics','science','physics','chemistry','biology','arabic','english','social_studies','other'];
+const SUBJECT_ICONS = { mathematics:'📐', science:'🔬', physics:'⚛️', chemistry:'🧪', biology:'🧬', arabic:'📚', english:'🌐', social_studies:'🌍', other:'📎' };
+const SUBJECTS_LOC_AR = { mathematics:'الرياضيات', science:'العلوم', physics:'الفيزياء', chemistry:'الكيمياء', biology:'الأحياء', arabic:'اللغة العربية', english:'اللغة الإنجليزية', social_studies:'الدراسات الاجتماعية', other:'أخرى' };
+const SUBJECTS_LOC_EN = { mathematics:'Mathematics', science:'Science', physics:'Physics', chemistry:'Chemistry', biology:'Biology', arabic:'Arabic', english:'English', social_studies:'Social Studies', other:'Other' };
 const MIME_ICONS = { 'application/pdf':'📄', 'image/jpeg':'🖼️', 'image/png':'🖼️', 'image/gif':'🖼️', 'image/webp':'🖼️' };
 
 function UploadDropzone({ onUploaded }) {
@@ -52,13 +54,9 @@ function UploadDropzone({ onUploaded }) {
       <h3 style={{ fontSize: 16, fontWeight: 900, marginBottom: 18, fontFamily: 'var(--font-head)', letterSpacing: '-0.02em' }}>{isAr ? '📥 رفع آمن للملفات' : '📥 Secure Vault Upload'}</h3>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
         <Select value={meta.subject} onChange={e => setMeta(m => ({ ...m, subject: e.target.value }))}>
-          {[
-            { value: 'mathematics',   label: isAr ? '📐 الرياضيات' : '📐 Mathematics' },
-            { value: 'science',       label: isAr ? '🔬 العلوم' : '🔬 Science' },
-            { value: 'arabic',        label: isAr ? '📚 اللغة العربية' : '📚 Arabic' },
-            { value: 'english',       label: isAr ? '🌐 اللغة الإنجليزية' : '🌐 English' },
-            { value: 'social_studies',label: isAr ? '🌍 الدراسات الاجتماعية' : '🌍 Social Studies' },
-          ].map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+          {SUBJECTS.map(s => (
+            <option key={s} value={s}>{SUBJECT_ICONS[s]} {isAr ? SUBJECTS_LOC_AR[s] : SUBJECTS_LOC_EN[s]}</option>
+          ))}
         </Select>
         <Input 
           placeholder={isAr ? "وسوم: ملاحظات، امتحان، ملخص..." : "Tags: notes, exam, summary..."} 
@@ -188,16 +186,10 @@ export default function FilesPage() {
           <UploadDropzone onUploaded={() => qc.invalidateQueries(['files'])} />
           
           <div className="files-filter-bar" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', background: 'var(--surface2)', padding: 8, borderRadius: 14, border: '1px solid var(--border)' }}>
-            <Btn size="sm" variant={!subject ? 'primary' : 'ghost'} onClick={() => setSubject('')}>{isAr ? 'جميع الملفات' : 'ALL ASSETS'}</Btn>
-            {[
-              { value: 'mathematics',   label: isAr ? 'الرياضيات' : 'Mathematics' },
-              { value: 'science',       label: isAr ? 'العلوم' : 'Science' },
-              { value: 'arabic',        label: isAr ? 'اللغة العربية' : 'Arabic' },
-              { value: 'english',       label: isAr ? 'اللغة الإنجليزية' : 'English' },
-              { value: 'social_studies',label: isAr ? 'الدراسات الاجتماعية' : 'Social Studies' },
-            ].map(s => (
-              <Btn key={s.value} size="sm" variant={subject === s.value ? 'primary' : 'ghost'} onClick={() => setSubject(s.value)}>
-                {SUBJECT_ICONS[s.value]} {s.label.toUpperCase()}
+            <Btn size="sm" variant={!subject ? 'primary' : 'ghost'} onClick={() => setSubject('')}>{isAr ? 'الكل' : 'ALL'}</Btn>
+            {SUBJECTS.map(s => (
+              <Btn key={s} size="sm" variant={subject === s ? 'primary' : 'ghost'} onClick={() => setSubject(s)}>
+                {SUBJECT_ICONS[s]} {(isAr ? SUBJECTS_LOC_AR[s] : SUBJECTS_LOC_EN[s]).toUpperCase()}
               </Btn>
             ))}
             <div className="files-search-wrapper" style={{ marginLeft: 'auto', width: 240 }}>
@@ -240,19 +232,12 @@ export default function FilesPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <h4 style={{ fontSize: 12, fontWeight: 900, color: 'var(--text2)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{isAr ? 'توزيع المواد' : 'Subject Distribution'}</h4>
             {SUBJECTS.map(s => {
-              const SUBJECTS_LOC = {
-                mathematics: isAr ? 'الرياضيات' : 'Mathematics',
-                science: isAr ? 'العلوم' : 'Science',
-                arabic: isAr ? 'اللغة العربية' : 'Arabic',
-                english: isAr ? 'اللغة الإنجليزية' : 'English',
-                social_studies: isAr ? 'الدراسات الاجتماعية' : 'Social Studies',
-              };
               const count = files.filter(f => f.subject === s).length;
               const pct = (count / (files.length || 1)) * 100;
               return (
                 <div key={s}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6 }}>
-                    <span style={{ fontWeight: 800, color: 'var(--text)' }}>{SUBJECT_ICONS[s]} {SUBJECTS_LOC[s]}</span>
+                    <span style={{ fontWeight: 800, color: 'var(--text)' }}>{SUBJECT_ICONS[s]} {isAr ? SUBJECTS_LOC_AR[s] : SUBJECTS_LOC_EN[s]}</span>
                     <span style={{ color: 'var(--text4)', fontWeight: 900 }}>{count}</span>
                   </div>
                   <ProgressBar value={pct} height={7} color="var(--primary)" />

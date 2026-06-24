@@ -33,21 +33,21 @@ const AIAssistant       = lazy(() => import('./components/ai/AIAssistant'));
 const NajahAI           = lazy(() => import('./components/ai/NajahAI'));
 const AdminLoginPage    = lazy(() => import('./components/admin/AdminLoginPage'));
 const AdminDashboard    = lazy(() => import('./components/admin/AdminDashboard'));
-const FocusPage         = lazy(() => import('./components/focus/FocusPage'));
 const AchievementsPage  = lazy(() => import('./components/achievements/AchievementsPage'));
+
 const NotificationsPage = lazy(() => import('./components/notifications/NotificationsPage'));
 const AnalyticsPage     = lazy(() => import('./components/analytics/AnalyticsPage'));
 const ProfilePage       = lazy(() => import('./components/profile/ProfilePage'));
 const SettingsPage      = lazy(() => import('./components/settings/SettingsPage'));
-const ExamPage          = lazy(() => import('./components/exam/ExamPage'));
 const QuizHistoryPage   = lazy(() => import('./components/quiz/QuizHistoryPage'));
+
 const GroupsPage        = lazy(() => import('./components/groups/GroupsPage'));
 const GroupDetailPage   = lazy(() => import('./components/groups/GroupDetailPage'));
 const AssignmentCreation= lazy(() => import('./components/groups/AssignmentCreation'));
 const GradingInterface  = lazy(() => import('./components/groups/GradingInterface'));
 const StudentProfile    = lazy(() => import('./components/groups/StudentProfile'));
-const StudyTools        = lazy(() => import('./components/tools/StudyTools'));
 const TeacherRegistration = lazy(() => import('./components/auth/TeacherRegistration'));
+
 const CurriculumBrowser    = lazy(() => import('./components/teacher/CurriculumBrowser'));
 const StudentsOverview     = lazy(() => import('./components/teacher/StudentsOverview'));
 const CalendarPage         = lazy(() => import('./components/calendar/CalendarPage'));
@@ -327,7 +327,8 @@ export default function App() {
             <Route path="/chat"            element={<Protected><ChatPage /></Protected>} />
             <Route path="/chat/private"    element={<Protected><ChatPage /></Protected>} />
             <Route path="/ai"              element={<Protected><AIAssistant /></Protected>} />
-            <Route path="/focus"           element={<Protected><FocusPage /></Protected>} />
+            <Route path="/focus"           element={<Navigate to="/planner" replace />} />
+
             <Route path="/calendar"        element={<Protected><CalendarPage /></Protected>} />
             <Route path="/students"        element={<Protected><StudentsOverview /></Protected>} />
             <Route path="/achievements"    element={<Protected><AchievementsPage /></Protected>} />
@@ -342,7 +343,8 @@ export default function App() {
                 </TeacherOnly>
               </Protected>
             } />
-            <Route path="/exam"            element={<Protected><ExamPage /></Protected>} />
+            <Route path="/exam"            element={<Navigate to="/files" replace />} />
+
             <Route path="/quiz-history"    element={<Protected><QuizHistoryPage /></Protected>} />
             <Route path="/groups"          element={<Protected><GroupsPage /></Protected>} />
             <Route path="/groups/:id"      element={<Protected><GroupDetailPage /></Protected>} />
@@ -350,7 +352,8 @@ export default function App() {
             <Route path="/groups/:id/assignments/:assignmentId/grade" element={<Protected><GradingInterface /></Protected>} />
             <Route path="/groups/:id/students/:studentId" element={<Protected><StudentProfile /></Protected>} />
             <Route path="/curriculum"      element={<Protected><CurriculumBrowser /></Protected>} />
-            <Route path="/tools"           element={<Protected><StudyTools /></Protected>} />
+            <Route path="/tools"           element={<Navigate to="/files" replace />} />
+
             <Route path="/payment"        element={<Protected><PaymentPage /></Protected>} />
             <Route path="/help"           element={<Protected><HelpCenter /></Protected>} />
             <Route path="/support"        element={<Protected><SupportPage /></Protected>} />

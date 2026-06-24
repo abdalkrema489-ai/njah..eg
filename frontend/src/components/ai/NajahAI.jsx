@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import client from '../../api/index';
 import { useTranslation } from '../../i18n/index';
+import { useDraftStore } from '../../context/store';
 
 // ── Markdown-like renderer (no external dep) ──────────────────
 function renderMd(text) {
@@ -58,13 +59,23 @@ export default function NajahAI() {
       : 'Hello! I\'m Najah AI — your intelligent assistant with real-time internet access. I can search the web, explain concepts, and help with homework. How can I help you today? 🎓',
     sources: []
   }]);
-  const [input, setInput]         = useState('');
+  const { chatDraft, setChatDraft, clearChatDraft } = useDraftStore();
+  const [input, setInput]         = useState(chatDraft || '');
   const [loading, setLoading]     = useState(false);
   const [useWebSearch, setUseWebSearch] = useState(false);
   const [level, setLevel]         = useState('intermediate');
   const [subject, setSubject]     = useState('');
   const bottomRef = useRef(null);
   const inputRef  = useRef(null);
+  const draftTimer = useRef(null);
+
+  // Restore draft on mount, save debounced on change
+  const handleInputChange = useCallback((e) => {
+    const val = e.target.value;
+    setInput(val);
+    clearTimeout(draftTimer.current);
+    draftTimer.current = setTimeout(() => setChatDraft(val), 600);
+  }, [setChatDraft]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -74,6 +85,7 @@ export default function NajahAI() {
     if (!input.trim() || loading) return;
     const userMsg = input.trim();
     setInput('');
+    clearChatDraft();
     setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
     setLoading(true);
 
@@ -392,7 +404,7 @@ export default function NajahAI() {
           <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
             <textarea
               ref={inputRef}
-              value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKey}
+              value={input} onChange={handleInputChange} onKeyDown={handleKey}
               placeholder={
                 mode === 'chat'    ? (lang === 'ar' ? 'اسأل أي سؤال...' : 'Ask anything...') :
                 mode === 'search'  ? 'Enter search query...' :

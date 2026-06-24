@@ -203,6 +203,27 @@ export const useChatStore = create(set => ({
   })),
 }));
 
+// ── Draft / Data-loss Prevention ──────────────────────────
+export const useDraftStore = create(
+  persist(
+    (set) => ({
+      noteDrafts: {},       // { [noteId]: content }
+      quizProgress: null,   // { questions, answers, startedAt, fileIds }
+      chatDraft: '',        // AI chat input
+
+      saveNoteDraft:  (id, content) => set(s => ({ noteDrafts: { ...s.noteDrafts, [id]: content } })),
+      clearNoteDraft: (id) => set(s => { const d = { ...s.noteDrafts }; delete d[id]; return { noteDrafts: d }; }),
+
+      saveQuizProgress:  (progress) => set({ quizProgress: { ...progress, savedAt: Date.now() } }),
+      clearQuizProgress: () => set({ quizProgress: null }),
+
+      setChatDraft:   (text) => set({ chatDraft: text }),
+      clearChatDraft: () => set({ chatDraft: '' }),
+    }),
+    { name: 'najah-drafts' }
+  )
+);
+
 // ── Groups ────────────────────────────────────────────────
 export const useGroupStore = create(set => ({
   groups:       [],

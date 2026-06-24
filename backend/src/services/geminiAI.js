@@ -91,14 +91,18 @@ function wrapModel(originalModel, options) {
           try {
             return await target.generateContent(...args);
           } catch (err) {
-            if (err.message?.includes('quota') || err.message?.includes('QUOTA') || err.status === 429) {
-              logger.warn('Quota error on gemini-2.0-flash, falling back to gemini-1.5-flash for generateContent');
+            const isRetryable = err.status === 429 || err.status === 503 ||
+              err.message?.includes('quota') || err.message?.includes('QUOTA') ||
+              err.message?.includes('overloaded') || err.message?.includes('RESOURCE_EXHAUSTED');
+            if (isRetryable) {
+              logger.warn('Retryable error on gemini-2.0-flash, falling back to gemini-1.5-flash for generateContent:', err.message);
               const fallback = genAI.getGenerativeModel({
                 ...options,
                 model: 'gemini-1.5-flash'
               });
               return await fallback.generateContent(...args);
             }
+            logger.error('Non-retryable Gemini error in generateContent. Reason:', err.message, 'Status:', err.status);
             throw err;
           }
         };
@@ -113,8 +117,11 @@ function wrapModel(originalModel, options) {
                   try {
                     return await chatTarget.sendMessage(...args);
                   } catch (err) {
-                    if (err.message?.includes('quota') || err.message?.includes('QUOTA') || err.status === 429) {
-                      logger.warn('Quota error on gemini-2.0-flash, falling back to gemini-1.5-flash for sendMessage');
+                    const isRetryable = err.status === 429 || err.status === 503 ||
+                      err.message?.includes('quota') || err.message?.includes('QUOTA') ||
+                      err.message?.includes('overloaded') || err.message?.includes('RESOURCE_EXHAUSTED');
+                    if (isRetryable) {
+                      logger.warn('Retryable error on gemini-2.0-flash, falling back to gemini-1.5-flash for sendMessage:', err.message);
                       const fallbackModel = genAI.getGenerativeModel({
                         ...options,
                         model: 'gemini-1.5-flash'
@@ -122,6 +129,7 @@ function wrapModel(originalModel, options) {
                       const fallbackChat = fallbackModel.startChat(chatOptions);
                       return await fallbackChat.sendMessage(...args);
                     }
+                    logger.error('Non-retryable Gemini error in sendMessage. Reason:', err.message, 'Status:', err.status);
                     throw err;
                   }
                 };
@@ -131,8 +139,11 @@ function wrapModel(originalModel, options) {
                   try {
                     return await chatTarget.sendMessageStream(...args);
                   } catch (err) {
-                    if (err.message?.includes('quota') || err.message?.includes('QUOTA') || err.status === 429) {
-                      logger.warn('Quota error on gemini-2.0-flash, falling back to gemini-1.5-flash for sendMessageStream');
+                    const isRetryable = err.status === 429 || err.status === 503 ||
+                      err.message?.includes('quota') || err.message?.includes('QUOTA') ||
+                      err.message?.includes('overloaded') || err.message?.includes('RESOURCE_EXHAUSTED');
+                    if (isRetryable) {
+                      logger.warn('Retryable error on gemini-2.0-flash, falling back to gemini-1.5-flash for sendMessageStream:', err.message);
                       const fallbackModel = genAI.getGenerativeModel({
                         ...options,
                         model: 'gemini-1.5-flash'
@@ -140,6 +151,7 @@ function wrapModel(originalModel, options) {
                       const fallbackChat = fallbackModel.startChat(chatOptions);
                       return await fallbackChat.sendMessageStream(...args);
                     }
+                    logger.error('Non-retryable Gemini error in sendMessageStream. Reason:', err.message, 'Status:', err.status);
                     throw err;
                   }
                 };
