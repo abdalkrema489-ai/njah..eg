@@ -9,7 +9,7 @@ const Announcement = require('../models/Announcement');
 const Assignment   = require('../models/Assignment');
 
 // Use shared authenticate middleware — checks is_active=true and avoids JWT drift
-const { authenticate } = require('../middleware/auth');
+const { authenticate, blockGuests } = require('../middleware/auth');
 const auth = authenticate; // alias so all existing router.*(path, auth, ...) calls work unchanged
 const logger = require('../utils/logger');
 
@@ -47,7 +47,7 @@ async function uniqueCode() {
 ═══════════════════════════════════════════════════════ */
 
 // POST /api/groups  — create group (paid groups start as pending_payment)
-router.post('/', auth, async (req, res) => {
+router.post('/', auth, blockGuests, async (req, res) => {
   const { name, description, subject, grade, institutionType, institution, maxStudents, color, emoji, privacy, isPaid, price, curriculumLinked } = req.body;
   if (!name || !subject) return res.status(400).json({ error: 'Name and subject are required' });
 
@@ -172,7 +172,7 @@ router.get('/:id', auth, async (req, res) => {
 });
 
 // POST /api/groups/join  — student joins by code
-router.post('/join', auth, async (req, res) => {
+router.post('/join', auth, blockGuests, async (req, res) => {
   const { code } = req.body;
   if (!code) return res.status(400).json({ error: 'Invite code required' });
 

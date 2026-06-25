@@ -1,7 +1,7 @@
 // src/routes/board.js
 const br = require('express').Router();
 const { pool } = require('../config/postgres');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, blockGuests } = require('../middleware/auth');
 const { checkAchievements } = require('../services/achievementService');
 const { body, validationResult } = require('express-validator');
 br.use(authenticate);
@@ -35,7 +35,7 @@ br.get('/', async (req,res) => {
   res.json({ posts: rows, total: parseInt(countResult.rows[0].count), page: Number(page), limit: Number(limit) });
 });
 
-br.post('/', [
+br.post('/', blockGuests, [
   body('title').trim().isLength({ min: 3, max: 200 }).withMessage('Title must be 3-200 characters'),
   body('description').optional().trim().isLength({ max: 2000 }).withMessage('Description max 2000 characters'),
   body('subject').optional().isIn(VALID_SUBJECTS).withMessage('Invalid subject'),

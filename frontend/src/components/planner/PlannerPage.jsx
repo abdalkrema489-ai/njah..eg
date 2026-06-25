@@ -430,9 +430,38 @@ function AIScheduleTab() {
         });
       });
 
-      await Promise.all(sessions.map(s => plannerAPI.createSession(s)));
+      let successCount = 0;
+      let skippedCount = 0;
+      const skippedDetails = [];
+
+      for (const s of sessions) {
+        try {
+          await plannerAPI.createSession(s);
+          successCount++;
+        } catch (err) {
+          if (err.response?.status === 409) {
+            skippedCount++;
+            skippedDetails.push(s.topic || s.subject);
+          } else {
+            // Non-conflict error (network, validation) — log but continue
+            console.error('Session creation failed:', err.message);
+            skippedCount++;
+          }
+        }
+      }
+
       qc.invalidateQueries(['sessions']);
-      toast.success(isAr ? `📅 تم إضافة ${sessions.length} جلسات دراسية إلى المخطط!` : `📅 ${sessions.length} sessions added to your planner!`);
+
+      if (successCount > 0 && skippedCount === 0) {
+        toast.success(isAr ? `📅 تم إضافة ${successCount} جلسات دراسية إلى المخطط!` : `📅 ${successCount} sessions added to your planner!`);
+      } else if (successCount > 0 && skippedCount > 0) {
+        toast.success(isAr
+          ? `📅 تم إضافة ${successCount} جلسة، وتم تجاوز ${skippedCount} بسبب تعارض في المواعيد`
+          : `📅 ${successCount} sessions added, ${skippedCount} skipped due to time conflicts`,
+          { duration: 5000 });
+      } else {
+        toast.error(isAr ? 'فشلت إضافة جميع الجلسات بسبب تعارضات في المواعيد' : 'All sessions failed due to schedule conflicts');
+      }
     } catch (err) {
       toast.error(isAr ? 'فشل إضافة الجلسات للمخطط' : 'Failed to apply sessions');
     } finally {

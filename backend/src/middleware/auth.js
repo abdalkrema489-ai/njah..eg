@@ -55,4 +55,14 @@ async function optionalAuth(req, res, next) {
   next();
 }
 
-module.exports = { authenticate, authorize, optionalAuth };
+function blockGuests(req, res, next) {
+  if (req.user?.email?.endsWith('@guest.najah.local')) {
+    return res.status(403).json({
+      error: 'يجب إنشاء حساب للقيام بهذا الإجراء',
+      code: 'GUEST_RESTRICTED'
+    });
+  }
+  next();
+}
+
+module.exports = { authenticate, authorize, optionalAuth, blockGuests };

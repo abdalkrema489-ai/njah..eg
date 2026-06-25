@@ -20,7 +20,7 @@ function setupSocketIO(io) {
       if (!token) return next(new Error('No token'));
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const { rows } = await pool.query(
-        'SELECT id,name,avatar_url,grade,role FROM users WHERE id=$1 AND is_active=true',
+        'SELECT id,name,email,avatar_url,grade,role FROM users WHERE id=$1 AND is_active=true',
         [decoded.id]
       );
       if (!rows[0]) return next(new Error('User not found'));
@@ -60,6 +60,13 @@ function setupSocketIO(io) {
     });
 
     socket.on('send_message', async ({ subject, content, type = 'text', fileUrl, replyTo }) => {
+      // Block guest accounts from sending persistent content
+      if (socket.user?.email?.endsWith('@guest.najah.local')) {
+        return socket.emit('error', {
+          message: 'يجب إنشاء حساب لإرسال الرسائل. التسجيل مجاني ويستغرق دقيقة واحدة.',
+          code: 'GUEST_RESTRICTED'
+        });
+      }
       if (!content?.trim() && type === 'text') return;
       const roomId = `room:${subject.toLowerCase()}`;
       try {
@@ -124,6 +131,13 @@ function setupSocketIO(io) {
 
     // ── Private Messaging (WhatsApp Protocol) ──
     socket.on('send_private_message', async ({ receiverId, content, type = 'text', fileUrl }) => {
+      // Block guest accounts from sending private messages
+      if (socket.user?.email?.endsWith('@guest.najah.local')) {
+        return socket.emit('error', {
+          message: 'يجب إنشاء حساب لإرسال الرسائل. التسجيل مجاني ويستغرق دقيقة واحدة.',
+          code: 'GUEST_RESTRICTED'
+        });
+      }
       if (!content?.trim() && type === 'text') return;
       try {
         // Automatically mark delivered if the receiver is currently connected to their personal socket room

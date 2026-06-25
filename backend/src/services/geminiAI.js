@@ -642,11 +642,22 @@ Return JSON: {"score": N, "feedback": "detailed feedback", "strengths": ["streng
 // ── Analyze Image (Vision AI) ─────────────────────────────────
 async function analyzeImage(base64, prompt = 'Describe this image in detail.', mimeType = 'image/jpeg') {
   if (!model) throw new Error('GEMINI_NOT_AVAILABLE');
-  const result = await model.generateContent([
-    prompt,
-    { inlineData: { mimeType, data: base64.replace(/^data:image\/\w+;base64,/, '') } },
-  ]);
-  return result.response.text();
+  const imagePart = { inlineData: { mimeType, data: base64.replace(/^data:image\/\w+;base64,/, '') } };
+  try {
+    const result = await model.generateContent([prompt, imagePart]);
+    return result.response.text();
+  } catch (err) {
+    const isRetryable = err.status === 429 || err.status === 503 ||
+      err.message?.includes('quota') || err.message?.includes('QUOTA') ||
+      err.message?.includes('overloaded') || err.message?.includes('RESOURCE_EXHAUSTED');
+    if (isRetryable) {
+      logger.warn('Quota/overload error on image analysis, retrying with gemini-1.5-flash:', err.message);
+      const fallback = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const result = await fallback.generateContent([prompt, imagePart]);
+      return result.response.text();
+    }
+    throw err;
+  }
 }
 
 // ── Availability check ────────────────────────────────────────

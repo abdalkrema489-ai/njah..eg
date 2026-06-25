@@ -410,10 +410,20 @@ async function summarizePdf(req, res) {
 
   const { rows } = await pool.query(
     `SELECT id, file_url, original_name, mime_type, subject
-     FROM files WHERE id = $1 AND (user_id = $2 OR is_public = true) AND mime_type = 'application/pdf'`,
+     FROM files WHERE id = $1 AND (user_id = $2 OR is_public = true)`,
     [fileId, req.user.id]
   );
-  if (!rows[0]) return res.status(404).json({ error: 'PDF not found' });
+  if (!rows[0]) {
+    return res.status(404).json({ error: req.body.language === 'ar' ? 'الملف غير موجود' : 'File not found' });
+  }
+  if (rows[0].mime_type !== 'application/pdf') {
+    return res.status(400).json({
+      error: req.body.language === 'ar'
+        ? 'التلخيص متاح حالياً لملفات PDF فقط'
+        : 'Summarization is currently only available for PDF files',
+      mimeType: rows[0].mime_type,
+    });
+  }
 
   const { text, pages } = await fetchPdfText(rows[0].file_url);
 
@@ -790,7 +800,10 @@ Always be encouraging.`;
     res.json({ correction: text, subject, grade });
   } catch (e) {
     logger.error('Homework correction error:', e.message);
-    res.status(500).json({ error: e.message });
+    if (e.message === 'GEMINI_NOT_AVAILABLE') {
+      return res.status(503).json({ error: req.body.language === 'ar' ? 'خدمة تصحيح الواجبات غير متاحة حالياً' : 'Homework correction service temporarily unavailable' });
+    }
+    res.status(500).json({ error: req.body.language === 'ar' ? 'حدث خطأ أثناء تصحيح الواجب، حاول مرة أخرى' : 'An error occurred while correcting the homework, please try again' });
   }
 }
 
