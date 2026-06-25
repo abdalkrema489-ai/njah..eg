@@ -122,7 +122,7 @@ export default function BoardPage() {
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 14, alignItems: 'center' }}>
           <Select value={sort} onChange={e => setSort(e.target.value)} style={{ width: 150, height: 44, borderRadius: 14, fontWeight: 900, fontSize: 12 }}>
             <option value="newest">NEWEST</option>
-            <option value="popular">VOPULAR</option>
+            <option value="popular">POPULAR</option>
           </Select>
           <div style={{ width: 260 }}>
             <Input placeholder="Search global assets..." value={search} onChange={e => setSearch(e.target.value)} prefix="🔍" style={{ height: 44, borderRadius: 14 }} />

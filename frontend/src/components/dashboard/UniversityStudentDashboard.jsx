@@ -302,7 +302,7 @@ export default function UniversityStudentDashboard() {
               { icon: '📄', label: isAr ? 'لخّص PDF' : 'Summarize PDF', sub: isAr ? 'ملخص الأوراق العلمية' : 'Research paper summarizer', path: '/tools' },
               { icon: '✍️', label: isAr ? 'مساعد الكتابة' : 'Essay Helper', sub: isAr ? 'راجع ابحاثك ومقالاتك' : 'Review your essays and reports', path: '/ai' },
               { icon: '🧪', label: isAr ? 'محاكي الامتحان' : 'Exam Simulator', sub: isAr ? 'أسئلة بنمط كليتك' : 'Questions in your college style', path: '/exam' },
-              { icon: '🔍', label: isAr ? 'بحث ذكي' : 'AI Web Search', sub: isAr ? 'استكشف المعرفة الحديثة' : 'Explore latest knowledge', path: '/ai-search' },
+              { icon: '🔍', label: isAr ? 'بحث ذكي' : 'AI Web Search', sub: isAr ? 'استكشف المعرفة الحديثة' : 'Explore latest knowledge', path: '/ai' },
             ].map(a => (
               <motion.div key={a.path} whileHover={{ x: 5 }} onClick={() => navigate(a.path)}
                 style={{ padding: '11px 14px', borderRadius: 12, background: 'var(--surface)', border: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12 }}

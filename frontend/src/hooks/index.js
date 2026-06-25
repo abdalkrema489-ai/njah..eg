@@ -4,6 +4,7 @@ import { io } from 'socket.io-client';
 import { useAuthStore, useUIStore, useNotifStore, useChatStore } from '../context/store';
 import { authAPI } from '../api/index';
 import { I18nContext } from '../i18n/index';
+import toast from 'react-hot-toast';
 
 // src/hooks/index.js
 
@@ -74,10 +75,16 @@ export function useSocket() {
     // Notifications (achievements, level up, etc.)
     const handleNotification = notif => addNotif(notif);
 
+    // Socket-level errors (e.g. guest restrictions, validation failures)
+    const handleSocketError = ({ message, code } = {}) => {
+      if (message) toast.error(message, { id: code || 'socket-error', duration: 4000 });
+    };
+
     socketInstance.on('new_message', handleNewMessage);
     socketInstance.on('notification', handleNotification);
     socketInstance.on('level_up', handleNotification);
     socketInstance.on('achievement', handleNotification);
+    socketInstance.on('error', handleSocketError);
 
     return () => {
       if (socketInstance) {
@@ -85,6 +92,7 @@ export function useSocket() {
         socketInstance.off('notification', handleNotification);
         socketInstance.off('level_up', handleNotification);
         socketInstance.off('achievement', handleNotification);
+        socketInstance.off('error', handleSocketError);
       }
     };
   }, [token, user?.id, addMessage, addNotif]);

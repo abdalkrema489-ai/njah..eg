@@ -315,13 +315,7 @@ export const adminAPI = {
   processWithdrawal: (id, d) => client.patch(`/admin/withdrawals/${id}`, d),
 };
 
-export const aiSearchAPI = {
-  chat:     d => client.post('/ai-search/chat', d),
-  search:   d => client.post('/ai-search/search', d),
-  explain:  d => client.post('/ai-search/explain', d),
-  homework: d => client.post('/ai-search/homework', d),
-  news:     d => client.post('/ai-search/news', d),
-};
+
 
 export const affiliateAPI = {
   getLinks:   () => client.get('/affiliates'),
