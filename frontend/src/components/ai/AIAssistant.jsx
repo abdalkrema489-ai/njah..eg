@@ -78,7 +78,7 @@ function StatusBadge({ provider }) {
   const b = labels[provider] || labels.najah_inhouse;
   return (
     <span style={{
-      fontSize: 10, fontWeight: 700, letterSpacing: 0.5,
+      fontSize: 12, fontWeight: 700, letterSpacing: 0.5,
       padding: '2px 8px', borderRadius: 20,
       color: b.color, background: b.bg,
     }}>{b.label}</span>
@@ -122,7 +122,7 @@ function MessageBubble({ msg, onCopy, onSpeak, isSpeaking }) {
       <div style={{ maxWidth: '80%', display: 'flex', flexDirection: 'column', gap: 4 }}>
         {!isUser && msg.provider && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text2)' }}>Najah AI</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text2)' }}>Najah AI</span>
             <StatusBadge provider={msg.provider} />
           </div>
         )}
@@ -134,7 +134,7 @@ function MessageBubble({ msg, onCopy, onSpeak, isSpeaking }) {
             ? 'linear-gradient(135deg, #6366F1, #8B5CF6)'
             : 'var(--surface2)',
           color: isUser ? '#fff' : 'var(--text)',
-          fontSize: 14, lineHeight: 1.7,
+          fontSize: 15, lineHeight: 1.7,
           border: isUser ? 'none' : '1px solid var(--border)',
           boxShadow: isUser
             ? '0 4px 20px rgba(99,102,241,0.3)'
@@ -170,7 +170,7 @@ function MessageBubble({ msg, onCopy, onSpeak, isSpeaking }) {
                   alignItems: 'center', justifyContent: 'center', color: 'var(--text3)',
                 }}>{btn.icon}</button>
             ))}
-            <span style={{ fontSize: 10, color: 'var(--text3)', alignSelf: 'center', marginLeft: 2 }}>
+            <span style={{ fontSize: 12, color: 'var(--text3)', alignSelf: 'center', marginLeft: 2 }}>
               {msg.ts ? new Date(msg.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
             </span>
           </div>
@@ -195,7 +195,7 @@ function SuggestionsRow({ suggestions, onSelect }) {
           whileTap={{ scale: 0.98 }}
           onClick={() => onSelect(s)}
           style={{
-            padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+            padding: '6px 14px', borderRadius: 20, fontSize: 14, fontWeight: 600,
             background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)',
             color: '#6366F1', cursor: 'pointer',
           }}
@@ -519,15 +519,15 @@ function AIChat() {
             }}
           >
             <div style={{ padding: '16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 700, fontSize: 14 }}>{isAr ? 'المحادثات' : 'History'}</span>
+              <span style={{ fontWeight: 700, fontSize: 16 }}>{isAr ? 'المحادثات' : 'History'}</span>
               <button onClick={() => { setMessages([{ role:'assistant', content: isAr ? 'محادثة جديدة! اسألني أي شيء.' : 'New chat! Ask me anything.', provider:'gemini', ts:new Date() }]); setConvId(null); setSuggestions([]); }}
-                style={{ padding: '6px 12px', borderRadius: 10, background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color:'#fff', border:'none', cursor:'pointer', fontSize:12, fontWeight:700 }}>
+                style={{ padding: '6px 12px', borderRadius: 10, background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color:'#fff', border:'none', cursor:'pointer', fontSize:14, fontWeight:700 }}>
                 + {isAr ? 'جديد' : 'New'}
               </button>
             </div>
             <div className="scroll-y" style={{ flex: 1 }}>
               {conversations.length === 0 ? (
-                <div style={{ padding: 20, textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
+                <div style={{ padding: 20, textAlign: 'center', color: 'var(--text3)', fontSize: 15 }}>
                   {isAr ? 'لا توجد محادثات سابقة' : 'No conversations yet'}
                 </div>
               ) : conversations.map(c => (
@@ -537,8 +537,8 @@ function AIChat() {
                     background: convId === c._id ? 'rgba(99,102,241,0.10)' : 'transparent',
                     borderLeft: convId === c._id ? '3px solid #6366F1' : '3px solid transparent',
                   }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.title || 'Chat'}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.title || 'Chat'}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text3)', marginTop: 2 }}>
                     {new Date(c.updatedAt).toLocaleDateString()}
                   </div>
                 </div>
@@ -567,13 +567,24 @@ function AIChat() {
           </motion.button>
           <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: '0 0 16px rgba(99,102,241,0.4)' }}>🎓</div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 800, fontSize: 17, fontFamily: 'var(--font-head)' }}>Najah AI</div>
-            <div style={{ fontSize: 11, color: geminiOk ? '#10B981' : '#F59E0B', fontWeight: 600 }}>
-              {geminiOk === null
-                ? '⏳ Connecting...'
-                : geminiOk
-                  ? '● Gemini 2.0 Flash · Online'
-                  : '● Najah In-House AI · Online'}
+            <div style={{ fontWeight: 800, fontSize: 18, fontFamily: 'var(--font-head)' }}>Najah AI</div>
+            <div style={{ fontSize: 13, color: geminiOk ? '#10B981' : '#F59E0B', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+              {geminiOk === null ? (
+                <span>⏳ Connecting...</span>
+              ) : (
+                <>
+                  <span style={{
+                    display: 'inline-block',
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: geminiOk ? '#10B981' : '#F59E0B',
+                    boxShadow: geminiOk ? '0 0 8px #10B981' : '0 0 8px #F59E0B',
+                    animation: 'najah-pulse 2s infinite'
+                  }} />
+                  <span>{geminiOk ? (isAr ? 'Gemini 2.0 Flash · متصل' : 'Gemini 2.0 Flash · Online') : (isAr ? 'Najah In-House AI · متصل' : 'Najah In-House AI · Online')}</span>
+                </>
+              )}
             </div>
           </div>
 
@@ -586,11 +597,11 @@ function AIChat() {
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '8px 16px', borderRadius: 20,
               background: searchMode ? 'linear-gradient(135deg,#06B6D4,#0891B2)' : 'var(--glass)',
-              color: searchMode ? '#fff' : 'var(--text2)', cursor: 'pointer', fontSize: 13, fontWeight: 700,
+              color: searchMode ? '#fff' : 'var(--text2)', cursor: 'pointer', fontSize: 15, fontWeight: 700,
             }}
           >
             🔍 {isAr ? 'بحث' : 'Search'}
-            {searchMode && <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.25)', padding: '1px 6px', borderRadius: 10 }}>ON</span>}
+            {searchMode && <span style={{ fontSize: 12, background: 'rgba(255,255,255,0.25)', padding: '1px 6px', borderRadius: 10 }}>ON</span>}
           </motion.button>
 
           <motion.button
@@ -609,7 +620,7 @@ function AIChat() {
               display: 'flex', alignItems: 'center', gap: 5,
               padding: '8px 14px', borderRadius: 20,
               background: 'var(--glass)', border: '1px solid var(--border)',
-              color: 'var(--text3)', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+              color: 'var(--text3)', cursor: 'pointer', fontSize: 14, fontWeight: 600,
             }}
           >
             🗑️ {isAr ? 'مسح الذاكرة' : 'Clear Memory'}
@@ -626,7 +637,7 @@ function AIChat() {
           {/* Quick prompts (when only the welcome message is shown) */}
           {messages.length === 1 && (
             <div style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10, marginLeft: 46 }}>
+              <div style={{ fontSize: 14, color: 'var(--text3)', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10, marginLeft: 46 }}>
                 {isAr ? 'جرب هذه الأسئلة' : 'Try these'}
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginLeft: 46 }}>
@@ -636,7 +647,7 @@ function AIChat() {
                     whileTap={{ scale: 0.97 }}
                     onClick={() => sendMessage(p)}
                     style={{
-                      padding: '8px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600,
+                      padding: '8px 16px', borderRadius: 20, fontSize: 15, fontWeight: 600,
                       background: 'var(--surface2)', border: '1px solid var(--border)',
                       color: 'var(--text2)', cursor: 'pointer',
                     }}>{p}</motion.button>
@@ -697,7 +708,7 @@ function AIChat() {
                 rows={1}
                 className="floating-card"
                 style={{
-                  width: '100%', padding: '14px 20px', borderRadius: 20, fontSize: 14,
+                  width: '100%', padding: '14px 20px', borderRadius: 20, fontSize: 16,
                   resize: 'none', outline: 'none', lineHeight: 1.5,
                   maxHeight: 140, overflowY: 'auto', color: 'var(--text)',
                   border: '1px solid var(--border)'
@@ -740,7 +751,7 @@ function AIChat() {
               {loading ? <Spinner size="sm" /> : '➤'}
             </motion.button>
           </div>
-          <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 6, textAlign: 'center' }}>
+          <div style={{ fontSize: 13, color: 'var(--text3)', marginTop: 6, textAlign: 'center' }}>
             {isAr ? 'Najah AI يغطي كامل المنهج المصري من الصف الأول الابتدائي حتى الثانوية العامة' : 'Najah AI covers the full Egyptian curriculum — Primary 1 through Secondary 3'}
           </div>
         </div>
@@ -751,9 +762,14 @@ function AIChat() {
         .ai-msg-content h3.ai-h3{font-size:1.05em;font-weight:700;margin:8px 0 4px;color:inherit}
         .ai-msg-content h4.ai-h4{font-size:1em;font-weight:700;margin:6px 0 3px;color:inherit}
         .ai-msg-content li.ai-li,.ai-msg-content li.ai-li-num{margin:3px 0;padding-left:4px}
-        .ai-msg-content pre.ai-code{background:rgba(0,0,0,0.2);border-radius:10px;padding:12px;overflow-x:auto;font-size:13px;margin:8px 0;font-family:monospace}
+        .ai-msg-content pre.ai-code{background:rgba(0,0,0,0.2);border-radius:10px;padding:12px;overflow-x:auto;font-size:14px;margin:8px 0;font-family:monospace}
         .ai-msg-content code.ai-inline-code{background:rgba(99,102,241,0.15);padding:2px 6px;border-radius:5px;font-family:monospace;font-size:0.9em}
         .ai-msg-content strong{font-weight:800}
+        @keyframes najah-pulse {
+          0% { opacity: 0.6; transform: scale(0.95); }
+          50% { opacity: 1; transform: scale(1.05); }
+          100% { opacity: 0.6; transform: scale(0.95); }
+        }
       `}</style>
     </div>
   );
@@ -897,60 +913,6 @@ function QuizPanel() {
   );
 }
 
-// ── Summarize PDF Panel ──────────────────────────────────────
-function SummarizePanel() {
-  const { language } = useUIStore();
-  const isAr = language === 'ar';
-  return (
-    <div style={{ padding: 24, maxWidth: 800, margin: '0 auto' }}>
-      <div style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>📄 {isAr ? 'تلخيص ملف PDF' : 'Summarize PDF'}</h2>
-        <p style={{ color: 'var(--text3)', fontSize: 14 }}>
-          {isAr
-            ? 'لتلخيص ملف PDF بواجهة مُحسّنة، توجّه لصفحة الملفات واضغط زر "تحليل AI" على أي ملف.'
-            : 'For the best PDF summarization experience, go to the Files page and click "AI ANALYZE" on any PDF file.'}
-        </p>
-      </div>
-      <div style={{ padding: 20, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 16, textAlign: 'center', color: 'var(--text3)', fontSize: 14, lineHeight: 1.8 }}>
-        <div style={{ fontSize: 36, marginBottom: 12 }}>📁</div>
-        {isAr
-          ? '💡 لتلخيص ملف PDF، اذهب إلى صفحة الملفات واضغط "تحليل AI" على أي ملف'
-          : '💡 To summarize a PDF, go to the Files page and click "AI ANALYZE" on any file'}
-        <div style={{ marginTop: 16 }}>
-          <a href="/files" style={{
-            display: 'inline-block', padding: '10px 24px', borderRadius: 12,
-            background: 'linear-gradient(135deg,#7C3AED,#5B21B6)', color: '#fff',
-            textDecoration: 'none', fontWeight: 700, fontSize: 14,
-            boxShadow: '0 4px 16px rgba(124,58,237,0.35)',
-          }}>
-            {isAr ? '← اذهب إلى صفحة الملفات' : '← Go to Files Page'}
-          </a>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-// ── Study Plan Panel ──────────────────────────────────────────
-function StudyPlanPanel() {
-  const { language } = useUIStore();
-  const isAr = language === 'ar';
-  return (
-    <div style={{ padding: 24 }}>
-      <div style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>
-          📅 {isAr ? 'خطة الدراسة الذكية' : 'AI Study Plan'}
-        </h2>
-        <p style={{ color: 'var(--text3)', fontSize: 14 }}>
-          {isAr ? 'خطة مذاكرة مخصصة بناءً على موادك وتاريخ امتحانك' : 'A personalized schedule tailored to your subjects, level, and exam date'}
-        </p>
-      </div>
-      <StudyPlanGenerator isAr={isAr} />
-    </div>
-  );
-}
-
 // ── YouTube Summary Panel ─────────────────────────────────────
 function YouTubePanel() {
   const { language } = useUIStore();
@@ -969,35 +931,35 @@ function YouTubePanel() {
   return (
     <div style={{ padding: 24, maxWidth: 800, margin: '0 auto' }}>
       <div style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>🎥 {isAr?'تلخيص فيديو يوتيوب':'YouTube Summary'}</h2>
-        <p style={{ color: 'var(--text3)', fontSize: 14 }}>{isAr?'الصق رابط فيديو تعليمي وسأقوم بتلخيصه فوراً':'Paste an educational YouTube link and get an instant AI summary'}</p>
+        <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 4 }}>🎥 {isAr?'تلخيص فيديو يوتيوب':'YouTube Summary'}</h2>
+        <p style={{ color: 'var(--text3)', fontSize: 15 }}>{isAr?'الصق رابط فيديو تعليمي وسأقوم بتلخيصه فوراً':'Paste an educational YouTube link and get an instant AI summary'}</p>
       </div>
       <div style={{ background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:20, padding:24, marginBottom:20 }}>
-        <label style={{ fontSize:12, fontWeight:700, color:'var(--text3)', display:'block', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.08em' }}>YouTube URL</label>
+        <label style={{ fontSize:14, fontWeight:700, color:'var(--text3)', display:'block', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.08em' }}>YouTube URL</label>
         <div style={{ display:'flex', gap:10 }}>
           <input value={url} onChange={e=>setUrl(e.target.value)} onKeyDown={e=>e.key==='Enter'&&doSummarize()}
             placeholder="https://www.youtube.com/watch?v=..."
-            style={{ flex:1, padding:'12px 16px', borderRadius:12, background:'var(--surface)', border:'1px solid var(--border)', color:'var(--text)', fontSize:14 }} />
+            style={{ flex:1, padding:'12px 16px', borderRadius:12, background:'var(--surface)', border:'1px solid var(--border)', color:'var(--text)', fontSize:16 }} />
           <motion.button whileHover={{ scale:1.04 }} whileTap={{ scale:0.96 }}
             onClick={doSummarize} disabled={loading}
-            style={{ padding:'12px 24px', borderRadius:12, background:'linear-gradient(135deg,#EF4444,#DC2626)', color:'#fff', border:'none', cursor:'pointer', fontWeight:700, fontSize:14, flexShrink:0, boxShadow:'0 4px 16px rgba(239,68,68,0.35)' }}>
+            style={{ padding:'12px 24px', borderRadius:12, background:'linear-gradient(135deg,#EF4444,#DC2626)', color:'#fff', border:'none', cursor:'pointer', fontWeight:700, fontSize:16, flexShrink:0, boxShadow:'0 4px 16px rgba(239,68,68,0.35)' }}>
             {loading?<Spinner size="sm" />:'▶ '+(isAr?'لخص':'Go')}
           </motion.button>
         </div>
-        <p style={{ fontSize:11, color:'var(--text3)', marginTop:10 }}>ℹ️ {isAr?'يعمل مع الفيديوهات التي تحتوي على ترجمة':'Works with videos that have captions'}</p>
+        <p style={{ fontSize:13, color:'var(--text3)', marginTop:10 }}>ℹ️ {isAr?'يعمل مع الفيديوهات التي تحتوي على ترجمة':'Works with videos that have captions'}</p>
       </div>
-      {loading&&<div style={{ textAlign:'center', padding:40 }}><Spinner size="lg" /><p style={{ color:'var(--text3)', marginTop:16, fontSize:14 }}>{isAr?'جارٍ تحليل الفيديو...':'Analyzing video…'}</p></div>}
+      {loading&&<div style={{ textAlign:'center', padding:40 }}><Spinner size="lg" /><p style={{ color:'var(--text3)', marginTop:16, fontSize:15 }}>{isAr?'جارٍ تحليل الفيديو...':'Analyzing video…'}</p></div>}
       {summary&&(
         <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
           style={{ background:'var(--surface2)', border:'1px solid var(--border2)', borderRadius:20, padding:24 }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-            <h3 style={{ fontSize:16, fontWeight:700 }}>🎬 {isAr?'ملخص الفيديو':'Video Summary'}</h3>
+            <h3 style={{ fontSize:18, fontWeight:700 }}>🎬 {isAr?'ملخص الفيديو':'Video Summary'}</h3>
             <div style={{ display:'flex', gap:8 }}>
-              <button onClick={()=>{navigator.clipboard.writeText(summary);toast.success(isAr?'تم النسخ!':'Copied!');}} style={{ padding:'6px 14px', borderRadius:8, background:'var(--surface)', border:'1px solid var(--border)', cursor:'pointer', fontSize:12, fontWeight:600, color:'var(--text2)' }}>📋 {isAr?'نسخ':'Copy'}</button>
-              <button onClick={()=>{setUrl('');setSummary('');}} style={{ padding:'6px 14px', borderRadius:8, background:'var(--surface)', border:'1px solid var(--border)', cursor:'pointer', fontSize:12, fontWeight:600, color:'var(--text2)' }}>+{isAr?'جديد':'New'}</button>
+              <button onClick={()=>{navigator.clipboard.writeText(summary);toast.success(isAr?'تم النسخ!':'Copied!');}} style={{ padding:'6px 14px', borderRadius:8, background:'var(--surface)', border:'1px solid var(--border)', cursor:'pointer', fontSize:14, fontWeight:600, color:'var(--text2)' }}>📋 {isAr?'نسخ':'Copy'}</button>
+              <button onClick={()=>{setUrl('');setSummary('');}} style={{ padding:'6px 14px', borderRadius:8, background:'var(--surface)', border:'1px solid var(--border)', cursor:'pointer', fontSize:14, fontWeight:600, color:'var(--text2)' }}>+{isAr?'جديد':'New'}</button>
             </div>
           </div>
-          <div className="ai-msg-content" style={{ fontSize:14, lineHeight:1.75, color:'var(--text)' }}
+          <div className="ai-msg-content" style={{ fontSize:15, lineHeight:1.75, color:'var(--text)' }}
             dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(renderMarkdown(summary), SANITIZE_OPTS) }} />
         </motion.div>
       )}
@@ -1007,12 +969,11 @@ function YouTubePanel() {
 
 // ── Tabs Container (main export) ─────────────────────────────
 const TABS = [
-  { id:'chat',      labelEn:'💬 Chat',       labelAr:'💬 المحادثة' },
-  { id:'quiz',      labelEn:'🧠 Quiz',       labelAr:'🧠 الاختبارات' },
-  { id:'summarize', labelEn:'📄 Summarize',  labelAr:'📄 التلخيص' },
-  { id:'plan',      labelEn:'📅 Study Plan', labelAr:'📅 خطة الدراسة' },
-  { id:'youtube',   labelEn:'🎥 YouTube',    labelAr:'🎥 يوتيوب' },
-  { id:'homework',  labelEn:'📸 Homework',   labelAr:'📸 صحح واجبك' },
+  { id:'chat',      labelEn:'💬 Chat',            labelAr:'💬 المحادثة' },
+  { id:'quiz',      labelEn:'🧠 Quiz',            labelAr:'🧠 الاختبارات' },
+  { id:'summarize', labelEn:'🎥 YouTube Summary', labelAr:'🎥 تلخيص يوتيوب' },
+  { id:'plan',      labelEn:'📅 Study Plan',      labelAr:'📅 خطة الدراسة' },
+  { id:'homework',  labelEn:'📸 Homework',        labelAr:'📸 صحح واجبك' },
 ];
 
 export default function AIAssistant() {
@@ -1025,7 +986,20 @@ export default function AIAssistant() {
       <div style={{ display:'flex', gap:4, padding:'10px 20px', background:'var(--surface2)', borderBottom:'1px solid var(--border)', overflowX:'auto', flexShrink:0, scrollbarWidth:'none' }}>
         {TABS.map(t => (
           <motion.button key={t.id} whileHover={{ scale:1.04 }} whileTap={{ scale:0.96 }} onClick={()=>setTab(t.id)}
-            style={{ padding:'8px 20px', borderRadius:12, fontWeight:700, fontSize:13.5, border:'none', cursor:'pointer', transition:'all 0.2s', whiteSpace:'nowrap', background:tab===t.id?'linear-gradient(135deg,#6366F1,#8B5CF6)':'var(--surface)', color:tab===t.id?'#fff':'var(--text2)', boxShadow:tab===t.id?'0 4px 14px rgba(99,102,241,0.30)':'none' }}>
+            style={{
+              padding: '8px 20px',
+              borderRadius: 12,
+              fontWeight: 700,
+              fontSize: tab === t.id ? 15 : 13.5,
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              whiteSpace: 'nowrap',
+              background: tab === t.id ? 'linear-gradient(135deg,#6366F1,#8B5CF6)' : 'var(--surface)',
+              color: tab === t.id ? '#fff' : 'var(--text2)',
+              boxShadow: tab === t.id ? '0 4px 14px rgba(99,102,241,0.30)' : 'none',
+              transform: tab === t.id ? 'scale(1.03)' : 'scale(1)'
+            }}>
               {isAr ? t.labelAr : t.labelEn}
           </motion.button>
         ))}
@@ -1033,9 +1007,8 @@ export default function AIAssistant() {
       <div style={{ flex:1, overflowY:'auto', background:'var(--ink2)' }}>
         {tab==='chat'      && <AIChat />}
         {tab==='quiz'      && <QuizPanel />}
-        {tab==='summarize' && <SummarizePanel />}
+        {tab==='summarize' && <YouTubePanel />}
         {tab==='plan'      && <StudyPlanPanel />}
-        {tab==='youtube'   && <YouTubePanel />}
         {tab==='homework'  && <HomeworkCorrector isAr={isAr} />}
       </div>
     </div>

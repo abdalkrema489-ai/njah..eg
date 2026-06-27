@@ -299,9 +299,9 @@ export default function UniversityStudentDashboard() {
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {[
-              { icon: '📄', label: isAr ? 'لخّص PDF' : 'Summarize PDF', sub: isAr ? 'ملخص الأوراق العلمية' : 'Research paper summarizer', path: '/tools' },
+              { icon: '📄', label: isAr ? 'لخّص PDF' : 'Summarize PDF', sub: isAr ? 'ملخص الأوراق العلمية' : 'Research paper summarizer', path: '/files' },
               { icon: '✍️', label: isAr ? 'مساعد الكتابة' : 'Essay Helper', sub: isAr ? 'راجع ابحاثك ومقالاتك' : 'Review your essays and reports', path: '/ai' },
-              { icon: '🧪', label: isAr ? 'محاكي الامتحان' : 'Exam Simulator', sub: isAr ? 'أسئلة بنمط كليتك' : 'Questions in your college style', path: '/exam' },
+              { icon: '🧪', label: isAr ? 'محاكي الامتحان' : 'Exam Simulator', sub: isAr ? 'أسئلة بنمط كليتك' : 'Questions in your college style', path: '/files' },
               { icon: '🔍', label: isAr ? 'بحث ذكي' : 'AI Web Search', sub: isAr ? 'استكشف المعرفة الحديثة' : 'Explore latest knowledge', path: '/ai' },
             ].map(a => (
               <motion.div key={a.path} whileHover={{ x: 5 }} onClick={() => navigate(a.path)}

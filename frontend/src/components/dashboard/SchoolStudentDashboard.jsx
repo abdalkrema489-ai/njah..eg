@@ -233,7 +233,7 @@ export default function SchoolStudentDashboard() {
           { emoji: '🤖', label: isAr ? 'المساعد الذكي' : 'AI Tutor',      path: '/ai',           accent: '#7C3AED' },
           { emoji: '⏱️', label: isAr ? 'بدء المذاكرة'  : 'Start Focus',   path: '/focus',        accent: '#F59E0B' },
           { emoji: '📝', label: isAr ? 'واجباتي'        : 'My Homework',   path: '/groups',       accent: '#10B981' },
-          { emoji: '🧪', label: isAr ? 'اختبار سريع'   : 'Quick Quiz',    path: '/exam',         accent: '#06B6D4' },
+          { emoji: '🧪', label: isAr ? 'اختبار سريع'   : 'Quick Quiz',    path: '/files',         accent: '#06B6D4' },
           { emoji: '💬', label: isAr ? 'رسائل'          : 'Messages',      path: '/chat',         accent: '#EF4444' },
         ].map(a => (
           <motion.div key={a.path} variants={fadeUp}>
