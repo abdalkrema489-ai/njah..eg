@@ -240,9 +240,9 @@ async function start() {
 
     // Databases - parallel connecting
     Promise.allSettled([
-      connectPostgres().catch(e => logger.warn('⚠️  Postgres unavailable:', e.message)),
-      connectMongo().catch(e => logger.warn('⚠️  MongoDB unavailable:', e.message)),
-      connectRedis().catch(e => logger.warn('⚠️  Redis unavailable:', e.message))
+      connectPostgres().catch(e => logger.warn(`⚠️  Postgres unavailable: ${e.message}`)),
+      connectMongo().catch(e => logger.warn(`⚠️  MongoDB unavailable: ${e.message}`)),
+      connectRedis().catch(e => logger.warn(`⚠️  Redis unavailable: ${e.message}`))
     ]).then(async () => {
       logger.info('📢 Database initialization sequence complete');
       

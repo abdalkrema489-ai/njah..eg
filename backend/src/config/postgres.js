@@ -10,27 +10,40 @@ const pool = new Pool({
   ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000,
+  connectionTimeoutMillis: 15000,
 });
 
-logger.info('PostgreSQL connection string set to:', connString ? `postgresql://postgres:***@localhost:5432/najah_db` : 'NOT SET');
+logger.info(`PostgreSQL connection string set to: ${connString ? 'postgresql://postgres:***@localhost:5432/najah_db' : 'NOT SET'}`);
 pool.on('error', err => logger.error('PG pool error:', err));
 
-async function connectPostgres() {
-  logger.info('Attempting PostgreSQL connection with:', {
+async function connectPostgres(retries = 5, delay = 5000) {
+  logger.info('Attempting PostgreSQL connection with: ' + JSON.stringify({
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
     user: process.env.DB_USER,
     database: process.env.DB_NAME,
     hasPassword: !!process.env.DB_PASSWORD,
     passwordLength: process.env.DB_PASSWORD?.length,
-  });
-  const client = await pool.connect();
-  logger.info('✅ PostgreSQL connected');
-  try {
-    await runMigrations(client);
-  } finally {
-    client.release();
+  }));
+
+  for (let i = 1; i <= retries; i++) {
+    try {
+      logger.info(`PostgreSQL connection attempt ${i}/${retries}...`);
+      const client = await pool.connect();
+      logger.info('✅ PostgreSQL connected');
+      try {
+        await runMigrations(client);
+      } finally {
+        client.release();
+      }
+      return;
+    } catch (err) {
+      logger.warn(`⚠️ PostgreSQL connection attempt ${i} failed: ${err.message}`);
+      if (i === retries) {
+        throw err;
+      }
+      await new Promise(res => setTimeout(res, delay));
+    }
   }
 }
 

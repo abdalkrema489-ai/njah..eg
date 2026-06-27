@@ -139,7 +139,7 @@ async function chat(req, res) {
       const geminiRes = await geminiAI.chat(contextMessage, history, language, req.user.id);
       if (typeof geminiRes === 'object' && geminiRes !== null) {
         reply = geminiRes.text;
-        usedProvider = geminiRes.model || 'gemini-1.5-flash-fallback';
+        usedProvider = geminiRes.model || 'gemini-flash-latest-fallback';
       } else {
         reply = geminiRes;
         usedProvider = 'gemini-2.0-flash';

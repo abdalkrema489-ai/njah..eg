@@ -13,7 +13,7 @@ export default function AdminLoginPage() {
 
   const handleQuickFill = () => {
     setEmail('ahmed1abdalkrem1@gmail.com');
-    setPassword('Admin@123456');
+    setPassword('Admin@Najah2026!');
   };
 
   const handleLogin = async (e) => {

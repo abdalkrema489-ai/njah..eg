@@ -143,7 +143,7 @@ export default defineConfig({
       : ['postmalarial-linearly-milly.ngrok-free.dev'],
     proxy: {
       '/api':       { target: 'http://localhost:5000', changeOrigin: true },
-      '/socket.io': { target: 'http://localhost:5000', ws: true },
+      '/socket.io': { target: 'http://localhost:5000', ws: true, changeOrigin: true },
     },
   },
 

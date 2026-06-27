@@ -49,14 +49,18 @@ async function saveMemory(userId, userMessage, aiReply) {
 async function getRelevantMemories(userId, query) {
   if (!memoryEnabled || !MemoryClient || !userId) return '';
   try {
-    const results = await MemoryClient.search(query, {
-      user_id: userId.toString(),
+    const response = await MemoryClient.search(query, {
+      filters: { user_id: userId.toString() },
       limit: 5,
     });
 
-    if (!results || results.length === 0) return '';
+    const memoriesList = Array.isArray(response) 
+      ? response 
+      : (response && Array.isArray(response.results) ? response.results : []);
 
-    const facts = results
+    if (memoriesList.length === 0) return '';
+
+    const facts = memoriesList
       .map(m => m.memory || m.text || '')
       .filter(Boolean)
       .join('\n- ');
@@ -70,7 +74,7 @@ async function getRelevantMemories(userId, query) {
     if (msg.includes('401') || msg.includes('Unauthorized') || msg.includes('api_key')) {
       logger.warn('Mem0 search skipped: invalid or missing MEM0_API_KEY (set MEM0_ENABLED=false to silence)');
     } else {
-      logger.warn('Mem0 search error:', msg);
+      logger.warn(`Mem0 search error: ${msg}`);
     }
     return '';
   }
@@ -80,10 +84,10 @@ async function getRelevantMemories(userId, query) {
 async function clearUserMemory(userId) {
   if (!memoryEnabled || !MemoryClient || !userId) return;
   try {
-    await MemoryClient.delete_all({ user_id: userId.toString() });
+    await MemoryClient.deleteAll({ user_id: userId.toString() });
     logger.info(`Mem0: cleared memory for user ${userId}`);
   } catch (err) {
-    logger.warn('Mem0 clear error:', err.message);
+    logger.warn(`Mem0 clear error: ${err.message}`);
   }
 }
 

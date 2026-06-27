@@ -4,20 +4,28 @@
 const mongoose = require('mongoose');
 const logger   = require('../utils/logger');
 
-async function connectMongo() {
+async function connectMongo(retries = 5, delay = 5000) {
   if (!process.env.MONGODB_URI) {
     logger.warn('⚠️  MONGODB_URI not set — MongoDB features disabled');
     return;
   }
-  try {
-    await mongoose.connect(process.env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 10000,
-      connectTimeoutMS: 10000,
-      socketTimeoutMS: 45000,
-    });
-    logger.info('✅ MongoDB connected');
-  } catch (err) {
-    logger.error('❌ MongoDB connection failed:', err.message);
+  for (let i = 1; i <= retries; i++) {
+    try {
+      logger.info(`MongoDB connection attempt ${i}/${retries}...`);
+      await mongoose.connect(process.env.MONGODB_URI, {
+        serverSelectionTimeoutMS: 15000,
+        connectTimeoutMS: 15000,
+        socketTimeoutMS: 45000,
+      });
+      logger.info('✅ MongoDB connected');
+      return;
+    } catch (err) {
+      logger.warn(`⚠️ MongoDB connection attempt ${i} failed: ${err.message}`);
+      if (i === retries) {
+        throw err;
+      }
+      await new Promise(res => setTimeout(res, delay));
+    }
   }
 }
 mongoose.connection.on('disconnected', () => logger.warn('MongoDB disconnected'));

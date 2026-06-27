@@ -95,10 +95,10 @@ function wrapModel(originalModel, options) {
               err.message?.includes('quota') || err.message?.includes('QUOTA') ||
               err.message?.includes('overloaded') || err.message?.includes('RESOURCE_EXHAUSTED');
             if (isRetryable) {
-              logger.warn('Retryable error on gemini-2.0-flash, falling back to gemini-1.5-flash for generateContent:', err.message);
+              logger.warn('Retryable error on gemini-2.0-flash, falling back to gemini-flash-latest for generateContent:', err.message);
               const fallback = genAI.getGenerativeModel({
                 ...options,
-                model: 'gemini-1.5-flash'
+                model: 'gemini-flash-latest'
               });
               return await fallback.generateContent(...args);
             }
@@ -121,10 +121,10 @@ function wrapModel(originalModel, options) {
                       err.message?.includes('quota') || err.message?.includes('QUOTA') ||
                       err.message?.includes('overloaded') || err.message?.includes('RESOURCE_EXHAUSTED');
                     if (isRetryable) {
-                      logger.warn('Retryable error on gemini-2.0-flash, falling back to gemini-1.5-flash for sendMessage:', err.message);
+                      logger.warn('Retryable error on gemini-2.0-flash, falling back to gemini-flash-latest for sendMessage:', err.message);
                       const fallbackModel = genAI.getGenerativeModel({
                         ...options,
-                        model: 'gemini-1.5-flash'
+                        model: 'gemini-flash-latest'
                       });
                       const fallbackChat = fallbackModel.startChat(chatOptions);
                       return await fallbackChat.sendMessage(...args);
@@ -143,10 +143,10 @@ function wrapModel(originalModel, options) {
                       err.message?.includes('quota') || err.message?.includes('QUOTA') ||
                       err.message?.includes('overloaded') || err.message?.includes('RESOURCE_EXHAUSTED');
                     if (isRetryable) {
-                      logger.warn('Retryable error on gemini-2.0-flash, falling back to gemini-1.5-flash for sendMessageStream:', err.message);
+                      logger.warn('Retryable error on gemini-2.0-flash, falling back to gemini-flash-latest for sendMessageStream:', err.message);
                       const fallbackModel = genAI.getGenerativeModel({
                         ...options,
-                        model: 'gemini-1.5-flash'
+                        model: 'gemini-flash-latest'
                       });
                       const fallbackChat = fallbackModel.startChat(chatOptions);
                       return await fallbackChat.sendMessageStream(...args);
@@ -293,7 +293,7 @@ async function chat(message, history = [], language = 'en', userId = null) {
     return text;
   } catch (err) {
     if (err.message?.includes('quota') || err.message?.includes('QUOTA') || err.message?.includes('429')) {
-      logger.warn('Gemini 2.0 quota error, falling back to gemini-1.5-flash');
+      logger.warn('Gemini 2.0 quota error, falling back to gemini-flash-latest');
       const safetySettings = [
         { category: HarmCategory.HARM_CATEGORY_HARASSMENT,        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
         { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,       threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
@@ -301,8 +301,8 @@ async function chat(message, history = [], language = 'en', userId = null) {
         { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
       ];
       const generationConfig = { temperature: 0.72, topK: 50, topP: 0.93, maxOutputTokens: 4096, candidateCount: 1 };
-      // Try gemini-1.5-flash first, then gemini-1.5-flash-8b as last resort
-      const fallbackModels = ['gemini-1.5-flash', 'gemini-1.5-flash-8b'];
+      // Try gemini-flash-latest first, then gemini-flash-lite-latest as last resort
+      const fallbackModels = ['gemini-flash-latest', 'gemini-flash-lite-latest'];
       for (const fallbackName of fallbackModels) {
         try {
           const fallbackModel = genAI.getGenerativeModel({
@@ -347,7 +347,7 @@ async function chatStream(message, history = [], res, userId = null) {
   const hist = buildHistory(history);
 
   // Waterfall: try each model in order until one streams successfully
-  const modelsToTry = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-8b'];
+  const modelsToTry = ['gemini-2.0-flash', 'gemini-flash-latest', 'gemini-flash-lite-latest'];
 
   for (const modelName of modelsToTry) {
     try {
@@ -651,8 +651,8 @@ async function analyzeImage(base64, prompt = 'Describe this image in detail.', m
       err.message?.includes('quota') || err.message?.includes('QUOTA') ||
       err.message?.includes('overloaded') || err.message?.includes('RESOURCE_EXHAUSTED');
     if (isRetryable) {
-      logger.warn('Quota/overload error on image analysis, retrying with gemini-1.5-flash:', err.message);
-      const fallback = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      logger.warn('Quota/overload error on image analysis, retrying with gemini-flash-latest:', err.message);
+      const fallback = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
       const result = await fallback.generateContent([prompt, imagePart]);
       return result.response.text();
     }
