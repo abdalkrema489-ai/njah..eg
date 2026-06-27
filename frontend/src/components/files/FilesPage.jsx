@@ -321,11 +321,10 @@ export default function FilesPage() {
     </div>
   );
 }
-
 function TimerRing({ seconds, totalSeconds, isAr }) {
   const radius = 32;
   const circ = 2 * Math.PI * radius;
-  const pct = seconds / totalSeconds;
+  const pct = totalSeconds > 0 ? (seconds / totalSeconds) : 0;
   const offset = circ * (1 - pct);
 
   const mm = String(Math.floor(seconds / 60)).padStart(2, '0');
@@ -375,7 +374,7 @@ function AIFileAnalysis({ file }) {
   const [current, setCurrent] = useState(0);
   const [flagged, setFlagged] = useState(new Set());
   const [timeTaken, setTimeTaken] = useState(0);
-  const [startTime, setStartTime] = useState(null);
+  const startTimeRef = useRef(null);
   const [quizScore, setQuizScore] = useState(null);
   const [showReview, setShowReview] = useState(false);
 
@@ -388,7 +387,7 @@ function AIFileAnalysis({ file }) {
 
   const submitExam = useCallback(async (finalAnswers = answersRef.current, wasTimedOut = false) => {
     clearInterval(timerRef.current);
-    const elapsed = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+    const elapsed = startTimeRef.current ? Math.round((Date.now() - startTimeRef.current) / 1000) : 0;
     setTimeTaken(elapsed);
 
     const questions = exam?.questions || [];
@@ -418,14 +417,14 @@ function AIFileAnalysis({ file }) {
           ? toast(isAr ? `👍 مجهود جيد! ${score}% — استمر في المحاولة!` : `👍 Good effort! ${score}% — keep practising!`)
           : toast(isAr ? `📚 ${score}% — راجع المادة وحاول مجدداً` : `📚 ${score}% — review the material and try again`);
     }
-  }, [exam, startTime, file, isAr]);
+  }, [exam, file, isAr]);
 
   useEffect(() => {
     if (mode === 'exam' && exam && quizScore === null) {
       const dur = exam.questions.length * 2 * 60; // 2 minutes per question
       setSeconds(dur);
       setTotalSeconds(dur);
-      setStartTime(Date.now());
+      startTimeRef.current = Date.now();
       timerRef.current = setInterval(() => {
         setSeconds(s => {
           if (s <= 1) {
