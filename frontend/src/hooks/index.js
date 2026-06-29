@@ -55,7 +55,28 @@ export function useSocket() {
         reconnectionDelay: 1000,
       });
 
-      socketInstance.on('connect_error', (err) => console.warn('🔌 Socket error:', err.message));
+      socketInstance.on('connect_error', (err) => {
+        console.warn('🔌 Socket error:', err.message);
+        // If the error is token expiry, try to silently refresh and reconnect
+        if (err.message && err.message.includes('Token expired')) {
+          const ref = localStorage.getItem('refresh');
+          if (ref) {
+            import('../api/index').then(async ({ default: client }) => {
+              try {
+                const axios = (await import('axios')).default;
+                const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+                const { data } = await axios.post(`${API}/auth/refresh`, { refresh: ref });
+                localStorage.setItem('token', data.token);
+                if (data.refresh) localStorage.setItem('refresh', data.refresh);
+                if (socketInstance) {
+                  socketInstance.auth.token = data.token;
+                  socketInstance.connect();
+                }
+              } catch { /* refresh failed — user will be logged out by HTTP interceptor */ }
+            }).catch(() => {});
+          }
+        }
+      });
       
       // Keep socket auth token in sync with the latest access token
       socketInstance.io.on('reconnect_attempt', () => {

@@ -17,21 +17,43 @@ function setupPassport() {
     clientID:     process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL:  process.env.GOOGLE_CALLBACK_URL,
-  }, async (accessToken, refreshToken, profile, done) => {
+    passReqToCallback: true,
+  }, async (req, accessToken, refreshToken, profile, done) => {
     try {
       const email = profile?.emails?.[0]?.value;
-      if (!email) return done(new Error('Google account has no email')); 
+      if (!email) return done(new Error('Google account has no email'));
       const avatar = profile?.photos?.[0]?.value;
+
+      // Parse role from state (encoded as base64 JSON by the /auth/google route)
+      let desiredRole = 'student';
+      try {
+        if (req.query.state) {
+          const stateObj = JSON.parse(Buffer.from(req.query.state, 'base64').toString('utf8'));
+          if (stateObj.role && ['student', 'university', 'teacher'].includes(stateObj.role)) {
+            desiredRole = stateObj.role;
+          }
+        }
+      } catch (_) {
+        // state missing or unparseable — default to 'student'
+      }
+
+      // On conflict: preserve existing role if already set.
+      // NULLIF(users.role, 'student') means: if current DB role is 'student' (default)
+      // we allow it to be overwritten by the desired role; otherwise keep it.
       const { rows } = await pool.query(`
         INSERT INTO users (name, email, google_id, avatar_url, email_verified, role)
-        VALUES ($1, $2, $3, $4, true, 'student')
+        VALUES ($1, $2, $3, $4, true, $5)
         ON CONFLICT (email) DO UPDATE SET
           google_id    = EXCLUDED.google_id,
           avatar_url   = COALESCE(users.avatar_url, EXCLUDED.avatar_url),
-          role         = COALESCE(users.role, 'student'),
+          role         = CASE
+                           WHEN users.role IS NULL OR users.role = 'student'
+                           THEN EXCLUDED.role
+                           ELSE users.role
+                         END,
           last_active  = NOW()
         RETURNING *
-      `, [profile.displayName, email, profile.id, avatar]);
+      `, [profile.displayName, email, profile.id, avatar, desiredRole]);
       done(null, rows[0]);
     } catch (err) {
       logger.error('Google OAuth error:', err);

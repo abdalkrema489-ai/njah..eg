@@ -50,9 +50,12 @@ client.interceptors.response.use(r => r, async err => {
       const { data } = await axios.post(`${API}/auth/refresh`, { refresh: ref });
       localStorage.setItem('token', data.token);
       if (data.refresh) localStorage.setItem('refresh', data.refresh);
+      // Always force socket reconnect with fresh token so the backend
+      // auth middleware re-verifies and "Token expired" errors stop.
       if (window.__najahSocket) {
         window.__najahSocket.auth.token = data.token;
-        if (!window.__najahSocket.connected) window.__najahSocket.connect();
+        window.__najahSocket.disconnect();
+        window.__najahSocket.connect();
       }
       client.defaults.headers.Authorization = `Bearer ${data.token}`;
       flush(null, data.token);
@@ -72,7 +75,8 @@ client.interceptors.response.use(r => r, async err => {
     if (orig.url.includes('/auth/refresh')) {
       import('../context/store').then(m => m.useAuthStore.getState().logout());
     }
-  } else if (err.response?.status !== 401 && msg) {
+  } else if (err.response?.status !== 401 && err.response?.status !== 409 && msg) {
+    // Skip 409 Conflict — callers handle those individually with their own UI feedback
     toast.error(msg);
   }
   return Promise.reject(err);
@@ -103,9 +107,11 @@ aiClient.interceptors.response.use(r => r, async err => {
       const { data } = await axios.post(`${API}/auth/refresh`, { refresh: ref });
       localStorage.setItem('token', data.token);
       if (data.refresh) localStorage.setItem('refresh', data.refresh);
+      // Force socket reconnect with fresh token
       if (window.__najahSocket) {
         window.__najahSocket.auth.token = data.token;
-        if (!window.__najahSocket.connected) window.__najahSocket.connect();
+        window.__najahSocket.disconnect();
+        window.__najahSocket.connect();
       }
       client.defaults.headers.Authorization = `Bearer ${data.token}`;
       aiClient.defaults.headers.Authorization = `Bearer ${data.token}`;
@@ -134,7 +140,7 @@ export const authAPI = {
   verifyEmail:    t  => client.get(`/auth/verify/${t}`),
   forgotPassword: e  => client.post('/auth/forgot-password', { email: e }),
   resetPassword:  d  => client.post('/auth/reset-password', d),
-  googleLogin:    () => { window.location.href = `${API}/auth/google`; },
+  googleLogin:    (role) => { window.location.href = `${API}/auth/google${role ? `?role=${encodeURIComponent(role)}` : ''}`; },
   guestRegister:  () => client.post('/auth/guest'),
   // OAuth code exchange: call this on /auth/callback?code=XXX
   exchangeCode:   code => client.post('/auth/exchange-code', { code }),
@@ -233,7 +239,7 @@ export const notificationsAPI = {
 
 export const achievementsAPI = {
   list:        () => client.get('/achievements'),
-  leaderboard: () => client.get('/achievements/leaderboard'),
+  leaderboard: (role) => client.get('/achievements/leaderboard', role ? { params: { role } } : undefined),
 };
 
 export const analyticsAPI = {

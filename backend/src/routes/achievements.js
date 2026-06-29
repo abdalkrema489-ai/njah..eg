@@ -18,18 +18,24 @@ router.get('/', async (req, res) => {
   res.json({ achievements: rows });
 });
 
-router.get('/leaderboard', async (_req, res) => {
+router.get('/leaderboard', async (req, res) => {
+  const { role } = req.query; // 'student' | 'university' | 'teacher' | undefined (all)
+  const roleFilter = role && ['student', 'university', 'teacher'].includes(role)
+    ? `AND role = '${role}'`
+    : '';
   const { rows } = await pool.query(`
-    SELECT id, name, avatar_url, xp_points, level, streak_days, grade,
+    SELECT id, name, avatar_url, xp_points, level, streak_days, grade, role,
            RANK() OVER (ORDER BY xp_points DESC) AS rank
     FROM users
     WHERE is_active = true
       AND email NOT LIKE '%@guest.najah.local'
       AND role != 'admin'
+      ${roleFilter}
     ORDER BY xp_points DESC
     LIMIT 50
   `);
   res.json({ leaderboard: rows });
 });
+
 
 module.exports = router;

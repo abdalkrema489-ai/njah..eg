@@ -17,11 +17,18 @@ r.post('/reset-password',  authLimiter, c.resetPassword);
 r.get ('/me',              authenticate, c.getMe);
 
 if (isGoogleAuthEnabled()) {
-  r.get('/google', passport.authenticate('google', { scope: ['profile', 'email'], session: false }));
+  r.get('/google', (req, res, next) => {
+    // Encode the desired role in state so it survives the OAuth redirect.
+    // The Passport strategy reads this back and stores it in the DB on first login.
+    const role = req.query.role || 'student';
+    const state = Buffer.from(JSON.stringify({ role })).toString('base64');
+    passport.authenticate('google', { scope: ['profile', 'email'], session: false, state })(req, res, next);
+  });
   r.get('/google/callback', passport.authenticate('google', { session: false, failureRedirect: '/login' }), c.googleCallback);
 } else {
   r.get('/google', (_req, res) => res.status(503).json({ error: 'Google auth not configured' }));
   r.get('/google/callback', (_req, res) => res.status(503).json({ error: 'Google auth not configured' }));
 }
+
 
 module.exports = r;

@@ -10,14 +10,14 @@ import { useAuthStore, useChatStore, useUIStore, playPing } from '../../context/
 import { Avatar, Spinner, Modal, Button } from '../shared/UI';
 import CreateGroupWizard from '../groups/CreateGroupWizard';
 
-// ─────────────────────────────────────────────────────────────
+// ----------------------------------
 // Helper: Format time
-// ─────────────────────────────────────────────────────────────
+// ----------------------------------
 const fmtTime = d => { try { return format(new Date(d), 'HH:mm'); } catch { return ''; } };
 
-// ─────────────────────────────────────────────────────────────
+// ----------------------------------
 // Subtle dot-grid background for chat area
-// ─────────────────────────────────────────────────────────────
+// ----------------------------------
 const CHAT_BG = {
   backgroundImage: `radial-gradient(circle, rgba(14,165,233,0.08) 1px, transparent 1px)`,
   backgroundSize: '22px 22px',
@@ -54,9 +54,260 @@ export default function ChatPage() {
   const [onlineUsers, setOnlineUsers] = useState(new Set());
   const [replyTo, setReplyTo] = useState(null); // message being replied to
   const [editingMsg, setEditingMsg] = useState(null); // { id, content }
-  const [showCallModal, setShowCallModal] = useState(false);
+  // WebRTC Call States
+  const [callState, setCallState] = useState(null); // null | 'calling' | 'incoming' | 'connected'
   const [callType, setCallType] = useState('audio'); // 'audio' | 'video'
   const [incomingCall, setIncomingCall] = useState(null);
+  const [localStream, setLocalStream] = useState(null);
+  const [remoteStream, setRemoteStream] = useState(null);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(false);
+  const [callDuration, setCallDuration] = useState(0);
+  const [callPartner, setCallPartner] = useState(null); // { id, name, avatar }
+
+  const peerRef = useRef(null);
+  const localStreamRef = useRef(null);
+  const iceQueueRef = useRef([]);
+
+  const localVideoRef = useRef(null);
+  const remoteVideoRef = useRef(null);
+
+  const cleanupCall = useCallback(() => {
+    if (peerRef.current) {
+      peerRef.current.close();
+      peerRef.current = null;
+    }
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => track.stop());
+      localStreamRef.current = null;
+    }
+    setCallState(null);
+    setIncomingCall(null);
+    setCallPartner(null);
+    setLocalStream(null);
+    setRemoteStream(null);
+    setIsMuted(false);
+    setIsVideoOff(false);
+    setCallDuration(0);
+    iceQueueRef.current = [];
+  }, []);
+
+  const startCall = async (type = 'audio') => {
+    if (!socket || !activePrivateChat) return;
+    cleanupCall();
+    try {
+      setCallType(type);
+      setCallState('calling');
+
+      const partner = recentChats.find(c => c.id === activePrivateChat)
+        || searchResults.find(c => c.id === activePrivateChat);
+      if (partner) {
+        setCallPartner({ id: partner.id, name: partner.name, avatar: partner.avatar || partner.avatar_url });
+      } else {
+        setCallPartner({ id: activePrivateChat, name: 'User', avatar: null });
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia(
+        type === 'video' ? { audio: true, video: true } : { audio: true }
+      );
+      localStreamRef.current = stream;
+      setLocalStream(stream);
+
+      const pc = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      });
+      peerRef.current = pc;
+
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+      pc.ontrack = (event) => {
+        setRemoteStream(event.streams[0]);
+      };
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          socket.emit('ice_candidate', {
+            targetId: activePrivateChat,
+            candidate: event.candidate
+          });
+        }
+      };
+
+      pc.onconnectionstatechange = () => {
+        if (['disconnected', 'failed', 'closed'].includes(pc.connectionState)) {
+          cleanupCall();
+        }
+      };
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      socket.emit('call_offer', {
+        targetId: activePrivateChat,
+        offer,
+        callType: type
+      });
+
+    } catch (err) {
+      console.error(err);
+      toast.error('Could not access microphone/camera');
+      cleanupCall();
+    }
+  };
+
+  const acceptCall = async () => {
+    if (!incomingCall || !socket) return;
+    const callerId = incomingCall.callerId;
+    const callOffer = incomingCall.offer;
+    const type = incomingCall.callType;
+    const callerName = incomingCall.callerName;
+    const callerAvatar = incomingCall.callerAvatar;
+
+    cleanupCall();
+    try {
+      setCallType(type);
+      setCallState('connected');
+      setCallPartner({ id: callerId, name: callerName, avatar: callerAvatar });
+      setIncomingCall(null);
+
+      const stream = await navigator.mediaDevices.getUserMedia(
+        type === 'video' ? { audio: true, video: true } : { audio: true }
+      );
+      localStreamRef.current = stream;
+      setLocalStream(stream);
+
+      const pc = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      });
+      peerRef.current = pc;
+
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+      pc.ontrack = (event) => {
+        setRemoteStream(event.streams[0]);
+      };
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          socket.emit('ice_candidate', {
+            targetId: callerId,
+            candidate: event.candidate
+          });
+        }
+      };
+
+      pc.onconnectionstatechange = () => {
+        if (['disconnected', 'failed', 'closed'].includes(pc.connectionState)) {
+          cleanupCall();
+        }
+      };
+
+      await pc.setRemoteDescription(new RTCSessionDescription(callOffer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+
+      socket.emit('call_answer', {
+        callerId,
+        answer
+      });
+
+      // Process queued candidates
+      for (const cand of iceQueueRef.current) {
+        await pc.addIceCandidate(new RTCIceCandidate(cand)).catch(err => console.warn(err));
+      }
+      iceQueueRef.current = [];
+
+    } catch (err) {
+      console.error(err);
+      toast.error('Could not accept call');
+      socket.emit('call_end', { targetId: callerId });
+      cleanupCall();
+    }
+  };
+
+  const declineCall = () => {
+    if (!incomingCall || !socket) return;
+    socket.emit('call_decline', { callerId: incomingCall.callerId });
+    cleanupCall();
+  };
+
+  const endCall = () => {
+    const targetId = callPartner?.id || activePrivateChat || (incomingCall ? incomingCall.callerId : null);
+    if (socket && targetId) {
+      socket.emit('call_end', { targetId });
+    }
+    cleanupCall();
+  };
+
+  const toggleMute = () => {
+    if (localStreamRef.current) {
+      const audioTrack = localStreamRef.current.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setIsMuted(!audioTrack.enabled);
+      }
+    }
+  };
+
+  const toggleCamera = () => {
+    if (localStreamRef.current) {
+      const videoTrack = localStreamRef.current.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setIsVideoOff(!videoTrack.enabled);
+      }
+    }
+  };
+
+  // Sync streams to video/audio tags
+  useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
+    }
+  }, [localStream, callState]);
+
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream, callState]);
+
+  // Call duration timer
+  useEffect(() => {
+    let timer;
+    if (callState === 'connected') {
+      setCallDuration(0);
+      timer = setInterval(() => {
+        setCallDuration(d => d + 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [callState]);
+
+  // Ring tone loop for incoming calls
+  useEffect(() => {
+    let ringInterval;
+    if (callState === 'incoming') {
+      playPing();
+      ringInterval = setInterval(() => {
+        playPing();
+      }, 2000);
+    }
+    return () => clearInterval(ringInterval);
+  }, [callState]);
+
+  // Cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      if (peerRef.current) {
+        peerRef.current.close();
+      }
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
 
   const activePartner = recentChats.find(c => c.id === activePrivateChat)
     || searchResults.find(c => c.id === activePrivateChat);
@@ -65,7 +316,7 @@ export default function ChatPage() {
     ? roomMessages
     : (privateMessages[activePrivateChat] || []);
 
-  // ── 1. Load recent chats + groups on mount ──
+  // ---------------------------------- 1. Load recent chats + groups on mount ──
   useEffect(() => {
     const load = async () => {
       try {
@@ -85,7 +336,7 @@ export default function ChatPage() {
     load();
   }, [setRecentChats]);
 
-  // ── 2. Handle deep-link from notifications ──
+  // ---------------------------------- 2. Handle deep-link from notifications ──
   useEffect(() => {
     const targetId = searchParams.get('user');
     if (targetId && recentChats.length > 0) {
@@ -94,7 +345,7 @@ export default function ChatPage() {
     }
   }, [searchParams, recentChats.length]);
 
-  // ── 2b. Handle navigation from StudentsOverview ──
+  // ---------------------------------- 2b. Handle navigation from StudentsOverview ──
   const location = useLocation();
   useEffect(() => {
     if (location.state?.openUserId) {
@@ -114,7 +365,7 @@ export default function ChatPage() {
     }
   }, [location.state, recentChats.length]);
 
-  // ── 3. Socket handlers ──
+  // ---------------------------------- 3. Socket handlers ──
   useEffect(() => {
     if (!socket) return;
 
@@ -177,7 +428,43 @@ export default function ChatPage() {
     // WebRTC incoming call
     const onCallIncoming = ({ callerId, callerName, callerAvatar, offer, callType }) => {
       setIncomingCall({ callerId, callerName, callerAvatar, offer, callType });
-      playPing();
+      setCallType(callType || 'audio');
+      setCallState('incoming');
+    };
+
+    const onCallAnswered = async ({ answererId, answer }) => {
+      if (peerRef.current) {
+        try {
+          await peerRef.current.setRemoteDescription(new RTCSessionDescription(answer));
+          setCallState('connected');
+          for (const cand of iceQueueRef.current) {
+            await peerRef.current.addIceCandidate(new RTCIceCandidate(cand)).catch(err => console.warn(err));
+          }
+          iceQueueRef.current = [];
+        } catch (err) {
+          console.error(err);
+          toast.error('Failed to connect call');
+          cleanupCall();
+        }
+      }
+    };
+
+    const onIceCandidate = async ({ from, candidate }) => {
+      if (peerRef.current && peerRef.current.remoteDescription && peerRef.current.remoteDescription.type) {
+        await peerRef.current.addIceCandidate(new RTCIceCandidate(candidate)).catch(err => console.warn(err));
+      } else {
+        iceQueueRef.current.push(candidate);
+      }
+    };
+
+    const onCallEnded = () => {
+      toast('Call ended');
+      cleanupCall();
+    };
+
+    const onCallDeclined = () => {
+      toast.error('Call declined');
+      cleanupCall();
     };
 
     socket.on('new_private_message', onNewPrivate);
@@ -187,6 +474,10 @@ export default function ChatPage() {
     socket.on('message_edited', onMessageEdited);
     socket.on('message_deleted', onMessageDeleted);
     socket.on('call_incoming', onCallIncoming);
+    socket.on('call_answered', onCallAnswered);
+    socket.on('ice_candidate', onIceCandidate);
+    socket.on('call_ended', onCallEnded);
+    socket.on('call_declined', onCallDeclined);
     socket.on('ai_typing', ({ isTyping }) => {
       setTypingUsers(prev => {
         const next = { ...prev };
@@ -204,10 +495,14 @@ export default function ChatPage() {
       socket.off('message_edited', onMessageEdited);
       socket.off('message_deleted', onMessageDeleted);
       socket.off('call_incoming', onCallIncoming);
+      socket.off('call_answered', onCallAnswered);
+      socket.off('ice_candidate', onIceCandidate);
+      socket.off('call_ended', onCallEnded);
+      socket.off('call_declined', onCallDeclined);
     };
-  }, [socket, user, activePrivateChat, addPrivateMessage, setPrivateMessages, markMessagesRead, setRecentChats, updateRecentChat]);
+  }, [socket, user, activePrivateChat, addPrivateMessage, setPrivateMessages, markMessagesRead, setRecentChats, updateRecentChat, cleanupCall]);
 
-  // ── 4. User search ──
+  // ---------------------------------- 4. User search ──
   useEffect(() => {
     if (!search.trim()) { setIsSearching(false); setSearchResults([]); return; }
     setIsSearching(true);
@@ -219,12 +514,12 @@ export default function ChatPage() {
     return () => clearTimeout(delay);
   }, [search]);
 
-  // ── 5. Auto-scroll ──
+  // ---------------------------------- 5. Auto-scroll ──
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeMsgs]);
 
-  // ── 6. Select a chat ──
+  // ---------------------------------- 6. Select a chat ──
   const selectChat = (item) => {
     setActivePrivateChat(item.id);
     setSearch('');
@@ -254,7 +549,7 @@ export default function ChatPage() {
     setTimeout(() => inputRef.current?.focus(), 100);
   };
 
-  // ── 7. Typing emit ──
+  // ---------------------------------- 7. Typing emit ──
   const handleInputChange = (e) => {
     setInput(e.target.value);
     if (activePrivateChat && activePartner?.chatType !== 'group') {
@@ -266,7 +561,7 @@ export default function ChatPage() {
     }
   };
 
-  // ── 8. Send message ──
+  // ---------------------------------- 8. Send message ──
   const sendMessage = () => {
     const content = input.trim();
     if ((!content && !editingMsg) || !socket || !activePrivateChat) return;
@@ -310,7 +605,7 @@ export default function ChatPage() {
     setReplyTo(null);
   };
 
-  // ── 9. File upload ──
+  // ---------------------------------- 9. File upload ──
   const onFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file || !socket || !activePrivateChat) return;
@@ -327,7 +622,7 @@ export default function ChatPage() {
     } catch { toast.error('Upload failed', { id: 'upload' }); }
   };
 
-  // ── 10. Voice recording ──
+  // ---------------------------------- 10. Voice recording ──
   const toggleVoice = async () => {
     if (isRecording) {
       const file = await stopRecording();
@@ -348,12 +643,12 @@ export default function ChatPage() {
     }
   };
 
-  // ── 11. Delete message ──
+  // ---------------------------------- 11. Delete message ──
   const deleteMessage = (msgId) => {
     socket?.emit('delete_private_message', { messageId: msgId });
   };
 
-  // ── 12. Message status icon ──
+  // ---------------------------------- 12. Message status icon ──
   const renderStatus = (msg) => {
     if (msg.senderId !== user?.id) return null;
     const isRead = msg.status === 'read';
@@ -565,16 +860,18 @@ export default function ChatPage() {
             </div>
 
             {/* Header Actions */}
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 {activePartner?.chatType !== 'group' && (
                   <>
                     <ChatHeaderBtn
-                      onClick={() => { setCallType('audio'); setShowCallModal(true); }}
-                      title="Voice Call" emoji="📞"
+                      onClick={() => startCall('audio')}
+                      title="Voice Call"
+                      icon={<PhoneIcon />}
                     />
                     <ChatHeaderBtn
-                      onClick={() => { setCallType('video'); setShowCallModal(true); }}
-                      title="Video Call" emoji="📹"
+                      onClick={() => startCall('video')}
+                      title="Video Call"
+                      icon={<VideoIcon />}
                     />
                   </>
                 )}
@@ -781,23 +1078,29 @@ export default function ChatPage() {
         {incomingCall && (
           <IncomingCallModal
             call={incomingCall}
-            onAccept={() => { setIncomingCall(null); /* WebRTC logic */ }}
-            onDecline={() => {
-              socket?.emit('call_decline', { callerId: incomingCall.callerId });
-              setIncomingCall(null);
-            }}
+            onAccept={acceptCall}
+            onDecline={declineCall}
           />
         )}
       </AnimatePresence>
 
-      {/* Outgoing Call Modal */}
+      {/* Immersive Calling Overlay */}
       <AnimatePresence>
-        {showCallModal && activePartner && (
-          <OutgoingCallModal
-            partner={activePartner}
+        {callState && callState !== 'incoming' && (
+          <CallingOverlay
+            callState={callState}
             callType={callType}
-            socket={socket}
-            onClose={() => setShowCallModal(false)}
+            callPartner={callPartner}
+            callDuration={callDuration}
+            localStream={localStream}
+            remoteStream={remoteStream}
+            localVideoRef={localVideoRef}
+            remoteVideoRef={remoteVideoRef}
+            isMuted={isMuted}
+            isVideoOff={isVideoOff}
+            toggleMute={toggleMute}
+            toggleCamera={toggleCamera}
+            endCall={endCall}
           />
         )}
       </AnimatePresence>
@@ -805,9 +1108,9 @@ export default function ChatPage() {
   );
 }
 
-// ─────────────────────────────────────────────────────────────
+// ----------------------------------
 // ContactRow
-// ─────────────────────────────────────────────────────────────
+// ----------------------------------
 function ContactRow({ r, active, onClick, user }) {
   return (
     <motion.div
@@ -861,9 +1164,9 @@ function ContactRow({ r, active, onClick, user }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────
+// ----------------------------------
 // MessageBubble
-// ─────────────────────────────────────────────────────────────
+// ----------------------------------
 function MessageBubble({ msg, isMe, showAvatar, activePartner, user, renderStatus, onReply, onEdit, onDelete, socket }) {
   const [showActions, setShowActions] = useState(false);
 
@@ -982,9 +1285,106 @@ function ActionBtn({ emoji, title, onClick }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────
+// ----------------------------------
+// SVG Icon helpers
+// ----------------------------------
+function PhoneIcon({ size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+    </svg>
+  );
+}
+
+function VideoIcon({ size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+    </svg>
+  );
+}
+
+// ----------------------------------
+// ChatHeaderBtn — icon button in chat header with tooltip
+// ----------------------------------
+function ChatHeaderBtn({ onClick, title, icon }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div style={{ position: 'relative' }}>
+      <motion.button
+        whileHover={{ scale: 1.12 }}
+        whileTap={{ scale: 0.9 }}
+        onClick={onClick}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        title={title}
+        style={{
+          width: 38, height: 38, borderRadius: 12,
+          background: hovered ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.15)',
+          border: '1px solid rgba(255,255,255,0.25)',
+          color: '#fff', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'background 0.18s',
+        }}
+      >
+        {icon}
+      </motion.button>
+      <AnimatePresence>
+        {hovered && (
+          <motion.div
+            initial={{ opacity: 0, y: 4, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.9 }}
+            style={{
+              position: 'absolute', bottom: -34, left: '50%',
+              transform: 'translateX(-50%)',
+              background: 'rgba(15,23,42,0.92)',
+              backdropFilter: 'blur(8px)',
+              color: '#fff', fontSize: 11, fontWeight: 600,
+              padding: '5px 10px', borderRadius: 8,
+              whiteSpace: 'nowrap', zIndex: 200,
+              border: '1px solid rgba(255,255,255,0.1)',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              pointerEvents: 'none',
+            }}
+          >{title}</motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ----------------------------------
+// CallControlBtn — button in the active-call control bar
+// ----------------------------------
+function CallControlBtn({ onClick, active, activeColor = '#ef4444', label, icon }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+      <motion.button
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.92 }}
+        onClick={onClick}
+        title={label}
+        style={{
+          width: 54, height: 54, borderRadius: '50%',
+          background: active ? activeColor : 'rgba(255,255,255,0.1)',
+          border: `1px solid ${active ? 'transparent' : 'rgba(255,255,255,0.14)'}`,
+          cursor: 'pointer', color: '#fff',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: active ? `0 6px 20px ${activeColor}60` : '0 2px 8px rgba(0,0,0,0.2)',
+          transition: 'all 0.22s ease',
+        }}
+      >
+        {icon}
+      </motion.button>
+      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', fontWeight: 500 }}>{label}</span>
+    </div>
+  );
+}
+
+// ----------------------------------
 // MessageContent — renders different types
-// ─────────────────────────────────────────────────────────────
+// ----------------------------------
 function MessageContent({ msg }) {
   if (msg.type === 'image') {
     return (
@@ -998,98 +1398,496 @@ function MessageContent({ msg }) {
   if (msg.type === 'file') {
     return (
       <a href={msg.fileUrl} target="_blank" rel="noreferrer"
-        style={{ color: 'inherit', textDecoration: 'underline', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-        📎 {msg.content}
+        style={{ color: 'inherit', textDecoration: 'underline', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}
+      >
+        <span style={{ fontSize: 22 }}>📎</span>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700 }}>{msg.content || 'File'}</div>
+          <div style={{ fontSize: 11, opacity: 0.7 }}>Tap to open</div>
+        </div>
       </a>
     );
   }
-  if (msg.type === 'audio') {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button
-          onClick={e => {
-            const audio = e.currentTarget.nextElementSibling;
-            if (audio.paused) { audio.play(); e.currentTarget.textContent = '⏸️'; }
-            else { audio.pause(); e.currentTarget.textContent = '▶️'; }
-          }}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22 }}
-        >▶️</button>
-        <audio src={msg.fileUrl} preload="metadata" style={{ display: 'none' }}
-          onEnded={e => { const btn = e.currentTarget.previousElementSibling; if(btn) btn.textContent = '▶️'; }}
-        />
-        <div style={{ flex: 1, height: 4, background: 'rgba(255,255,255,0.3)', borderRadius: 4 }}>
-          <div style={{ width: '40%', height: '100%', background: 'rgba(255,255,255,0.8)', borderRadius: 4 }} />
-        </div>
-        <span style={{ fontSize: 11, opacity: 0.7 }}>🎤</span>
-      </div>
-    );
-  }
-  return <span>{msg.content}</span>;
+  return <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.content}</span>;
 }
 
-// ─────────────────────────────────────────────────────────────
-// ChatHeaderBtn
-// ─────────────────────────────────────────────────────────────
-function ChatHeaderBtn({ onClick, title, emoji }) {
-  return (
-    <motion.button
-      whileHover={{ scale: 1.1, background: 'rgba(255,255,255,0.25)' }}
-      whileTap={{ scale: 0.9 }}
-      onClick={onClick} title={title}
-      style={{
-        width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.15)',
-        border: '1px solid rgba(255,255,255,0.25)', cursor: 'pointer',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17,
-      }}
-    >{emoji}</motion.button>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────
+// ----------------------------------
 // IncomingCallModal
-// ─────────────────────────────────────────────────────────────
+// ----------------------------------
 function IncomingCallModal({ call, onAccept, onDecline }) {
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.85 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.85 }}
+      initial={{ opacity: 0, y: -40, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -20, scale: 0.95 }}
+      transition={{ type: 'spring', damping: 25, stiffness: 350 }}
       style={{
-        position: 'fixed', top: 24, right: 24, zIndex: 9999,
-        background: 'var(--surface)', borderRadius: 20, padding: '24px 28px',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.25)', border: '1px solid var(--border)',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, minWidth: 280,
+        position: 'fixed',
+        top: 24,
+        right: 24,
+        zIndex: 99999,
+        background: 'rgba(15, 23, 42, 0.75)',
+        backdropFilter: 'blur(24px) saturate(180%)',
+        borderRadius: 24,
+        padding: '24px',
+        boxShadow: '0 20px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.1)',
+        border: '1px solid rgba(255,255,255,0.12)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 20,
+        minWidth: 320,
+        color: '#fff',
       }}
     >
-      <motion.div animate={{ scale: [1, 1.15, 1] }} transition={{ repeat: Infinity, duration: 1.2 }}
-        style={{ fontSize: 48 }}>{call.callType === 'video' ? '📹' : '📞'}</motion.div>
+      <style>{`
+        @keyframes incomingRingPulse {
+          0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); transform: scale(1); }
+          50% { box-shadow: 0 0 0 20px rgba(16, 185, 129, 0); transform: scale(1.05); }
+          100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); transform: scale(1); }
+        }
+        .accept-btn-glow {
+          animation: incomingRingPulse 1.6s infinite ease-in-out;
+        }
+        @keyframes avatarGlow {
+          0%, 100% { box-shadow: 0 0 15px rgba(56, 189, 248, 0.2); }
+          50% { box-shadow: 0 0 25px rgba(56, 189, 248, 0.6); }
+        }
+        .caller-avatar-glow {
+          animation: avatarGlow 2s infinite ease-in-out;
+          border-radius: 50%;
+        }
+      `}</style>
+
+      <div style={{ position: 'relative' }} className="caller-avatar-glow">
+        <Avatar src={call.callerAvatar} name={call.callerName} size={80} />
+        <div
+          style={{
+            position: 'absolute',
+            bottom: -2,
+            right: -2,
+            width: 30,
+            height: 30,
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 14,
+            border: '2px solid #0f172a',
+            boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+          }}
+        >
+          {call.callType === 'video' ? '📹' : '📞'}
+        </div>
+      </div>
+
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)' }}>
+        <div style={{ fontWeight: 800, fontSize: 19, letterSpacing: '-0.02em', color: '#fff' }}>
           {call.callerName}
         </div>
-        <div style={{ fontSize: 13, color: 'var(--text3)', marginTop: 4 }}>
+        <div style={{ fontSize: 13, color: '#94a3b8', marginTop: 4, fontWeight: 500 }} className="animate-pulse">
           Incoming {call.callType} call...
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 12 }}>
-        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+
+      <div style={{ display: 'flex', gap: 12, width: '100%', justifyContent: 'center' }}>
+        <motion.button
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.96 }}
           onClick={onDecline}
-          style={{ padding: '10px 20px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer', fontSize: 14 }}>
-          ✕ Decline
+          style={{
+            flex: 1,
+            padding: '12px 18px',
+            background: 'rgba(239, 68, 68, 0.2)',
+            border: '1px solid rgba(239, 68, 68, 0.4)',
+            color: '#ef4444',
+            borderRadius: 16,
+            fontWeight: 700,
+            cursor: 'pointer',
+            fontSize: 14,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            transition: 'background 0.2s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.3)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'}
+        >
+          <span style={{ fontSize: 16 }}>✕</span> Decline
         </motion.button>
-        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+        <motion.button
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.96 }}
           onClick={onAccept}
-          style={{ padding: '10px 20px', background: '#10b981', color: '#fff', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer', fontSize: 14 }}>
-          ✓ Accept
+          className="accept-btn-glow"
+          style={{
+            flex: 1,
+            padding: '12px 18px',
+            background: '#10b981',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 16,
+            fontWeight: 700,
+            cursor: 'pointer',
+            fontSize: 14,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            boxShadow: '0 4px 14px rgba(16,185,129,0.3)',
+          }}
+        >
+          <span style={{ fontSize: 16 }}>✓</span> Accept
         </motion.button>
       </div>
     </motion.div>
   );
 }
 
-// ─────────────────────────────────────────────────────────────
+// ----------------------------------
+// CallingOverlay
+// ----------------------------------
+function CallingOverlay({
+  callState,
+  callType,
+  callPartner,
+  callDuration,
+  localStream,
+  remoteStream,
+  localVideoRef,
+  remoteVideoRef,
+  isMuted,
+  isVideoOff,
+  toggleMute,
+  toggleCamera,
+  endCall,
+}) {
+  const formatDuration = (s) => {
+    const mins = Math.floor(s / 60);
+    const secs = s % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
+    }
+  }, [localStream, callState]);
+
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream, callState]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9999,
+        background: 'radial-gradient(circle at center, #0f172a 0%, #020617 100%)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#fff',
+        fontFamily: '"Outfit", "Cairo", sans-serif',
+        overflow: 'hidden',
+      }}
+    >
+      <style>{`
+        @keyframes pulseRing {
+          0% { transform: scale(0.95); opacity: 0.6; }
+          50% { transform: scale(1.4); opacity: 0.2; }
+          100% { transform: scale(1.8); opacity: 0; }
+        }
+        .pulse-ring-element {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          border-radius: 50%;
+          border: 2.5px solid #0ea5e9;
+          animation: pulseRing 2.4s infinite ease-out;
+          pointer-events: none;
+        }
+        .pulse-ring-element:nth-child(2) {
+          animation-delay: 0.8s;
+        }
+        .pulse-ring-element:nth-child(3) {
+          animation-delay: 1.6s;
+        }
+        @keyframes audioWaveGlow {
+          0%, 100% { transform: scale(1); opacity: 0.45; }
+          50% { transform: scale(1.15); opacity: 0.75; }
+        }
+        .audio-wave-pulse {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(14, 165, 233, 0.15) 0%, transparent 70%);
+          animation: audioWaveGlow 2s infinite ease-in-out;
+          pointer-events: none;
+        }
+      `}</style>
+
+      {/* Voice/Calling Background Wave Decorator */}
+      {callType === 'audio' && (
+        <div style={{ position: 'absolute', inset: 0, opacity: 0.04, backgroundImage: 'radial-gradient(#38bdf8 1.5px, transparent 1.5px)', backgroundSize: '24px 24px', pointerEvents: 'none' }} />
+      )}
+
+      {/* CALLING state */}
+      {callState === 'calling' && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 28, zIndex: 10 }}>
+          <div style={{ position: 'relative', width: 160, height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div className="pulse-ring-element"></div>
+            <div className="pulse-ring-element"></div>
+            <div className="pulse-ring-element"></div>
+            <Avatar src={callPartner?.avatar} name={callPartner?.name} size={120} />
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <h2 style={{ fontSize: 28, fontWeight: 900, marginBottom: 8, letterSpacing: '-0.02em', color: '#fff' }}>
+              {callPartner?.name}
+            </h2>
+            <p style={{ fontSize: 15, color: '#38bdf8', letterSpacing: '0.05em', fontWeight: 600 }} className="animate-pulse">
+              Calling ({callType === 'video' ? 'Video' : 'Voice'})...
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* CONNECTED state (AUDIO) */}
+      {callState === 'connected' && callType === 'audio' && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 28, zIndex: 10 }}>
+          <div style={{ position: 'relative', width: 170, height: 170, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div className="audio-wave-pulse"></div>
+            <Avatar src={callPartner?.avatar} name={callPartner?.name} size={130} />
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <h2 style={{ fontSize: 28, fontWeight: 900, marginBottom: 8, color: '#fff' }}>
+              {callPartner?.name}
+            </h2>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 20, background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }} className="animate-pulse" />
+              <span style={{ fontSize: 13, color: '#10b981', fontWeight: 700 }}>Voice Connected</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONNECTED state (VIDEO) */}
+      {callState === 'connected' && callType === 'video' && (
+        <div style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+          {/* Remote Video Stream */}
+          <video
+            ref={remoteVideoRef}
+            autoPlay
+            playsInline
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              background: '#020617',
+            }}
+          />
+
+          {/* Draggable Local PIP */}
+          <motion.div
+            drag
+            dragConstraints={{ left: 16, right: window.innerWidth - 176, top: 16, bottom: window.innerHeight - 256 }}
+            style={{
+              position: 'absolute',
+              top: 24,
+              right: 24,
+              width: 130,
+              height: 195,
+              borderRadius: 20,
+              overflow: 'hidden',
+              boxShadow: '0 16px 40px rgba(0,0,0,0.6)',
+              border: '2px solid rgba(255,255,255,0.18)',
+              background: '#0f172a',
+              cursor: 'grab',
+              zIndex: 100,
+            }}
+            whileTap={{ scale: 0.98, cursor: 'grabbing' }}
+          >
+            <video
+              ref={localVideoRef}
+              autoPlay
+              playsInline
+              muted
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+              }}
+            />
+            {isVideoOff && (
+              <div style={{ position: 'absolute', inset: 0, background: '#1e293b', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <span style={{ fontSize: 24 }}>🚫</span>
+                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Camera Off</span>
+              </div>
+            )}
+          </motion.div>
+
+          {/* Caller Details Header HUD (floating top left) */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 24,
+              left: 24,
+              background: 'rgba(15, 23, 42, 0.65)',
+              backdropFilter: 'blur(16px)',
+              padding: '12px 18px',
+              borderRadius: 20,
+              border: '1px solid rgba(255,255,255,0.08)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+              zIndex: 90,
+            }}
+          >
+            <Avatar src={callPartner?.avatar} name={callPartner?.name} size={38} />
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>{callPartner?.name}</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', fontWeight: 500, marginTop: 1 }}>Video Calling</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Control overlay container */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 48,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 18,
+          zIndex: 100,
+          width: '100%',
+          padding: '0 24px',
+        }}
+      >
+        {/* Timer Badge */}
+        {callState === 'connected' && (
+          <div
+            style={{
+              padding: '6px 14px',
+              borderRadius: 20,
+              background: 'rgba(15, 23, 42, 0.7)',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              fontSize: 13,
+              fontWeight: 700,
+              fontFamily: 'monospace',
+              letterSpacing: '0.05em',
+              color: '#38bdf8',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+            }}
+          >
+            ⏱️ {formatDuration(callDuration)}
+          </div>
+        )}
+
+        {/* Floating Glass Control Pill */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 20,
+            background: 'rgba(15, 23, 42, 0.65)',
+            padding: '14px 28px',
+            borderRadius: 99,
+            backdropFilter: 'blur(20px) saturate(140%)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.4)',
+          }}
+        >
+          {/* Mute Button */}
+          <CallControlBtn
+            onClick={toggleMute}
+            active={isMuted}
+            activeColor="#ef4444"
+            label="Mute"
+            icon={
+              isMuted ? (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-1.01.9-2.17.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l6 6zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.79 1.79C13.56 15.85 12.79 16 12 16c-3.14 0-6-2.54-6-6H4.3c0 3.84 2.87 7.02 6.57 7.61V21h2.26v-3.39c1.07-.15 2.09-.49 3-.98l2.6 2.6L20 18 4.27 3z"/>
+                </svg>
+              ) : (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
+                </svg>
+              )
+            }
+          />
+
+          {/* Camera Button (Only shows for Video Calls) */}
+          {callType === 'video' && (
+            <CallControlBtn
+              onClick={toggleCamera}
+              active={isVideoOff}
+              activeColor="#ef4444"
+              label="Camera"
+              icon={
+                isVideoOff ? (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M21 6.5l-4 4V7c0-.55-.45-1-1-1H9.82L21 17.18V6.5zM3.27 2L2 3.27 4.73 6H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.21 0 .39-.08.55-.18L19.73 21 21 19.73 3.27 2z"/>
+                  </svg>
+                ) : (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+                  </svg>
+                )
+              }
+            />
+          )}
+
+          {/* End Call Button */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+            <motion.button
+              whileHover={{ scale: 1.15, rotate: 135 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={endCall}
+              style={{
+                width: 58,
+                height: 58,
+                borderRadius: '50%',
+                background: '#ef4444',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 8px 24px rgba(239,68,68,0.5)',
+              }}
+              title="End Call"
+            >
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" style={{ transform: 'rotate(135deg)' }}>
+                <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+              </svg>
+            </motion.button>
+            <span style={{ fontSize: 11, color: '#ef4444', fontWeight: 600 }}>End Call</span>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ----------------------------------
 // OutgoingCallModal
-// ─────────────────────────────────────────────────────────────
+// ----------------------------------
 function OutgoingCallModal({ partner, callType, socket, onClose }) {
   useEffect(() => {
     socket?.emit('call_offer', {
@@ -1103,52 +1901,108 @@ function OutgoingCallModal({ partner, callType, socket, onClose }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
       style={{
-        position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.7)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        backdropFilter: 'blur(12px)',
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9999,
+        background: 'rgba(15, 23, 42, 0.75)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backdropFilter: 'blur(20px)',
       }}
     >
       <motion.div
-        initial={{ scale: 0.85, y: 20 }} animate={{ scale: 1, y: 0 }}
+        initial={{ scale: 0.9, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.9, y: 20 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 350 }}
         style={{
-          background: 'var(--surface)', borderRadius: 28, padding: '48px 56px',
-          textAlign: 'center', boxShadow: '0 30px 80px rgba(0,0,0,0.4)',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20,
+          background: 'rgba(30, 41, 59, 0.65)',
+          backdropFilter: 'blur(24px) saturate(180%)',
+          borderRadius: 32,
+          padding: '48px 64px',
+          textAlign: 'center',
+          boxShadow: '0 30px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 24,
         }}
       >
-        <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1.5 }}
+        <style>{`
+          @keyframes outgoingGlowPulse {
+            0% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.35); transform: scale(1); }
+            50% { box-shadow: 0 0 0 24px rgba(56, 189, 248, 0); transform: scale(1.08); }
+            100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); transform: scale(1); }
+          }
+          .outgoing-icon-pulse {
+            animation: outgoingGlowPulse 1.8s infinite ease-in-out;
+          }
+        `}</style>
+
+        <div
+          className="outgoing-icon-pulse"
           style={{
-            width: 90, height: 90, borderRadius: '50%', background: 'linear-gradient(135deg, #10b981, #38bdf8)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40,
-          }}>
+            width: 96,
+            height: 96,
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 40,
+            color: '#fff',
+            boxShadow: '0 8px 24px rgba(14,165,233,0.3)',
+          }}
+        >
           {callType === 'video' ? '📹' : '📞'}
-        </motion.div>
+        </div>
+
         <div>
-          <div style={{ fontWeight: 900, fontSize: 20, color: 'var(--text)' }}>{partner.name}</div>
-          <div style={{ fontSize: 14, color: 'var(--text3)', marginTop: 6 }}>
-            Calling... {callType === 'video' ? 'Video' : 'Voice'}
+          <div style={{ fontWeight: 800, fontSize: 22, color: '#fff', letterSpacing: '-0.02em' }}>
+            {partner.name}
+          </div>
+          <div style={{ fontSize: 14, color: '#94a3b8', marginTop: 6, fontWeight: 500 }} className="animate-pulse">
+            Calling ({callType === 'video' ? 'Video' : 'Voice'})...
           </div>
         </div>
+
         <motion.button
-          whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-          onClick={() => { socket?.emit('call_end', { targetId: partner.id }); onClose(); }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => {
+            socket?.emit('call_end', { targetId: partner.id });
+            onClose();
+          }}
           style={{
-            padding: '14px 36px', background: '#ef4444', color: '#fff', border: 'none',
-            borderRadius: 14, fontWeight: 800, cursor: 'pointer', fontSize: 15,
-            boxShadow: '0 4px 16px rgba(239,68,68,0.3)',
-          }}>
-          ✕ Cancel
+            padding: '14px 38px',
+            background: 'rgba(239, 68, 68, 0.18)',
+            border: '1px solid rgba(239, 68, 68, 0.4)',
+            color: '#ef4444',
+            borderRadius: 16,
+            fontWeight: 700,
+            cursor: 'pointer',
+            fontSize: 14,
+            transition: 'background 0.2s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.28)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.18)'}
+        >
+          ✕ Cancel Call
         </motion.button>
       </motion.div>
     </motion.div>
   );
 }
 
-// ─────────────────────────────────────────────────────────────
+// ----------------------------------
 // UserModal
-// ─────────────────────────────────────────────────────────────
+// ----------------------------------
 function UserModal({ userId, onClose, onMessage }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);

@@ -127,8 +127,8 @@ async function generateQuiz({ subject, topic, difficulty = 'medium', count = 10,
 async function generateStudyPlan({ subject, daysUntil, dailyHours = 2, currentLevel = 'intermediate', language = 'ar' }) {
   if (!groqClient) throw new Error('GROQ_NOT_AVAILABLE');
   const prompt = language === 'ar'
-    ? `أنشئ خطة دراسية لـ "${subject}": ${daysUntil} يوم، ${dailyHours} ساعة/يوم، مستوى: ${currentLevel}.\nأرجع JSON:\n{"plan":[{"day":1,"date":"YYYY-MM-DD","sessions":[{"time":"HH:MM","duration":60,"topic":"...","goal":"...","type":"study"}]}],"tips":["..."],"totalHours":${daysUntil * dailyHours}}`
-    : `Create a study plan for "${subject}": ${daysUntil} days, ${dailyHours} hrs/day, level: ${currentLevel}.\nReturn ONLY JSON:\n{"plan":[{"day":1,"date":"YYYY-MM-DD","sessions":[{"time":"HH:MM","duration":60,"topic":"...","goal":"...","type":"study"}]}],"tips":["..."],"totalHours":${daysUntil * dailyHours}}`;
+    ? `أنشئ خطة دراسية لـ "${subject}": ${daysUntil} يوم، ${dailyHours} ساعة/يوم، مستوى: ${currentLevel}.\nأرجع JSON:\n{"plan":[{"day":1,"date":"YYYY-MM-DD","sessions":[{"time":"HH:MM","duration":60,"subject":"mathematics","topic":"...","goal":"...","type":"study"}]}],"tips":["..."],"totalHours":${daysUntil * dailyHours}}`
+    : `Create a study plan for "${subject}": ${daysUntil} days, ${dailyHours} hrs/day, level: ${currentLevel}.\nReturn ONLY JSON:\n{"plan":[{"day":1,"date":"YYYY-MM-DD","sessions":[{"time":"HH:MM","duration":60,"subject":"mathematics","topic":"...","goal":"...","type":"study"}]}],"tips":["..."],"totalHours":${daysUntil * dailyHours}}`;
 
   const res = await groqClient.chat.completions.create({
     model: GROQ_MODEL,

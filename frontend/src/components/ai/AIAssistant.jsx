@@ -8,7 +8,7 @@ import { aiAPI, filesAPI, aiClient } from '../../api/index';
 import { useUIStore, useAuthStore } from '../../context/store';
 import { Spinner } from '../shared/UI';
 import HomeworkCorrector from './HomeworkCorrector';
-import StudyPlanGenerator from './StudyPlanGenerator';
+
 
 // ── DOMPurify config ──────────────────────────────────────
 const SANITIZE_OPTS = {
@@ -21,8 +21,8 @@ const SANITIZE_OPTS = {
     'table', 'thead', 'tbody', 'tr', 'th', 'td',
   ],
   ALLOWED_ATTR: ['class'],
-  FORBID_TAGS:  ['script', 'style', 'iframe', 'form', 'input'],
-  FORBID_ATTR:  ['onerror', 'onload', 'onclick', 'onmouseover'],
+  FORBID_TAGS: ['script', 'style', 'iframe', 'form', 'input'],
+  FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover'],
 };
 
 // ── Markdown-lite renderer ─────────────────────────────────
@@ -70,10 +70,10 @@ function TypingDots() {
 // ── AI status badge ───────────────────────────────────────
 function StatusBadge({ provider }) {
   const labels = {
-    gemini:           { label: '✨ External AI', color: '#8B5CF6', bg: 'rgba(139,92,246,0.12)' },
-    najah_inhouse:    { label: '🧠 Najah Massive AI', color: '#10B981', bg: 'rgba(16,185,129,0.12)' },
+    gemini: { label: '✨ External AI', color: '#8B5CF6', bg: 'rgba(139,92,246,0.12)' },
+    najah_inhouse: { label: '🧠 Najah Massive AI', color: '#10B981', bg: 'rgba(16,185,129,0.12)' },
     najah_heuristics: { label: '⚡ Core Heuristics', color: '#F59E0B', bg: 'rgba(245,158,11,0.12)' },
-    error:            { label: '❌ Error', color: '#EF4444', bg: 'rgba(239,68,68,0.12)' },
+    error: { label: '❌ Error', color: '#EF4444', bg: 'rgba(239,68,68,0.12)' },
   };
   const b = labels[provider] || labels.najah_inhouse;
   return (
@@ -219,19 +219,19 @@ function AIChat() {
     provider: 'gemini', ts: new Date(),
   }]);
 
-  const [convId, setConvId]           = useState(null);
-  const [input, setInput]             = useState('');
-  const [loading, setLoading]         = useState(false);
+  const [convId, setConvId] = useState(null);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
-  const [searchMode, setSearchMode]   = useState(false);
-  const [speaking, setSpeaking]       = useState(false);
+  const [searchMode, setSearchMode] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [geminiOk, setGeminiOk]       = useState(null);
+  const [geminiOk, setGeminiOk] = useState(null);
 
-  const bottomRef  = useRef(null);
-  const inputRef   = useRef(null);
-  const speechRef  = useRef(null);
+  const bottomRef = useRef(null);
+  const inputRef = useRef(null);
+  const speechRef = useRef(null);
   const recognitionRef = useRef(null);
 
   // Check Gemini status
@@ -297,8 +297,8 @@ function AIChat() {
     if (speaking) { window.speechSynthesis.cancel(); setSpeaking(false); return; }
     const plain = text.replace(/[*#`_]/g, '').replace(/<[^>]+>/g, '');
     const utter = new SpeechSynthesisUtterance(plain);
-    utter.lang  = language === 'ar' ? 'ar-EG' : 'en-US';
-    utter.rate  = 0.95;
+    utter.lang = language === 'ar' ? 'ar-EG' : 'en-US';
+    utter.rate = 0.95;
     utter.onend = () => setSpeaking(false);
     speechRef.current = utter;
     setSpeaking(true);
@@ -443,7 +443,7 @@ function AIChat() {
             const parsed = JSON.parse(match[0]);
             setSuggestions(parsed.suggestions || []);
           }
-        } catch {}
+        } catch { }
       }
 
       refetchHistory();
@@ -520,8 +520,8 @@ function AIChat() {
           >
             <div style={{ padding: '16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontWeight: 700, fontSize: 16 }}>{isAr ? 'المحادثات' : 'History'}</span>
-              <button onClick={() => { setMessages([{ role:'assistant', content: isAr ? 'محادثة جديدة! اسألني أي شيء.' : 'New chat! Ask me anything.', provider:'gemini', ts:new Date() }]); setConvId(null); setSuggestions([]); }}
-                style={{ padding: '6px 12px', borderRadius: 10, background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color:'#fff', border:'none', cursor:'pointer', fontSize:14, fontWeight:700 }}>
+              <button onClick={() => { setMessages([{ role: 'assistant', content: isAr ? 'محادثة جديدة! اسألني أي شيء.' : 'New chat! Ask me anything.', provider: 'gemini', ts: new Date() }]); setConvId(null); setSuggestions([]); }}
+                style={{ padding: '6px 12px', borderRadius: 10, background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700 }}>
                 + {isAr ? 'جديد' : 'New'}
               </button>
             </div>
@@ -559,7 +559,7 @@ function AIChat() {
           display: 'flex', alignItems: 'center', gap: 12,
           backdropFilter: 'var(--glass-blur)'
         }}>
-          <motion.button 
+          <motion.button
             whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
             onClick={() => setShowHistory(v => !v)}
             style={{ width: 34, height: 34, borderRadius: 10, background: showHistory ? 'rgba(99,102,241,0.15)' : 'var(--surface)', border: '1px solid var(--border)', cursor: 'pointer', fontSize: 16 }}>
@@ -686,7 +686,7 @@ function AIChat() {
         {/* Input area */}
         <div className="floating-panel" style={{
           margin: '0 12px 12px 12px',
-          padding: '16px 24px 20px', 
+          padding: '16px 24px 20px',
           borderRadius: 24,
           backdropFilter: 'var(--glass-blur)'
         }}>
@@ -775,143 +775,6 @@ function AIChat() {
   );
 }
 
-// ── Quiz, Study Plan, Summarizer, YouTube panels ──────────────────
-function QuizPanel() {
-  const [subject, setSubject] = useState('mathematics');
-  const [difficulty, setDifficulty] = useState('medium');
-  const [count, setCount] = useState(10);
-  const [language] = [useUIStore().language];
-  const [quiz, setQuiz] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [answers, setAnswers] = useState({});
-  const [submitted, setSubmitted] = useState(false);
-  const [score, setScore] = useState(null);
-
-  const generate = async () => {
-    setLoading(true); setQuiz(null); setAnswers({}); setSubmitted(false); setScore(null);
-    try {
-      const { data } = await aiAPI.generateQuiz({ subject, difficulty, count, language });
-      setQuiz(data);
-    } catch { toast.error('Failed to generate quiz'); }
-    finally { setLoading(false); }
-  };
-
-  const submit = async () => {
-    const correct = quiz.questions.filter((q, i) => answers[i] === q.correct).length;
-    const total = quiz.questions.length;
-    setScore({ correct, total, pct: Math.round((correct / total) * 100) });
-    setSubmitted(true);
-    try {
-      await aiAPI.submitQuiz({ subject, topic: '', totalQ: total, correctQ: correct, difficulty, questions: quiz.questions });
-    } catch {}
-  };
-
-  const SUBJECTS = ['mathematics','science','arabic','english','social_studies','islamic_studies'];
-
-  return (
-    <div style={{ padding: 24, maxWidth: 800, margin: '0 auto' }}>
-      <div style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>🧠 AI Quiz Generator</h2>
-        <p style={{ color: 'var(--text3)', fontSize: 14 }}>Powered by Gemini 2.0 — intelligent questions tailored to the Egyptian curriculum</p>
-      </div>
-
-      {!quiz && (
-        <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 20, padding: 24, display: 'flex', flex: 1, flexWrap: 'wrap', gap: 16 }}>
-          <div style={{ flex: 1, minWidth: 160 }}>
-            <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text3)', display: 'block', marginBottom: 6 }}>SUBJECT</label>
-            <select value={subject} onChange={e => setSubject(e.target.value)}
-              style={{ width: '100%', padding: '10px 14px', borderRadius: 12, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: 14 }}>
-              {SUBJECTS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1).replace('_',' ')}</option>)}
-            </select>
-          </div>
-          <div style={{ flex: 1, minWidth: 140 }}>
-            <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text3)', display: 'block', marginBottom: 6 }}>DIFFICULTY</label>
-            <select value={difficulty} onChange={e => setDifficulty(e.target.value)}
-              style={{ width: '100%', padding: '10px 14px', borderRadius: 12, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: 14 }}>
-              {['easy','medium','hard'].map(d => <option key={d} value={d}>{d.charAt(0).toUpperCase()+d.slice(1)}</option>)}
-            </select>
-          </div>
-          <div style={{ flex: 1, minWidth: 120 }}>
-            <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text3)', display: 'block', marginBottom: 6 }}>QUESTIONS</label>
-            <select value={count} onChange={e => setCount(+e.target.value)}
-              style={{ width: '100%', padding: '10px 14px', borderRadius: 12, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: 14 }}>
-              {[5,10,15,20].map(n => <option key={n} value={n}>{n}</option>)}
-            </select>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-            <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
-              onClick={generate} disabled={loading}
-              style={{ padding: '10px 28px', borderRadius: 14, background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 14, boxShadow: '0 4px 16px rgba(99,102,241,0.35)' }}>
-              {loading ? <Spinner size="sm" /> : '✨ Generate'}
-            </motion.button>
-          </div>
-        </div>
-      )}
-
-      {quiz && !submitted && (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <span style={{ fontWeight: 700, fontSize: 16 }}>{quiz.questions?.length} questions · {subject} · {difficulty}</span>
-            <button onClick={() => setQuiz(null)} style={{ padding: '6px 14px', borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text2)', fontSize: 13 }}>← Back</button>
-          </div>
-          {quiz.questions?.map((q, i) => (
-            <motion.div key={i} initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay: i*0.04 }}
-              style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 16, padding: 20, marginBottom: 12 }}>
-              <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12 }}>{i+1}. {q.question}</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                {q.options?.map((opt, oi) => (
-                  <button key={oi} onClick={() => setAnswers(a => ({...a, [i]: oi}))}
-                    style={{
-                      padding: '10px 14px', borderRadius: 12, textAlign: 'left', cursor: 'pointer', fontSize: 13,
-                      background: answers[i] === oi ? 'rgba(99,102,241,0.15)' : 'var(--surface)',
-                      border: '2px solid', borderColor: answers[i] === oi ? '#6366F1' : 'var(--border)',
-                      color: 'var(--text)', fontWeight: answers[i] === oi ? 700 : 400, transition: 'all 0.15s',
-                    }}>{opt}</button>
-                ))}
-              </div>
-            </motion.div>
-          ))}
-          <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-            onClick={submit} disabled={Object.keys(answers).length < quiz.questions?.length}
-            style={{ width: '100%', padding: '14px', borderRadius: 16, background: 'linear-gradient(135deg,#10B981,#059669)', color:'#fff', border:'none', cursor:'pointer', fontWeight:700, fontSize:16, boxShadow:'0 4px 16px rgba(16,185,129,0.3)', marginTop:8 }}>
-            Submit Quiz →
-          </motion.button>
-        </div>
-      )}
-
-      {submitted && score && (
-        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-          style={{ background: 'var(--surface2)', border: '2px solid var(--border2)', borderRadius: 24, padding: 32, textAlign: 'center' }}>
-          <div style={{ fontSize: 64, marginBottom: 12 }}>{score.pct >= 80 ? '🏆' : score.pct >= 60 ? '😊' : '📚'}</div>
-          <div style={{ fontSize: 48, fontWeight: 900, color: score.pct >= 80 ? '#10B981' : score.pct >= 60 ? '#F59E0B' : '#EF4444' }}>{score.pct}%</div>
-          <div style={{ fontSize: 16, fontWeight: 700, marginTop: 8, marginBottom: 24 }}>{score.correct} / {score.total} correct</div>
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-            <button onClick={() => { setQuiz(null); setAnswers({}); setSubmitted(false); setScore(null); }}
-              style={{ padding: '10px 24px', borderRadius: 14, background: 'var(--surface)', border: '1px solid var(--border)', cursor: 'pointer', fontWeight: 600 }}>
-              New Quiz
-            </button>
-            <button onClick={() => { setAnswers({}); setSubmitted(false); setScore(null); }}
-              style={{ padding: '10px 24px', borderRadius: 14, background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', color:'#fff', border:'none', cursor:'pointer', fontWeight:600 }}>
-              Retry ↺
-            </button>
-          </div>
-          {/* Show explanation */}
-          <div style={{ marginTop: 24, textAlign: 'left' }}>
-            {quiz.questions?.map((q, i) => {
-              const ua = answers[i]; const correct = q.correct;
-              return (
-                <div key={i} style={{ background: ua===correct?'rgba(16,185,129,0.06)':'rgba(239,68,68,0.06)', border:`1px solid ${ua===correct?'rgba(16,185,129,0.2)':'rgba(239,68,68,0.2)'}`, borderRadius: 12, padding: 14, marginBottom: 8 }}>
-                  <div style={{ fontWeight:700, marginBottom:4, color: ua===correct?'#10B981':'#EF4444' }}>{ua===correct?'✓':'✗'} {q.question}</div>
-                  <div style={{ fontSize:13, color:'var(--text3)' }}>💡 {q.explanation}</div>
-                </div>
-              );
-            })}
-          </div>
-        </motion.div>
-      )}
-    </div>
-  );
-}
 
 // ── YouTube Summary Panel ─────────────────────────────────────
 function YouTubePanel() {
@@ -921,45 +784,45 @@ function YouTubePanel() {
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState('');
   const doSummarize = async () => {
-    if (!url.trim()) return toast.error(isAr?'أدخل رابط يوتيوب':'Enter a YouTube URL');
-    if (!url.includes('youtube')&&!url.includes('youtu.be')) return toast.error(isAr?'رابط غير صالح':'Invalid URL');
+    if (!url.trim()) return toast.error(isAr ? 'أدخل رابط يوتيوب' : 'Enter a YouTube URL');
+    if (!url.includes('youtube') && !url.includes('youtu.be')) return toast.error(isAr ? 'رابط غير صالح' : 'Invalid URL');
     setLoading(true); setSummary('');
-    try { const { data } = await aiAPI.youtubeSummarize({ url, language }); setSummary(data.summary||''); }
-    catch { toast.error(isAr?'تعذر جلب النص. الفيديو يحتاج ترجمة.':'Could not get transcript. Video needs captions.'); }
+    try { const { data } = await aiAPI.youtubeSummarize({ url, language }); setSummary(data.summary || ''); }
+    catch { toast.error(isAr ? 'تعذر جلب النص. الفيديو يحتاج ترجمة.' : 'Could not get transcript. Video needs captions.'); }
     finally { setLoading(false); }
   };
   return (
     <div style={{ padding: 24, maxWidth: 800, margin: '0 auto' }}>
       <div style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 4 }}>🎥 {isAr?'تلخيص فيديو يوتيوب':'YouTube Summary'}</h2>
-        <p style={{ color: 'var(--text3)', fontSize: 15 }}>{isAr?'الصق رابط فيديو تعليمي وسأقوم بتلخيصه فوراً':'Paste an educational YouTube link and get an instant AI summary'}</p>
+        <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 4 }}>🎥 {isAr ? 'تلخيص فيديو يوتيوب' : 'YouTube Summary'}</h2>
+        <p style={{ color: 'var(--text3)', fontSize: 15 }}>{isAr ? 'الصق رابط فيديو تعليمي وسأقوم بتلخيصه فوراً' : 'Paste an educational YouTube link and get an instant AI summary'}</p>
       </div>
-      <div style={{ background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:20, padding:24, marginBottom:20 }}>
-        <label style={{ fontSize:14, fontWeight:700, color:'var(--text3)', display:'block', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.08em' }}>YouTube URL</label>
-        <div style={{ display:'flex', gap:10 }}>
-          <input value={url} onChange={e=>setUrl(e.target.value)} onKeyDown={e=>e.key==='Enter'&&doSummarize()}
+      <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 20, padding: 24, marginBottom: 20 }}>
+        <label style={{ fontSize: 14, fontWeight: 700, color: 'var(--text3)', display: 'block', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>YouTube URL</label>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <input value={url} onChange={e => setUrl(e.target.value)} onKeyDown={e => e.key === 'Enter' && doSummarize()}
             placeholder="https://www.youtube.com/watch?v=..."
-            style={{ flex:1, padding:'12px 16px', borderRadius:12, background:'var(--surface)', border:'1px solid var(--border)', color:'var(--text)', fontSize:16 }} />
-          <motion.button whileHover={{ scale:1.04 }} whileTap={{ scale:0.96 }}
+            style={{ flex: 1, padding: '12px 16px', borderRadius: 12, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: 16 }} />
+          <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
             onClick={doSummarize} disabled={loading}
-            style={{ padding:'12px 24px', borderRadius:12, background:'linear-gradient(135deg,#EF4444,#DC2626)', color:'#fff', border:'none', cursor:'pointer', fontWeight:700, fontSize:16, flexShrink:0, boxShadow:'0 4px 16px rgba(239,68,68,0.35)' }}>
-            {loading?<Spinner size="sm" />:'▶ '+(isAr?'لخص':'Go')}
+            style={{ padding: '12px 24px', borderRadius: 12, background: 'linear-gradient(135deg,#EF4444,#DC2626)', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 16, flexShrink: 0, boxShadow: '0 4px 16px rgba(239,68,68,0.35)' }}>
+            {loading ? <Spinner size="sm" /> : '▶ ' + (isAr ? 'لخص' : 'Go')}
           </motion.button>
         </div>
-        <p style={{ fontSize:13, color:'var(--text3)', marginTop:10 }}>ℹ️ {isAr?'يعمل مع الفيديوهات التي تحتوي على ترجمة':'Works with videos that have captions'}</p>
+        <p style={{ fontSize: 13, color: 'var(--text3)', marginTop: 10 }}>ℹ️ {isAr ? 'يعمل مع الفيديوهات التي تحتوي على ترجمة' : 'Works with videos that have captions'}</p>
       </div>
-      {loading&&<div style={{ textAlign:'center', padding:40 }}><Spinner size="lg" /><p style={{ color:'var(--text3)', marginTop:16, fontSize:15 }}>{isAr?'جارٍ تحليل الفيديو...':'Analyzing video…'}</p></div>}
-      {summary&&(
-        <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
-          style={{ background:'var(--surface2)', border:'1px solid var(--border2)', borderRadius:20, padding:24 }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-            <h3 style={{ fontSize:18, fontWeight:700 }}>🎬 {isAr?'ملخص الفيديو':'Video Summary'}</h3>
-            <div style={{ display:'flex', gap:8 }}>
-              <button onClick={()=>{navigator.clipboard.writeText(summary);toast.success(isAr?'تم النسخ!':'Copied!');}} style={{ padding:'6px 14px', borderRadius:8, background:'var(--surface)', border:'1px solid var(--border)', cursor:'pointer', fontSize:14, fontWeight:600, color:'var(--text2)' }}>📋 {isAr?'نسخ':'Copy'}</button>
-              <button onClick={()=>{setUrl('');setSummary('');}} style={{ padding:'6px 14px', borderRadius:8, background:'var(--surface)', border:'1px solid var(--border)', cursor:'pointer', fontSize:14, fontWeight:600, color:'var(--text2)' }}>+{isAr?'جديد':'New'}</button>
+      {loading && <div style={{ textAlign: 'center', padding: 40 }}><Spinner size="lg" /><p style={{ color: 'var(--text3)', marginTop: 16, fontSize: 15 }}>{isAr ? 'جارٍ تحليل الفيديو...' : 'Analyzing video…'}</p></div>}
+      {summary && (
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+          style={{ background: 'var(--surface2)', border: '1px solid var(--border2)', borderRadius: 20, padding: 24 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h3 style={{ fontSize: 18, fontWeight: 700 }}>🎬 {isAr ? 'ملخص الفيديو' : 'Video Summary'}</h3>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => { navigator.clipboard.writeText(summary); toast.success(isAr ? 'تم النسخ!' : 'Copied!'); }} style={{ padding: '6px 14px', borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: 'var(--text2)' }}>📋 {isAr ? 'نسخ' : 'Copy'}</button>
+              <button onClick={() => { setUrl(''); setSummary(''); }} style={{ padding: '6px 14px', borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: 'var(--text2)' }}>+{isAr ? 'جديد' : 'New'}</button>
             </div>
           </div>
-          <div className="ai-msg-content" style={{ fontSize:15, lineHeight:1.75, color:'var(--text)' }}
+          <div className="ai-msg-content" style={{ fontSize: 15, lineHeight: 1.75, color: 'var(--text)' }}
             dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(renderMarkdown(summary), SANITIZE_OPTS) }} />
         </motion.div>
       )}
@@ -969,23 +832,21 @@ function YouTubePanel() {
 
 // ── Tabs Container (main export) ─────────────────────────────
 const TABS = [
-  { id:'chat',      labelEn:'💬 Chat',            labelAr:'💬 المحادثة' },
-  { id:'quiz',      labelEn:'🧠 Quiz',            labelAr:'🧠 الاختبارات' },
-  { id:'summarize', labelEn:'🎥 YouTube Summary', labelAr:'🎥 تلخيص يوتيوب' },
-  { id:'plan',      labelEn:'📅 Study Plan',      labelAr:'📅 خطة الدراسة' },
-  { id:'homework',  labelEn:'📸 Homework',        labelAr:'📸 صحح واجبك' },
+  { id: 'chat', labelEn: '💬 Chat', labelAr: '💬 المحادثة' },
+  { id: 'summarize', labelEn: '🎥 YouTube Summary', labelAr: '🎥 تلخيص يوتيوب' },
+  { id: 'homework', labelEn: '📸 Homework', labelAr: '📸 صحح واجبك' },
 ];
 
 export default function AIAssistant() {
   const [tab, setTab] = useState('chat');
   const { language } = useUIStore();
   const isAr = language === 'ar';
-  
+
   return (
-    <div style={{ height:'calc(100vh - 90px)', display:'flex', flexDirection:'column' }}>
-      <div style={{ display:'flex', gap:4, padding:'10px 20px', background:'var(--surface2)', borderBottom:'1px solid var(--border)', overflowX:'auto', flexShrink:0, scrollbarWidth:'none' }}>
+    <div style={{ height: 'calc(100vh - 90px)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: 'flex', gap: 4, padding: '10px 20px', background: 'var(--surface2)', borderBottom: '1px solid var(--border)', overflowX: 'auto', flexShrink: 0, scrollbarWidth: 'none' }}>
         {TABS.map(t => (
-          <motion.button key={t.id} whileHover={{ scale:1.04 }} whileTap={{ scale:0.96 }} onClick={()=>setTab(t.id)}
+          <motion.button key={t.id} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} onClick={() => setTab(t.id)}
             style={{
               padding: '8px 20px',
               borderRadius: 12,
@@ -1000,16 +861,15 @@ export default function AIAssistant() {
               boxShadow: tab === t.id ? '0 4px 14px rgba(99,102,241,0.30)' : 'none',
               transform: tab === t.id ? 'scale(1.03)' : 'scale(1)'
             }}>
-              {isAr ? t.labelAr : t.labelEn}
+            {isAr ? t.labelAr : t.labelEn}
           </motion.button>
         ))}
       </div>
-      <div style={{ flex:1, overflowY:'auto', background:'var(--ink2)' }}>
-        {tab==='chat'      && <AIChat />}
-        {tab==='quiz'      && <QuizPanel />}
-        {tab==='summarize' && <YouTubePanel />}
-        {tab==='plan'      && <StudyPlanPanel />}
-        {tab==='homework'  && <HomeworkCorrector isAr={isAr} />}
+      <div style={{ flex: 1, overflowY: 'auto', background: 'var(--ink2)' }}>
+        {tab === 'chat' && <AIChat />}
+        {tab === 'summarize' && <YouTubePanel />}
+        {tab === 'plan' && <StudyPlanGenerator isAr={isAr} />}
+        {tab === 'homework' && <HomeworkCorrector isAr={isAr} />}
       </div>
     </div>
   );

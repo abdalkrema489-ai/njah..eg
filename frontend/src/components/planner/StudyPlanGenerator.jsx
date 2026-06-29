@@ -1,8 +1,8 @@
-// src/components/ai/StudyPlanGenerator.jsx
+// src/components/planner/StudyPlanGenerator.jsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import client from '../../api/index';
 import { Spinner } from '../shared/UI';
@@ -26,7 +26,6 @@ const LEVELS = [
 ];
 
 function MarkdownPlan({ content, isAr }) {
-  // Simple markdown renderer for the plan
   const safeContent = typeof content === 'string' ? content : JSON.stringify(content, null, 2) || '';
   const lines = safeContent.split('\n');
   return (
@@ -74,6 +73,7 @@ function MarkdownPlan({ content, isAr }) {
 
 export default function StudyPlanGenerator({ isAr }) {
   const navigate = useNavigate();
+  const qc = useQueryClient();
 
   const [examDate, setExamDate]       = useState('');
   const [subjects, setSubjects]       = useState([]);
@@ -103,62 +103,127 @@ export default function StudyPlanGenerator({ isAr }) {
     setApplying(true);
     try {
       const sessions = [];
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Normalize to midnight
+
       plan.plan.forEach((day) => {
-        const dayOffset = parseInt(day.day) || 1;
-        let dateObj = new Date();
+        let dateObj = null;
+
         if (day.date) {
-          const cleanDate = day.date.replace(/\//g, '-');
-          const match = cleanDate.match(/(\d{4})-(\d{2})-(\d{2})/);
-          if (match) {
-            dateObj = new Date(cleanDate);
-          } else {
-            const parsed = new Date(day.date);
-            if (!isNaN(parsed.getTime())) {
-              dateObj = parsed;
-            } else {
-              dateObj.setDate(dateObj.getDate() + dayOffset);
-            }
+          const cleanDate = String(day.date).replace(/\//g, '-').trim();
+          const isoMatch = cleanDate.match(/(\d{4})-(\d{2})-(\d{2})/);
+          if (isoMatch) {
+            const y = parseInt(isoMatch[1], 10);
+            const m = parseInt(isoMatch[2], 10) - 1;
+            const d = parseInt(isoMatch[3], 10);
+            const candidate = new Date(y, m, d);
+            if (!isNaN(candidate.getTime())) dateObj = candidate;
           }
-        } else {
-          dateObj.setDate(dateObj.getDate() + dayOffset);
+          if (!dateObj) {
+            const parsed = new Date(day.date);
+            if (!isNaN(parsed.getTime())) dateObj = parsed;
+          }
+        }
+
+        if (!dateObj || isNaN(dateObj.getTime())) {
+          const dayOffset = Math.max(0, (parseInt(String(day.day).replace(/\D/g, '')) || 1) - 1);
+          dateObj = new Date(today);
+          dateObj.setDate(today.getDate() + dayOffset);
         }
 
         (day.sessions || []).forEach((s, si) => {
           if (s.type === 'rest') return;
-          
+
           let hour = 9 + (si * 2);
           let minute = 0;
+
           if (s.time) {
             const timeStr = String(s.time).trim();
-            const match = timeStr.match(/(\d{1,2}):(\d{2})/);
-            if (match) {
-              hour = parseInt(match[1], 10);
-              minute = parseInt(match[2], 10);
-              if (timeStr.toLowerCase().includes('pm') && hour < 12) {
-                hour += 12;
-              } else if (timeStr.toLowerCase().includes('am') && hour === 12) {
-                hour = 0;
+            const timeMatch = timeStr.match(/(\d{1,2}):(\d{2})/);
+            if (timeMatch) {
+              const rawHour = parseInt(timeMatch[1], 10);
+              const rawMin  = parseInt(timeMatch[2], 10);
+              if (!isNaN(rawHour) && !isNaN(rawMin)) {
+                hour   = rawHour;
+                minute = rawMin;
+                const lower = timeStr.toLowerCase();
+                if (lower.includes('pm') && hour < 12) hour += 12;
+                if (lower.includes('am') && hour === 12) hour = 0;
               }
             }
           }
 
-          const start = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), hour, minute, 0);
-          const end = new Date(start.getTime() + (parseInt(s.duration) || 60) * 60000);
+          hour   = Math.min(Math.max(hour, 0), 23);
+          minute = Math.min(Math.max(minute, 0), 59);
+
+          const start = new Date(
+            dateObj.getFullYear(),
+            dateObj.getMonth(),
+            dateObj.getDate(),
+            hour, minute, 0
+          );
+
+          if (isNaN(start.getTime())) return;
+
+          const durationMin = parseInt(String(s.duration).replace(/\D/g, '')) || 60;
+          const end = new Date(start.getTime() + durationMin * 60000);
+
+          let sessSubject = s.subject || plan.subject || (Array.isArray(plan.subjects) ? plan.subjects[0] : null) || 'mathematics';
+          sessSubject = String(sessSubject).toLowerCase().trim().replace(/[^a-z0-9_]/g, '').replace(/\s+/g, '_');
+          if (!sessSubject) sessSubject = 'mathematics';
 
           sessions.push({
-            subject: plan.subject || plan.subjects?.[0] || 'mathematics',
-            topic: s.topic || 'Study Session',
+            subject: sessSubject,
+            topic:      s.topic || (isAr ? 'جلسة مذاكرة' : 'Study Session'),
             start_time: start.toISOString(),
-            end_time: end.toISOString(),
-            notes: s.goal || '',
+            end_time:   end.toISOString(),
+            notes:      s.goal || s.notes || '',
           });
         });
       });
 
-      await Promise.all(sessions.map(s => client.post('/planner', s)));
-      toast.success(isAr ? '📅 تم إضافة الجلسات للمخطط بنجاح!' : `📅 Added ${sessions.length} sessions to your planner!`);
+      if (sessions.length === 0) {
+        toast.error(isAr ? 'لا توجد جلسات دراسية صالحة لإضافتها' : 'No study sessions to apply');
+        setApplying(false);
+        return;
+      }
+
+      let successCount = 0;
+      let skippedCount = 0;
+
+      for (const s of sessions) {
+        try {
+          await client.post('/planner', s);
+          successCount++;
+        } catch (err) {
+          if (err.response?.status === 409) {
+            skippedCount++;
+          } else {
+            console.warn('Session creation skipped:', err.message);
+            skippedCount++;
+          }
+        }
+      }
+
+      qc.invalidateQueries(['sessions']);
+
+      if (successCount > 0) {
+        if (skippedCount > 0) {
+          toast.success(isAr
+            ? `📅 تم إضافة ${successCount} جلسة، وتجاوز ${skippedCount} بسبب تعارض المواعيد`
+            : `📅 Added ${successCount} sessions, skipped ${skippedCount} due to conflicts`
+          );
+        } else {
+          toast.success(isAr
+            ? `📅 تم إضافة ${successCount} جلسة بنجاح إلى المخطط!`
+            : `📅 Successfully added ${successCount} sessions to your planner!`
+          );
+        }
+      } else {
+        toast.error(isAr ? 'تعذر إضافة الجلسات لوجود تعارضات في كل المواعيد' : 'All sessions skipped due to conflicts');
+      }
     } catch (err) {
-      toast.error(err.response?.data?.error || (isAr ? 'فشل إضافة الجلسات للمخطط' : 'Failed to apply sessions'));
+      toast.error(isAr ? 'فشل إضافة الجلسات للمخطط' : 'Failed to apply sessions');
     } finally {
       setApplying(false);
     }
@@ -180,7 +245,7 @@ export default function StudyPlanGenerator({ isAr }) {
         {/* Exam date */}
         <div style={{ marginBottom: 20 }}>
           <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text3)', display: 'block', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            📆 {isAr ? 'تاريخ الامتحان' : 'Exam Date'}
+            % 📆 {isAr ? 'تاريخ الامتحان' : 'Exam Date'}
           </label>
           <input
             type="date"
@@ -302,7 +367,6 @@ export default function StudyPlanGenerator({ isAr }) {
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="glass-panel" style={{ padding: 28 }}
           >
-            {/* Header section with futuristic design */}
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
@@ -381,7 +445,6 @@ export default function StudyPlanGenerator({ isAr }) {
               </div>
             </div>
 
-            {/* Plan Display Area */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxHeight: 450, overflowY: 'auto', paddingRight: 6 }} className="scroll-y">
               {Array.isArray(plan.plan) ? (
                 plan.plan.map((day, idx) => (
@@ -401,7 +464,6 @@ export default function StudyPlanGenerator({ isAr }) {
                     }}
                     whileHover={{ scale: 1.01, borderColor: 'rgba(99,102,241,0.3)' }}
                   >
-                    {/* Futuristic Day Header */}
                     <div style={{
                       display: 'flex',
                       justifyContent: 'space-between',
@@ -425,7 +487,6 @@ export default function StudyPlanGenerator({ isAr }) {
                       </span>
                     </div>
 
-                    {/* Day's Sessions */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {(day.sessions || []).map((s, si) => {
                         let badgeBg = 'rgba(99,102,241,0.08)';
@@ -531,7 +592,6 @@ export default function StudyPlanGenerator({ isAr }) {
               )}
             </div>
 
-            {/* AI Tips Section */}
             {plan.tips?.length > 0 && (
               <div style={{
                 marginTop: 20,

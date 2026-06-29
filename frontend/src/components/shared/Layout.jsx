@@ -62,9 +62,7 @@ const NAV_SECTIONS_DEF = [
       { key:'planner',      path:'/planner',      Icon: Icons.planner,       tKey:'nav.planner' },
       { key:'notes',        path:'/notes',        Icon: Icons.notes,         tKey:'nav.notes' },
       { key:'files',        path:'/files',        Icon: Icons.files,         tKey:'nav.files' },
-      { key:'focus',        path:'/focus',        Icon: Icons.focus,         tKey:'nav.focus' },
       { key:'quiz-history', path:'/quiz-history', Icon: Icons.quizHistory,   tKey:'nav.quizHistory' },
-      { key:'tools',        path:'/tools',        Icon: Icons.tools,         tKey:'nav.tools' },
     ],
   },
   {
@@ -102,7 +100,6 @@ const TEACHER_SECTIONS_DEF = [
       { key:'lesson-planner', path:'/lesson-planner',Icon: Icons.notes,        tKey:'nav.lessonPlanner' },
       { key:'exam-builder',   path:'/exam-builder',  Icon: Icons.exam,         tKey:'nav.examBuilder' },
       { key:'essay-grader',   path:'/essay-grader',  Icon: Icons.analytics,    tKey:'nav.essayGrader' },
-      { key:'tools',          path:'/tools',         Icon: Icons.tools,        tKey:'nav.tools' },
     ],
   },
   {
@@ -134,7 +131,6 @@ const UNIVERSITY_SECTIONS_DEF = [
       { key:'files',        path:'/files',        Icon: Icons.files,        tKey:'nav.files' },
       { key:'groups',       path:'/groups',       Icon: Icons.groups,       tKey:'nav.groups' },
       { key:'notes',        path:'/notes',        Icon: Icons.notes,        tKey:'nav.notes' },
-      { key:'tools',        path:'/tools',        Icon: Icons.tools,        tKey:'nav.tools' },
     ],
   },
   {

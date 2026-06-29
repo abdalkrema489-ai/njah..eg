@@ -684,7 +684,7 @@ function generateStudyPlan({ subject, daysUntil, dailyHours = 2, currentLevel = 
     const n = Math.max(1, Math.min(Number(dailyHours) || 2, 4));
     for (let s = 0; s < n; s++) {
       const hour = 9 + (s * 2);
-      sessions.push({ time: `${String(hour).padStart(2, '0')}:00`, duration: 60, topic: topics[(Math.floor((day - 1) / daysUntil * topics.length) + s) % topics.length], goal: `${phase.name}`, type: phase.type });
+      sessions.push({ time: `${String(hour).padStart(2, '0')}:00`, duration: 60, subject: subject || 'mathematics', topic: topics[(Math.floor((day - 1) / daysUntil * topics.length) + s) % topics.length], goal: `${phase.name}`, type: phase.type });
     }
     plan.push({ day, date: dateStr, sessions });
   }

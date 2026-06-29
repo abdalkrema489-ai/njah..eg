@@ -120,6 +120,28 @@ export default function NotesPage() {
     saveNote({ id: selectedNote.id, data: { title: editTitle, subject: editSubject, content } });
   };
 
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const toastId = toast.loading(isAr ? 'جاري رفع الصورة...' : 'Uploading image...');
+    try {
+      const { filesAPI } = await import('../../api/index');
+      const res = await filesAPI.upload(file, { subject: editSubject || 'other', tags: 'notes-image', is_public: false });
+      const imageUrl = res.data.file.file_url;
+      
+      const ed = document.getElementById('note-editor');
+      if (ed) {
+        ed.focus();
+        document.execCommand('insertHTML', false, `<img src="${imageUrl}" alt="Uploaded asset" style="max-width: 100%; border-radius: 12px; margin: 16px 0; box-shadow: var(--shadow); display: block;" />`);
+        setIsDirty(true);
+      }
+      toast.success(isAr ? 'تم رفع الصورة وإدراجها بنجاح!' : 'Image uploaded and inserted!', { id: toastId });
+    } catch (err) {
+      toast.error(isAr ? 'فشل رفع الصورة' : 'Image upload failed', { id: toastId });
+    }
+  };
+
   const execFormat = (item) => {
     if (item.exec) { item.exec(); return; }
     document.execCommand(item.cmd, false, null);
@@ -235,20 +257,43 @@ export default function NotesPage() {
                   >
                     {isAr ? '← رجوع' : '← Back'}
                   </button>
-                  <div style={{ flex: 1, display: 'flex', gap: 14, alignItems: 'center', minWidth: 200 }}>
-                    <input 
-                      value={editTitle} 
-                      onChange={e => { setEditTitle(e.target.value); setIsDirty(true); }}
-                      placeholder="Document Title"
-                      style={{ background: 'none', border: 'none', fontSize: 24, fontWeight: 900, color: 'var(--text)', flex: 1, outline: 'none', fontFamily: 'var(--font-head)', letterSpacing: '-0.025em', padding: 0 }}
-                    />
-                    <Select 
-                      value={editSubject} 
-                      onChange={e => { setEditSubject(e.target.value); setIsDirty(true); }}
-                      style={{ width: 'auto', padding: '8px 14px', fontSize: 13, fontWeight: 700 }}
-                    >
-                      {SUBJECTS.map(s => <option key={s} value={s}>{s.replace('_',' ').toUpperCase()}</option>)}
-                    </Select>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6, minWidth: 200, alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', gap: 14, alignItems: 'center', width: '100%' }}>
+                      <input 
+                        value={editTitle} 
+                        onChange={e => { setEditTitle(e.target.value); setIsDirty(true); }}
+                        placeholder="Document Title"
+                        style={{ background: 'none', border: 'none', fontSize: 24, fontWeight: 900, color: 'var(--text)', flex: 1, outline: 'none', fontFamily: 'var(--font-head)', letterSpacing: '-0.025em', padding: 0 }}
+                      />
+                      <Select 
+                        value={editSubject} 
+                        onChange={e => { setEditSubject(e.target.value); setIsDirty(true); }}
+                        style={{ width: 'auto', padding: '8px 14px', fontSize: 13, fontWeight: 700 }}
+                      >
+                        {SUBJECTS.map(s => <option key={s} value={s}>{s.replace('_',' ').toUpperCase()}</option>)}
+                      </Select>
+                    </div>
+                    {selectedNote.file_name && (
+                      <a href={selectedNote.file_url} target="_blank" rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: 'var(--primary-light)',
+                          background: 'rgba(99,102,241,0.08)',
+                          border: '1px solid rgba(99,102,241,0.2)',
+                          padding: '4px 10px',
+                          borderRadius: 8,
+                          textDecoration: 'none',
+                          marginTop: 4
+                        }}
+                      >
+                        🔗 {isAr ? 'الملف المرتبط: ' : 'Linked File: '}
+                        <span style={{ textDecoration: 'underline' }}>{selectedNote.file_name}</span>
+                      </a>
+                    )}
                   </div>
                   
                   <div style={{ display: 'flex', gap: 10 }}>
@@ -268,8 +313,15 @@ export default function NotesPage() {
                   </div>
                 </div>
 
-                {/* Formatting Toolbar */}
+                 {/* Formatting Toolbar */}
                 <div style={{ padding: '12px 32px', background: 'var(--glass)', borderBottom: '1px solid var(--border)', backdropFilter: 'blur(10px)', display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <input
+                    type="file"
+                    id="note-image-input"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    style={{ display: 'none' }}
+                  />
                   {TOOLBAR.map(item => (
                     <motion.button key={item.cmd}
                       whileHover={{ scale: 1.1, background: 'var(--surface3)' }}
@@ -290,8 +342,18 @@ export default function NotesPage() {
                     whileTap={{ scale: 0.9 }}
                     onMouseDown={e => { e.preventDefault(); const url=prompt('Enter destination URL:'); if(url) document.execCommand('createLink',false,url); }}
                     style={{ padding: '8px 14px', borderRadius: 10, fontSize: 13, background: 'transparent', border: '1px solid transparent', color: 'var(--text)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                    title={isAr ? 'إدراج رابط' : 'Insert Link'}
                   >
                     <LinkIcon />
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.1, background: 'var(--surface3)' }}
+                    whileTap={{ scale: 0.9 }}
+                    onMouseDown={e => { e.preventDefault(); document.getElementById('note-image-input')?.click(); }}
+                    style={{ padding: '8px 14px', borderRadius: 10, fontSize: 14, background: 'transparent', border: '1px solid transparent', color: 'var(--text)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    title={isAr ? 'إدراج صورة' : 'Insert Image'}
+                  >
+                    📷
                   </motion.button>
                 </div>
 

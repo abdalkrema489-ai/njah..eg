@@ -457,7 +457,7 @@ async function generateStudyPlan({ subject, daysUntil, dailyHours = 2, currentLe
 ${history ? '- سجل الدراسة السابق: ' + history : ''}
 
 أرجع JSON فقط:
-{"plan":[{"day":1,"date":"YYYY-MM-DD","sessions":[{"time":"HH:MM","duration":60,"topic":"...","goal":"...","type":"study|review|practice|rest"}]}],"tips":["..."],"totalHours":N,"weakAreas":["..."]}`
+{"plan":[{"day":1,"date":"YYYY-MM-DD","sessions":[{"time":"HH:MM","duration":60,"subject":"اسم المادة بالإنجليزية مثلا mathematics","topic":"...","goal":"...","type":"study|review|practice|rest"}]}],"tips":["..."],"totalHours":N,"weakAreas":["..."]}`
     : `Create a personalized study plan for an Egyptian student studying "${subject}":
 - Days available: ${daysUntil}
 - Daily hours: ${dailyHours}
@@ -465,7 +465,7 @@ ${history ? '- سجل الدراسة السابق: ' + history : ''}
 ${history ? '- Study history: ' + history : ''}
 
 Return ONLY valid JSON:
-{"plan":[{"day":1,"date":"YYYY-MM-DD","sessions":[{"time":"HH:MM","duration":60,"topic":"...","goal":"...","type":"study|review|practice|rest"}]}],"tips":["..."],"totalHours":N,"weakAreas":["..."]}`;
+{"plan":[{"day":1,"date":"YYYY-MM-DD","sessions":[{"time":"HH:MM","duration":60,"subject":"subject name e.g. mathematics","topic":"...","goal":"...","type":"study|review|practice|rest"}]}],"tips":["..."],"totalHours":N,"weakAreas":["..."]}`;
 
   const result = await model.generateContent(prompt);
   const text   = result.response.text().trim();

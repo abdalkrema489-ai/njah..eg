@@ -438,7 +438,7 @@ export function LoginPage() {
 
         <Divider label={isAr ? "أو المتابعة باستخدام" : "or continue with"} margin={24} />
 
-        <motion.button onClick={() => authAPI.googleLogin()}
+        <motion.button onClick={() => authAPI.googleLogin('student')}
           whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
           style={{ width: '100%', padding: '12px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, color: 'var(--text)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
         >
@@ -629,6 +629,23 @@ export function RegisterPage() {
             {isAr ? 'إنشاء حساب' : 'Create Account'}
           </Btn>
         </form>
+
+        {/* Google Sign-up — preserves the selected role */}
+        <div style={{ marginTop: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            <span style={{ fontSize: 12, color: 'var(--text4)', fontWeight: 600 }}>{isAr ? 'أو' : 'or'}</span>
+            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+          </div>
+          <motion.button
+            type="button"
+            onClick={() => authAPI.googleLogin(role)}
+            whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+            style={{ width: '100%', padding: '12px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, color: 'var(--text)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+          >
+            <GoogleIcon /> {isAr ? `التسجيل كـ${role === 'teacher' ? 'معلم' : role === 'university' ? 'طالب جامعي' : 'طالب'} باستخدام جوجل` : `Sign up as ${role === 'teacher' ? 'Teacher' : role === 'university' ? 'University Student' : 'Student'} with Google`}
+          </motion.button>
+        </div>
       </div>
 
       <p style={{ textAlign: 'center', marginTop: 32, fontSize: 13, color: 'var(--text3)' }}>

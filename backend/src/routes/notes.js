@@ -14,18 +14,18 @@ nr.get('/', async (req,res) => {
 
     // Build query safely — stable param indices via array push
     const params = [req.user.id];
-    const conditions = ['user_id=$1'];
+    const conditions = ['n.user_id=$1'];
 
     if (subject) {
       params.push(subject);
-      conditions.push(`subject=$${params.length}`);
+      conditions.push(`n.subject=$${params.length}`);
     }
     if (pinned === 'true') {
-      conditions.push('is_pinned=true');
+      conditions.push('n.is_pinned=true');
     }
     if (search) {
       params.push(`%${search}%`);
-      conditions.push(`(title ILIKE $${params.length} OR content ILIKE $${params.length})`);
+      conditions.push(`(n.title ILIKE $${params.length} OR n.content ILIKE $${params.length})`);
     }
 
     // Push LIMIT then OFFSET last so indices are always correct
@@ -34,7 +34,12 @@ nr.get('/', async (req,res) => {
     params.push(offset);
     const offsetIdx = params.length;
 
-    const q = `SELECT * FROM notes WHERE ${conditions.join(' AND ')} ORDER BY is_pinned DESC, updated_at DESC LIMIT $${limitIdx} OFFSET $${offsetIdx}`;
+    const q = `SELECT n.*, f.original_name AS file_name, f.file_url AS file_url 
+               FROM notes n 
+               LEFT JOIN files f ON f.id = n.linked_file 
+               WHERE ${conditions.join(' AND ')} 
+               ORDER BY n.is_pinned DESC, n.updated_at DESC 
+               LIMIT $${limitIdx} OFFSET $${offsetIdx}`;
 
     const { rows } = await pool.query(q, params);
     res.json({ notes: rows });
@@ -64,7 +69,13 @@ nr.post('/', async (req,res) => {
 });
 
 nr.get('/:id', async (req,res) => {
-  const { rows }=await pool.query('SELECT * FROM notes WHERE id=$1 AND user_id=$2',[req.params.id,req.user.id]);
+  const { rows } = await pool.query(
+    `SELECT n.*, f.original_name AS file_name, f.file_url AS file_url 
+     FROM notes n 
+     LEFT JOIN files f ON f.id = n.linked_file 
+     WHERE n.id=$1 AND n.user_id=$2`,
+    [req.params.id, req.user.id]
+  );
   if (!rows[0]) return res.status(404).json({ error:'Not found' });
   res.json({ note: rows[0] });
 });

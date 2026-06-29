@@ -211,9 +211,13 @@ function FileCard({ file, onDelete, onAnalyze }) {
   );
 }
 
+import QuizPanel from './QuizPanel';
+import StudyToolsPanel from './StudyToolsPanel';
+
 export default function FilesPage() {
   const { lang } = useTranslation();
   const isAr = lang === 'ar';
+  const [activeTab, setActiveTab] = useState('vault'); // 'vault' | 'quiz' | 'tools'
   const [subject, setSubject] = useState('');
   const [search, setSearch] = useState('');
   const [analyzeFile, setAnalyzeFile] = useState(null);
@@ -239,81 +243,165 @@ export default function FilesPage() {
         subtitle={isAr ? "إدارة مستودعك الأكاديمي. يمكنك الوصول والتحليل وتنظيم المواد الدراسية بسهولة." : "Manage your academic repository. Access, analyze, and organize your study materials with ease."} 
       />
 
-      <div className="files-layout-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) min(320px, 100%)', gap: 24, marginBottom: 32 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-          <UploadDropzone onUploaded={() => qc.invalidateQueries(['files'])} />
-          
-          <div className="files-filter-bar" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', background: 'var(--surface2)', padding: 8, borderRadius: 14, border: '1px solid var(--border)' }}>
-            <Btn size="sm" variant={!subject ? 'primary' : 'ghost'} onClick={() => setSubject('')}>{isAr ? 'الكل' : 'ALL'}</Btn>
-            {SUBJECTS.map(s => (
-              <Btn key={s} size="sm" variant={subject === s ? 'primary' : 'ghost'} onClick={() => setSubject(s)}>
-                {SUBJECT_ICONS[s]} {(isAr ? SUBJECTS_LOC_AR[s] : SUBJECTS_LOC_EN[s]).toUpperCase()}
-              </Btn>
-            ))}
-            <div className="files-search-wrapper" style={{ marginLeft: 'auto', width: 240 }}>
-              <Input placeholder={isAr ? "البحث في المخزن..." : "Search Vault..."} value={search} onChange={e => setSearch(e.target.value)} prefix="🔍" />
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {isLoading ? (
-              [1, 2, 3, 4].map(i => <div key={i} className="skeleton" style={{ height: 80, borderRadius: 14 }} />)
-            ) : files.length === 0 ? (
-              <Card><EmptyState icon="📦" title={isAr ? "المخزن فارغ" : "Vault is Empty"} subtitle={isAr ? "ابدأ في رفع الأدلة والملاحظات الدراسية لملء مستودعك." : "Start uploading your study guides and notes to populate your repository."} /></Card>
-            ) : (
-              <AnimatePresence>
-                {files.map(f => (
-                  <FileCard key={f.id} file={f}
-                    onDelete={(id) => { if (window.confirm('Remove this file from your vault?')) deleteFile(id); }}
-                    onAnalyze={(f) => setAnalyzeFile(f)}
-                  />
-                ))}
-              </AnimatePresence>
-            )}
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-        <div className="floating-panel" style={{ padding: 28 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 900, marginBottom: 20, fontFamily: 'var(--font-head)', letterSpacing: '-0.02em' }}>{isAr ? 'تحليلات المخزن' : 'Vault Analytics'}</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 28 }}>
-            <div className="floating-card" style={{ padding: 16, borderRadius: 14, textAlign: 'center' }}>
-              <div style={{ fontSize: 28, fontWeight: 900, fontFamily: 'var(--font-head)', color: 'var(--primary)' }}>{files.length}</div>
-              <div style={{ fontSize: 10, color: 'var(--text4)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{isAr ? 'إجمالي الملفات' : 'TOTAL ASSETS'}</div>
-            </div>
-            <div className="floating-card" style={{ padding: 16, borderRadius: 14, textAlign: 'center' }}>
-              <div style={{ fontSize: 28, fontWeight: 900, fontFamily: 'var(--font-head)', color: 'var(--warning)' }}>{files.filter(f => f.mime_type === 'application/pdf').length}</div>
-              <div style={{ fontSize: 10, color: 'var(--text4)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{isAr ? 'أدلة PDF' : 'PDF GUIDES'}</div>
-            </div>
-          </div>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <h4 style={{ fontSize: 12, fontWeight: 900, color: 'var(--text2)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{isAr ? 'توزيع المواد' : 'Subject Distribution'}</h4>
-            {SUBJECTS.map(s => {
-              const count = files.filter(f => f.subject === s).length;
-              const pct = (count / (files.length || 1)) * 100;
-              return (
-                <div key={s}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6 }}>
-                    <span style={{ fontWeight: 800, color: 'var(--text)' }}>{SUBJECT_ICONS[s]} {isAr ? SUBJECTS_LOC_AR[s] : SUBJECTS_LOC_EN[s]}</span>
-                    <span style={{ color: 'var(--text4)', fontWeight: 900 }}>{count}</span>
-                  </div>
-                  <ProgressBar value={pct} height={7} color="var(--primary)" />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-          
-          <Card style={{ background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%)', border: 'none', color: '#fff' }}>
-            <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 8, color: '#fff' }}>{isAr ? 'تحليل الذكاء الاصطناعي للمخزن' : 'AI Vault Analysis'}</h3>
-            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', lineHeight: 1.6, marginBottom: 20 }}>
-              {isAr ? 'استخدم الذكاء الاصطناعي المتقدم الخاص بنا لتلخيص ملفات PDF وإنشاء اختبارات والإجابة على أسئلة محددة من مستنداتك فورًا.' : 'Use our advanced AI to summarize your PDFs, generate quizzes, and answer specific questions from your documents instantly.'}
-            </p>
-            <div style={{ fontSize: 40, textAlign: 'center', opacity: 0.5 }}>🤖</div>
-          </Card>
-        </div>
+      {/* Tabs navigation */}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 24, borderBottom: '1px solid var(--border)', paddingBottom: 10 }}>
+        <button
+          onClick={() => setActiveTab('vault')}
+          style={{
+            padding: '10px 24px',
+            borderRadius: 12,
+            fontWeight: 800,
+            fontSize: 15,
+            cursor: 'pointer',
+            transition: 'all 0.25s',
+            background: activeTab === 'vault' ? 'linear-gradient(135deg, var(--primary), var(--primary-dark))' : 'transparent',
+            color: activeTab === 'vault' ? '#fff' : 'var(--text3)',
+            boxShadow: activeTab === 'vault' ? '0 4px 14px rgba(99,102,241,0.25)' : 'none',
+          }}
+        >
+          📁 {isAr ? 'ملفات المخزن' : 'Vault Files'}
+        </button>
+        <button
+          onClick={() => setActiveTab('quiz')}
+          style={{
+            padding: '10px 24px',
+            borderRadius: 12,
+            fontWeight: 800,
+            fontSize: 15,
+            cursor: 'pointer',
+            transition: 'all 0.25s',
+            background: activeTab === 'quiz' ? 'linear-gradient(135deg, var(--primary), var(--primary-dark))' : 'transparent',
+            color: activeTab === 'quiz' ? '#fff' : 'var(--text3)',
+            boxShadow: activeTab === 'quiz' ? '0 4px 14px rgba(99,102,241,0.25)' : 'none',
+          }}
+        >
+          🧠 {isAr ? 'اختبارات الذكاء الاصطناعي' : 'AI Quizzes'}
+        </button>
+        <button
+          onClick={() => setActiveTab('tools')}
+          style={{
+            padding: '10px 24px',
+            borderRadius: 12,
+            fontWeight: 800,
+            fontSize: 15,
+            cursor: 'pointer',
+            transition: 'all 0.25s',
+            background: activeTab === 'tools' ? 'linear-gradient(135deg, var(--primary), var(--primary-dark))' : 'transparent',
+            color: activeTab === 'tools' ? '#fff' : 'var(--text3)',
+            boxShadow: activeTab === 'tools' ? '0 4px 14px rgba(99,102,241,0.25)' : 'none',
+          }}
+        >
+          🛠️ {isAr ? 'أدوات الدراسة' : 'Study Tools'}
+        </button>
       </div>
+
+      <AnimatePresence mode="wait">
+        {activeTab === 'vault' ? (
+          <motion.div
+            key="vault"
+            initial={{ opacity: 0, x: -15 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 15 }}
+            transition={{ duration: 0.18 }}
+            className="files-layout-grid"
+            style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) min(320px, 100%)', gap: 24, marginBottom: 32 }}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+              <UploadDropzone onUploaded={() => qc.invalidateQueries(['files'])} />
+              
+              <div className="files-filter-bar" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', background: 'var(--surface2)', padding: 8, borderRadius: 14, border: '1px solid var(--border)' }}>
+                <Btn size="sm" variant={!subject ? 'primary' : 'ghost'} onClick={() => setSubject('')}>{isAr ? 'الكل' : 'ALL'}</Btn>
+                {SUBJECTS.map(s => (
+                  <Btn key={s} size="sm" variant={subject === s ? 'primary' : 'ghost'} onClick={() => setSubject(s)}>
+                    {SUBJECT_ICONS[s]} {(isAr ? SUBJECTS_LOC_AR[s] : SUBJECTS_LOC_EN[s]).toUpperCase()}
+                  </Btn>
+                ))}
+                <div className="files-search-wrapper" style={{ marginLeft: 'auto', width: 240 }}>
+                  <Input placeholder={isAr ? "البحث في المخزن..." : "Search Vault..."} value={search} onChange={e => setSearch(e.target.value)} prefix="🔍" />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {isLoading ? (
+                  [1, 2, 3, 4].map(i => <div key={i} className="skeleton" style={{ height: 80, borderRadius: 14 }} />)
+                ) : files.length === 0 ? (
+                  <Card><EmptyState icon="📦" title={isAr ? "المخزن فارغ" : "Vault is Empty"} subtitle={isAr ? "ابدأ في رفع الأدلة والملاحظات الدراسية لملء مستودعك." : "Start uploading your study guides and notes to populate your repository."} /></Card>
+                ) : (
+                  <AnimatePresence>
+                    {files.map(f => (
+                      <FileCard key={f.id} file={f}
+                        onDelete={(id) => { if (window.confirm('Remove this file from your vault?')) deleteFile(id); }}
+                        onAnalyze={(f) => setAnalyzeFile(f)}
+                      />
+                    ))}
+                  </AnimatePresence>
+                )}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+              <div className="floating-panel" style={{ padding: 28 }}>
+                <h3 style={{ fontSize: 16, fontWeight: 900, marginBottom: 20, fontFamily: 'var(--font-head)', letterSpacing: '-0.02em' }}>{isAr ? 'تحليلات المخزن' : 'Vault Analytics'}</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 28 }}>
+                  <div className="floating-card" style={{ padding: 16, borderRadius: 14, textAlign: 'center' }}>
+                    <div style={{ fontSize: 28, fontWeight: 900, fontFamily: 'var(--font-head)', color: 'var(--primary)' }}>{files.length}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text4)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{isAr ? 'إجمالي الملفات' : 'TOTAL ASSETS'}</div>
+                  </div>
+                  <div className="floating-card" style={{ padding: 16, borderRadius: 14, textAlign: 'center' }}>
+                    <div style={{ fontSize: 28, fontWeight: 900, fontFamily: 'var(--font-head)', color: 'var(--warning)' }}>{files.filter(f => f.mime_type === 'application/pdf').length}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text4)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{isAr ? 'أدلة PDF' : 'PDF GUIDES'}</div>
+                  </div>
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <h4 style={{ fontSize: 12, fontWeight: 900, color: 'var(--text2)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{isAr ? 'توزيع المواد' : 'Subject Distribution'}</h4>
+                  {SUBJECTS.map(s => {
+                    const count = files.filter(f => f.subject === s).length;
+                    const pct = (count / (files.length || 1)) * 100;
+                    return (
+                      <div key={s}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6 }}>
+                          <span style={{ fontWeight: 800, color: 'var(--text)' }}>{SUBJECT_ICONS[s]} {isAr ? SUBJECTS_LOC_AR[s] : SUBJECTS_LOC_EN[s]}</span>
+                          <span style={{ color: 'var(--text4)', fontWeight: 900 }}>{count}</span>
+                        </div>
+                        <ProgressBar value={pct} height={7} color="var(--primary)" />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              
+              <Card style={{ background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%)', border: 'none', color: '#fff' }}>
+                <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 8, color: '#fff' }}>{isAr ? 'تحليل الذكاء الاصطناعي للمخزن' : 'AI Vault Analysis'}</h3>
+                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', lineHeight: 1.6, marginBottom: 20 }}>
+                  {isAr ? 'استخدم الذكاء الاصطناعي المتقدم الخاص بنا لتلخيص ملفات PDF وإنشاء اختبارات والإجابة على أسئلة محددة من مستنداتك فورًا.' : 'Use our advanced AI to summarize your PDFs, generate quizzes, and answer specific questions from your documents instantly.'}
+                </p>
+                <div style={{ fontSize: 40, textAlign: 'center', opacity: 0.5 }}>🤖</div>
+              </Card>
+            </div>
+          </motion.div>
+        ) : activeTab === 'quiz' ? (
+          <motion.div
+            key="quiz"
+            initial={{ opacity: 0, x: 15 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -15 }}
+            transition={{ duration: 0.18 }}
+          >
+            <QuizPanel />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="tools"
+            initial={{ opacity: 0, x: 15 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -15 }}
+            transition={{ duration: 0.18 }}
+          >
+            <StudyToolsPanel />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <Modal open={!!analyzeFile} onClose={() => setAnalyzeFile(null)} title={`🤖 ${isAr ? 'تحليل الذكاء الاصطناعي' : 'INTELLECT ANALYSIS'} — ${analyzeFile?.original_name}`} size="lg">
         {analyzeFile && <AIFileAnalysis file={analyzeFile} />}
@@ -359,6 +447,45 @@ function AIFileAnalysis({ file }) {
   const [question, setQuestion] = useState('');
   const [askAnswer, setAskAnswer] = useState('');
   const [loading, setLoading] = useState(false);
+  const [savingNote, setSavingNote] = useState(false);
+  const [customCount, setCustomCount] = useState(10);
+  const [customTime, setCustomTime] = useState(10); // in minutes
+  const [explainLoading, setExplainLoading] = useState({});
+  const [explanations, setExplanations] = useState({});
+
+  const handleExplainQuestion = async (qi, questionText, correctOptText, userOptText) => {
+    setExplainLoading(prev => ({ ...prev, [qi]: true }));
+    try {
+      const promptText = isAr
+        ? `فسر لي بالتفصيل وبأسلوب تعليمي مبسط هذا السؤال:\nالسؤال: "${questionText}"\nالخيار الصحيح: "${correctOptText}"\nخيار الطالب: "${userOptText || 'لم يتم الإجابة'}"\n\nاشرح لماذا هذا الخيار هو الصحيح وكيف يتم التفكير للوصول للإجابة الصحيحة.`
+        : `Explain this question in detail:\nQuestion: "${questionText}"\nCorrect Answer: "${correctOptText}"\nStudent Answer: "${userOptText || 'No Answer'}"\n\nProvide a clear, step-by-step breakdown of why the correct option is right and how to solve it.`;
+      
+      const res = await aiAPI.chat({ message: promptText, withFollowUps: false });
+      setExplanations(prev => ({ ...prev, [qi]: res.data?.reply || '' }));
+    } catch {
+      toast.error(isAr ? 'فشل جلب التفسير من الذكاء الاصطناعي' : 'Failed to fetch AI explanation');
+    } finally {
+      setExplainLoading(prev => ({ ...prev, [qi]: false }));
+    }
+  };
+
+  const saveToNotes = async (contentStr, titlePrefix = 'Summary') => {
+    setSavingNote(true);
+    try {
+      const { notesAPI } = await import('../../api/index');
+      await notesAPI.create({
+        title: `${titlePrefix}: ${file.original_name}`,
+        subject: file.subject || 'other',
+        content: `<div>${contentStr.replace(/\n/g, '<br/>')}</div>`,
+        linked_file: file.id
+      });
+      toast.success(isAr ? '📝 تم الحفظ في الملاحظات بنجاح!' : '📝 Saved to Notes successfully!');
+    } catch (err) {
+      toast.error(isAr ? 'فشل الحفظ في الملاحظات' : 'Failed to save to Notes');
+    } finally {
+      setSavingNote(false);
+    }
+  };
 
   // Mode: select | exam | summary
   const [mode, setMode] = useState('select');
@@ -537,17 +664,24 @@ function AIFileAnalysis({ file }) {
 
           <AnimatePresence>
             {askAnswer && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                style={{
-                  background: 'var(--surface2)', border: '1px solid var(--border)',
-                  borderRadius: 14, padding: 20, fontSize: 14, lineHeight: 1.8, color: 'var(--text)',
-                  maxHeight: 400, overflowY: 'auto', whiteSpace: 'pre-wrap',
-                  boxShadow: 'var(--shadow-inner)'
-                }}
-              >
-                {String(askAnswer)}
-              </motion.div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                  style={{
+                    background: 'var(--surface2)', border: '1px solid var(--border)',
+                    borderRadius: 14, padding: 20, fontSize: 14, lineHeight: 1.8, color: 'var(--text)',
+                    maxHeight: 400, overflowY: 'auto', whiteSpace: 'pre-wrap',
+                    boxShadow: 'var(--shadow-inner)'
+                  }}
+                >
+                  {String(askAnswer)}
+                </motion.div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Btn variant="glass" size="sm" onClick={() => saveToNotes(`Question: ${question}\n\nAnswer:\n${askAnswer}`, isAr ? 'سؤال وجواب' : 'Q&A')} disabled={savingNote}>
+                    {savingNote ? <Spinner size="sm" /> : <>📝 {isAr ? 'حفظ في الملاحظات' : 'Save to Notes'}</>}
+                  </Btn>
+                </div>
+              </div>
             )}
           </AnimatePresence>
         </>
@@ -580,6 +714,10 @@ function AIFileAnalysis({ file }) {
               <p style={{ fontSize: 13, color: 'var(--text3)', margin: '2px 0 0' }} className="truncate">{file.original_name}</p>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => saveToNotes(summaryResult, isAr ? 'ملخص' : 'Summary')} disabled={savingNote}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', minHeight: 40, background: 'var(--success-dark)', color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: 13, opacity: savingNote ? 0.6 : 1 }}>
+                {savingNote ? <Spinner size="sm" /> : <>📝 {isAr ? 'حفظ في الملاحظات' : 'Save to Notes'}</>}
+              </button>
               <button onClick={() => downloadSummaryPdf(summaryResult, file.original_name, file.id)}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', minHeight: 40, background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>
                 📥 {isAr ? 'تحميل PDF' : 'Download PDF'}
