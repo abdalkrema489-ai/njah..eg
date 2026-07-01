@@ -6,9 +6,9 @@ const { isGoogleAuthEnabled } = require('../config/passport');
 const { authLimiter } = require('../middleware/rateLimiter');
 const { authenticate } = require('../middleware/auth');
 r.post('/register',        authLimiter, c.register);
-r.post('/guest',           c.guestRegister);
+r.post('/guest',           authLimiter, c.guestRegister);   // rate-limited: prevents guest-account spam
 r.post('/login',           authLimiter, c.login);
-r.post('/refresh',         c.refreshToken);
+r.post('/refresh',         authLimiter, c.refreshToken);    // rate-limited: prevents refresh brute-force
 r.post('/logout',          authenticate, c.logout);
 r.post('/exchange-code',   c.exchangeCode);  // OAuth token exchange (one-time code)
 r.get ('/verify/:token',   c.verifyEmail);

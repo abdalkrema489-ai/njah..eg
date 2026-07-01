@@ -12,9 +12,13 @@ function validatePaymobHMAC(req, res, next) {
   const receivedHmac = req.query.hmac;
   const secret = process.env.PAYMOB_HMAC_SECRET;
 
-  // If no secret configured, skip validation in dev (log a warning)
+  // If no secret configured — fail CLOSED in production, skip in dev only
   if (!secret) {
-    logger.warn('[HMAC] PAYMOB_HMAC_SECRET not set — skipping webhook HMAC validation (INSECURE)');
+    if (process.env.NODE_ENV === 'production') {
+      logger.error('[HMAC] PAYMOB_HMAC_SECRET not set in production — rejecting webhook (fail-closed). Set this env var immediately.');
+      return res.status(500).json({ error: 'Payment webhook misconfigured — contact administrator' });
+    }
+    logger.warn('[HMAC] PAYMOB_HMAC_SECRET not set — skipping webhook HMAC validation (DEV ONLY, INSECURE)');
     return next();
   }
 

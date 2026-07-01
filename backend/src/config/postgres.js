@@ -429,6 +429,18 @@ async function runMigrations(client) {
       UNIQUE(teacher_id, student_id)
     );
     CREATE INDEX IF NOT EXISTS idx_teacher_ratings_teacher ON teacher_ratings(teacher_id);
+
+    -- Web Push (VAPID) subscriptions — one row per browser/device per user.
+    -- Separate from users.push_token (which is the FCM/APNs native token).
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+      id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id    UUID REFERENCES users(id) ON DELETE CASCADE,
+      endpoint   TEXT UNIQUE NOT NULL,
+      p256dh     TEXT NOT NULL,
+      auth       TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_push_subs_user ON push_subscriptions(user_id);
   `);
   logger.info('✅ DB migrations complete');
 }

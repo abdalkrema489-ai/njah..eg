@@ -1,91 +1,143 @@
 // src/hooks/usePushNotifications.js
-// Capacitor Push Notifications — request permission, register token, handle events
+// Initializes push notifications for both:
+//   - Native Capacitor (Android/iOS) via FCM
+//   - Web/PWA via VAPID (service worker PushManager)
 import { useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
 import client from '../api/index';
 
+const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+
+/** Convert a base64 string to a Uint8Array (required by PushManager.subscribe) */
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+}
+
 /**
- * usePushNotifications — initialize FCM push notifications on native platforms.
- * Automatically skips on web (PWA push is handled separately via VAPID).
+ * usePushNotifications — initializes push notifications.
+ *
+ * • Native platform (Capacitor): requests FCM token, saves to backend.
+ * • Web/PWA: subscribes via PushManager (VAPID), saves subscription to backend.
+ *   Skipped silently if VITE_VAPID_PUBLIC_KEY is not set.
  *
  * @param {string|null} userId — current authenticated user ID
- *
- * Usage in App.jsx:
- *   import { usePushNotifications } from './hooks/usePushNotifications';
- *   // Inside the component:
- *   usePushNotifications(user?.id);
  */
 export function usePushNotifications(userId) {
   useEffect(() => {
-    // Only run on Capacitor native (Android / iOS)
-    if (!userId || !Capacitor.isNativePlatform()) return;
+    if (!userId) return;
 
-    let cleanup = () => {};
+    // ── Native (Android / iOS via Capacitor) ─────────────────
+    if (Capacitor.isNativePlatform()) {
+      let cleanup = () => {};
 
-    async function initPush() {
+      async function initNativePush() {
+        try {
+          const { PushNotifications } = await import('@capacitor/push-notifications');
+
+          const permission = await PushNotifications.requestPermissions();
+          if (permission.receive !== 'granted') {
+            console.warn('[Push] Native permission not granted');
+            return;
+          }
+
+          await PushNotifications.register();
+
+          const regListener = await PushNotifications.addListener('registration', async (token) => {
+            try {
+              await client.post('/users/push-token', {
+                token:    token.value,
+                platform: Capacitor.getPlatform(),
+              });
+              console.info('[Push] Native token registered:', token.value.slice(0, 20) + '…');
+            } catch (err) {
+              console.warn('[Push] Failed to save native token:', err.message);
+            }
+          });
+
+          const errListener = await PushNotifications.addListener('registrationError', (err) => {
+            console.error('[Push] Native registration error:', err.error);
+          });
+
+          const fgListener = await PushNotifications.addListener(
+            'pushNotificationReceived',
+            (notification) => {
+              console.info('[Push] Foreground notification:', notification.title);
+            }
+          );
+
+          const tapListener = await PushNotifications.addListener(
+            'pushNotificationActionPerformed',
+            (action) => {
+              const link = action.notification.data?.link;
+              if (link) window.location.href = link;
+            }
+          );
+
+          cleanup = async () => {
+            await regListener.remove();
+            await errListener.remove();
+            await fgListener.remove();
+            await tapListener.remove();
+          };
+        } catch (err) {
+          console.warn('[Push] Native push not available:', err.message);
+        }
+      }
+
+      initNativePush();
+      return () => { cleanup(); };
+    }
+
+    // ── Web / PWA (VAPID via PushManager) ────────────────────
+    if (!VAPID_PUBLIC_KEY) {
+      // VITE_VAPID_PUBLIC_KEY not configured — web push silently disabled
+      return;
+    }
+
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      console.info('[Push] PushManager not supported in this browser');
+      return;
+    }
+
+    async function initWebPush() {
       try {
-        const { PushNotifications } = await import('@capacitor/push-notifications');
-
-        // 1. Request permission
-        const permission = await PushNotifications.requestPermissions();
-        if (permission.receive !== 'granted') {
-          console.warn('[Push] Permission not granted');
+        // Request permission first — don't subscribe if not granted
+        const perm = await Notification.requestPermission();
+        if (perm !== 'granted') {
+          console.info('[Push] Web notification permission:', perm);
           return;
         }
 
-        // 2. Register with FCM / APNs
-        await PushNotifications.register();
+        const registration = await navigator.serviceWorker.ready;
 
-        // 3. Receive token → send to backend
-        const regListener = await PushNotifications.addListener('registration', async (token) => {
-          try {
-            await client.post('/users/push-token', {
-              token:    token.value,
-              platform: Capacitor.getPlatform(), // 'android' | 'ios'
-            });
-            console.info('[Push] Token registered:', token.value.slice(0, 20) + '…');
-          } catch (err) {
-            console.warn('[Push] Failed to save token:', err.message);
-          }
+        // Check if already subscribed
+        let subscription = await registration.pushManager.getSubscription();
+
+        if (!subscription) {
+          subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+          });
+        }
+
+        // Save / upsert subscription to backend
+        await client.post('/users/push-subscription', {
+          endpoint: subscription.endpoint,
+          keys: {
+            p256dh: btoa(String.fromCharCode(...new Uint8Array(subscription.getKey('p256dh')))),
+            auth:   btoa(String.fromCharCode(...new Uint8Array(subscription.getKey('auth')))),
+          },
         });
 
-        // 4. Handle registration errors
-        const errListener = await PushNotifications.addListener('registrationError', (err) => {
-          console.error('[Push] Registration error:', err.error);
-        });
-
-        // 5. Foreground notification received
-        const fgListener = await PushNotifications.addListener(
-          'pushNotificationReceived',
-          (notification) => {
-            console.info('[Push] Foreground notification:', notification.title);
-          }
-        );
-
-        // 6. User tapped notification → navigate to link
-        const tapListener = await PushNotifications.addListener(
-          'pushNotificationActionPerformed',
-          (action) => {
-            const data = action.notification.data;
-            if (data?.link) {
-              window.location.href = data.link;
-            }
-          }
-        );
-
-        cleanup = async () => {
-          await regListener.remove();
-          await errListener.remove();
-          await fgListener.remove();
-          await tapListener.remove();
-        };
-
+        console.info('[Push] Web push subscription registered');
       } catch (err) {
-        console.warn('[Push] Not available:', err.message);
+        console.warn('[Push] Web push setup failed:', err.message);
       }
     }
 
-    initPush();
-    return () => { cleanup(); };
+    initWebPush();
   }, [userId]);
 }

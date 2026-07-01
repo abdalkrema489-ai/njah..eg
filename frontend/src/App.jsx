@@ -3,6 +3,7 @@ import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
+import { MotionConfig } from 'framer-motion';
 import { useAuthStore, useUIStore } from './context/store';
 import { AppShell } from './components/shared/Layout';
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
@@ -273,6 +274,7 @@ function NotFound() {
 // ── App ──────────────────────────────────────────────────────
 export default function App() {
   return (
+    <MotionConfig reducedMotion="user">
     <ErrorBoundary>
       <I18nProvider>
       <QueryClientProvider client={qc}>
@@ -376,5 +378,6 @@ export default function App() {
       </QueryClientProvider>
       </I18nProvider>
     </ErrorBoundary>
+    </MotionConfig>
   );
 }

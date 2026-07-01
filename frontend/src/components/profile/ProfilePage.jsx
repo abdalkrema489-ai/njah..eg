@@ -87,13 +87,13 @@ export default function ProfilePage() {
     onSuccess: ({ data }) => { 
       setUser({ ...user, ...data.user }); 
       qc.invalidateQueries(['profile']); 
-      toast.success('Profile updated successfully!'); 
+      toast.success(t('toast.profileUpdated'));
     },
   });
 
   const { mutate: uploadAvatar } = useMutation({
     mutationFn: usersAPI.uploadAvatar,
-    onSuccess: ({ data }) => { setUser({ ...user, avatar_url: data.avatarUrl }); toast.success('Profile picture updated!'); },
+    onSuccess: ({ data }) => { setUser({ ...user, avatar_url: data.avatarUrl }); toast.success(t('toast.avatarUpdated')); },
     onError:   (err) => toast.error(err.response?.data?.error || 'Upload failed'),
   });
 

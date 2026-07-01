@@ -19,7 +19,8 @@ notifR.get('/', async (req,res) => {
   const limitIdx  = params.length - 1;
   const offsetIdx = params.length;
 
-  const q = `SELECT * FROM notifications WHERE ${where} ORDER BY created_at DESC LIMIT $${limitIdx} OFFSET $${offsetIdx}`;
+  const q = `SELECT id, user_id, type, title, body, data, is_read, action_url, created_at
+    FROM notifications WHERE ${where} ORDER BY created_at DESC LIMIT $${limitIdx} OFFSET $${offsetIdx}`;
 
   const [{ rows }, { rows: cnt }] = await Promise.all([
     pool.query(q, params),

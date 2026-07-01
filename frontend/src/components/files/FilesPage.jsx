@@ -6,11 +6,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { filesAPI, aiAPI } from '../../api/index';
-import { Card, Button, Tag, Modal, Input, Select, Spinner, EmptyState, SectionHeader, Btn, ProgressBar } from '../shared/UI';
+import { Card, Button, Tag, Modal, Input, Select, Spinner, EmptyState, SectionHeader, Btn, ProgressBar, Skeleton } from '../shared/UI';
 import { useTranslation } from '../../i18n/index';
 import jsPDF from 'jspdf';
 
-async function downloadSummaryPdf(summaryText, fileName, fileId) {
+// msgs = { downloadSuccess, downloadError, pdfError } — passed from the calling component
+async function downloadSummaryPdf(summaryText, fileName, fileId, msgs = {}) {
   const isArabic = /[\u0600-\u06FF]/.test(summaryText || '');
   if (isArabic) {
     try {
@@ -39,17 +40,17 @@ async function downloadSummaryPdf(summaryText, fileName, fileId) {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-      toast.success('Downloaded PDF successfully!');
+      toast.success(msgs.downloadSuccess || 'Downloaded PDF successfully!');
     } catch (err) {
-      toast.error('Failed to download Arabic PDF from backend. Falling back to client-side.');
-      generateClientPdf(summaryText, fileName);
+      toast.error(msgs.downloadError || 'Failed to download PDF. Falling back to client-side.');
+      generateClientPdf(summaryText, fileName, msgs);
     }
   } else {
-    generateClientPdf(summaryText, fileName);
+    generateClientPdf(summaryText, fileName, msgs);
   }
 }
 
-function generateClientPdf(summaryText, fileName) {
+function generateClientPdf(summaryText, fileName, msgs = {}) {
   try {
     const doc = new jsPDF();
     doc.setFont('helvetica');
@@ -63,9 +64,9 @@ function generateClientPdf(summaryText, fileName) {
     const lines = doc.splitTextToSize(summaryText || '', 180);
     doc.text(lines, 14, 38);
     doc.save(`${(fileName || 'summary').replace(/\.[^.]+$/, '')}-summary.pdf`);
-    toast.success('Downloaded PDF successfully!');
+    toast.success(msgs.downloadSuccess || 'Downloaded PDF successfully!');
   } catch (err) {
-    toast.error('Failed to generate PDF client-side.');
+    toast.error(msgs.pdfError || 'Failed to generate PDF.');
   }
 }
 
@@ -76,7 +77,7 @@ const SUBJECTS_LOC_EN = { mathematics:'Mathematics', science:'Science', physics:
 const MIME_ICONS = { 'application/pdf':'📄', 'image/jpeg':'🖼️', 'image/png':'🖼️', 'image/gif':'🖼️', 'image/webp':'🖼️' };
 
 function UploadDropzone({ onUploaded }) {
-  const { lang } = useTranslation();
+  const { lang, t } = useTranslation();
   const isAr = lang === 'ar';
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -89,12 +90,12 @@ function UploadDropzone({ onUploaded }) {
     try {
       for (const file of files) {
         await filesAPI.upload(file, meta, setProgress);
-        toast.success(`✅ ${file.name} uploaded successfully!`);
+        toast.success(`✅ ${file.name} ${isAr ? 'تم رفعه بنجاح!' : 'uploaded successfully!'}`);
       }
       onUploaded?.();
     } catch (err) { 
       console.error(err);
-      toast.error(err.response?.data?.error || 'Upload failed. Please check your connection.'); 
+      toast.error(err.response?.data?.error || t('toast.uploadFailed')); 
     }
     finally { setUploading(false); setProgress(0); }
   }, [meta, onUploaded]);
@@ -215,7 +216,7 @@ import QuizPanel from './QuizPanel';
 import StudyToolsPanel from './StudyToolsPanel';
 
 export default function FilesPage() {
-  const { lang } = useTranslation();
+  const { lang, t } = useTranslation();
   const isAr = lang === 'ar';
   const [activeTab, setActiveTab] = useState('vault'); // 'vault' | 'quiz' | 'tools'
   const [subject, setSubject] = useState('');
@@ -231,8 +232,8 @@ export default function FilesPage() {
 
   const { mutate: deleteFile } = useMutation({
     mutationFn: filesAPI.remove,
-    onSuccess: () => { qc.invalidateQueries(['files']); toast.success('Removed from Vault'); },
-    onError:   (err) => toast.error(err.response?.data?.error || 'Removal failed'),
+    onSuccess: () => { qc.invalidateQueries(['files']); toast.success(t('toast.fileDeleted')); },
+    onError:   (err) => toast.error(err.response?.data?.error || t('toast.operationFailed')),
   });
 
   return (
@@ -323,7 +324,23 @@ export default function FilesPage() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {isLoading ? (
-                  [1, 2, 3, 4].map(i => <div key={i} className="skeleton" style={{ height: 80, borderRadius: 14 }} />)
+                  <div
+                    style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
+                    aria-busy="true"
+                    aria-label={isAr ? 'جاري تحميل الملفات…' : 'Loading files…'}
+                  >
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <div key={i} className="skeleton-card" style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: '14px 18px', borderRadius: 14 }}>
+                        <div className="skeleton" style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0 }} />
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 7 }}>
+                          <Skeleton.Text width="55%" />
+                          <Skeleton.Text width="35%" style={{ height: 11 }} />
+                        </div>
+                        <Skeleton.Badge width={60} />
+                        <Skeleton.Button width={78} style={{ height: 32 }} />
+                      </div>
+                    ))}
+                  </div>
                 ) : files.length === 0 ? (
                   <Card><EmptyState icon="📦" title={isAr ? "المخزن فارغ" : "Vault is Empty"} subtitle={isAr ? "ابدأ في رفع الأدلة والملاحظات الدراسية لملء مستودعك." : "Start uploading your study guides and notes to populate your repository."} /></Card>
                 ) : (

@@ -78,12 +78,12 @@ export default function SettingsPage() {
 
   const { mutate: changePwd, isSuccess: saved } = useMutation({
     mutationFn: usersAPI.changePassword,
-    onSuccess: () => { toast.success('Password updated successfully!'); haptic.light(); reset(); },
+    onSuccess: () => { toast.success(t('toast.passwordUpdated')); haptic.light(); reset(); },
     onError:   (err) => toast.error(err.response?.data?.error || 'Current password incorrect'),
   });
 
   const onPwdSubmit = d => {
-    if (d.newPassword !== d.confirmPassword) { toast.error('Passwords do not match'); return; }
+    if (d.newPassword !== d.confirmPassword) { toast.error(t('toast.passwordMismatch')); return; }
     changePwd({ currentPassword: d.currentPassword, newPassword: d.newPassword });
   };
 

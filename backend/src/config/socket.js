@@ -5,6 +5,7 @@ const { Message, PrivateMessage } = require('./mongo');
 const geminiAI = require('../services/geminiAI');
 const internalAI = require('../services/internalAI');
 const { cacheGet, cacheSet } = require('./redis');
+const { sendPush } = require('../services/pushService');
 const logger = require('../utils/logger');
 const axios = require('axios');
 
@@ -291,7 +292,7 @@ function setupSocketIO(io) {
 
     // ── WebRTC Voice/Video Call Signaling ──
     // Relay offer to the specific target user
-    socket.on('call_offer', ({ targetId, offer, callType = 'audio' }) => {
+    socket.on('call_offer', async ({ targetId, offer, callType = 'audio' }) => {
       io.to(`user:${targetId}`).emit('call_incoming', {
         callerId:   socket.user.id,
         callerName: socket.user.name,
@@ -299,6 +300,15 @@ function setupSocketIO(io) {
         offer,
         callType,
       });
+      // Always send OS push for calls — we can't detect tab visibility server-side.
+      // The client suppresses the OS notification itself if the call screen is already active.
+      try {
+        await sendPush(targetId, {
+          title: socket.user.name,
+          body: callType === 'video' ? '📹 Incoming video call' : '📞 Incoming call',
+          link: '/chat/private',
+        });
+      } catch {}
     });
 
     // Relay answer back to caller
@@ -343,24 +353,12 @@ async function pushNotification(userId, notification) {
 }
 
 async function sendPushToUser(userId, notification) {
-  try {
-    const { rows } = await pool.query('SELECT fcm_token FROM users WHERE id=$1', [userId]);
-    const token = rows[0]?.fcm_token;
-    if (!token || !process.env.FIREBASE_SERVER_KEY) return;
-    
-    await axios.post('https://fcm.googleapis.com/fcm/send', {
-      to: token,
-      notification: { title: notification.title, body: notification.body },
-      data: notification.data
-    }, {
-      headers: {
-        'Authorization': `key=${process.env.FIREBASE_SERVER_KEY}`,
-        'Content-Type': 'application/json'
-      }
-    });
-  } catch (err) {
-    logger.warn('FCM Push failed:', err.message);
-  }
+  // Delegate to the unified pushService which handles both FCM and web VAPID
+  await sendPush(userId, {
+    title: notification.title,
+    body:  notification.body,
+    link:  notification.action_url || notification.data?.link || '/',
+  });
 }
 
 async function broadcastToRoom(subject, event, data) {

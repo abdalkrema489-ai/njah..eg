@@ -780,7 +780,7 @@ export function Header({ sidebarOpen, onToggle, onOpenNotifs, onOpenWizard }) {
   const handleLogout = async () => {
     try { await authAPI.logout(); } catch {}
     logout(); navigate('/login');
-    toast.success('Signed out. See you soon! 👋');
+    toast.success(t('toast.logoutSuccess'));
   };
 
   useEffect(() => {

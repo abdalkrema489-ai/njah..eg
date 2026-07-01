@@ -1,13 +1,14 @@
 // src/components/notes/NotesPage.jsx — Professional v3
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import DOMPurify from 'dompurify';
 import { notesAPI } from '../../api/index';
-import { Card, Button, Input, Select, Tag, EmptyState, SectionHeader, Btn, Spinner } from '../shared/UI';
+import { Card, Button, Input, Select, Tag, EmptyState, SectionHeader, Btn, Spinner, Skeleton } from '../shared/UI';
 import { useTranslation } from '../../i18n/index';
+import { useDraftStore } from '../../context/store';
 import { haptic } from '../../utils/haptics';
 
 const SUBJECTS = ['mathematics','science','arabic','english','social_studies','physics','chemistry','biology'];
@@ -72,7 +73,10 @@ export default function NotesPage() {
   const [isDirty, setIsDirty]           = useState(false);
   const [searchQ, setSearchQ]           = useState('');
   const [filterSubject, setFilterSubject] = useState('');
-  
+  const [draftBanner, setDraftBanner]   = useState(null); // { noteId, content }
+  const draftTimerRef = useRef(null);
+
+  const { noteDrafts, saveNoteDraft, clearNoteDraft } = useDraftStore();
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -95,12 +99,24 @@ export default function NotesPage() {
 
   const { mutate: saveNote, isPending: isSaving } = useMutation({
     mutationFn: ({ id, data }) => notesAPI.update(id, data),
-    onSuccess: () => { qc.invalidateQueries(['notes']); setIsDirty(false); toast.success('Changes synced'); haptic.light(); },
+    onSuccess: (_res, vars) => {
+      qc.invalidateQueries(['notes']);
+      setIsDirty(false);
+      clearNoteDraft(vars.id); // remove persisted draft after successful server save
+      toast.success(isAr ? 'تم حفظ التغييرات' : 'Changes synced');
+      haptic.light();
+    },
   });
 
   const { mutate: deleteNote } = useMutation({
     mutationFn: notesAPI.remove,
-    onSuccess: () => { qc.invalidateQueries(['notes']); setSelectedNote(null); toast.success('Document obliterated'); haptic.medium(); },
+    onSuccess: (_res, id) => {
+      qc.invalidateQueries(['notes']);
+      clearNoteDraft(id);
+      setSelectedNote(null);
+      toast.success(isAr ? 'تم حذف الملاحظة' : 'Document deleted');
+      haptic.medium();
+    },
   });
 
   const openNote = (note) => {
@@ -108,16 +124,47 @@ export default function NotesPage() {
     setEditTitle(note.title);
     setEditSubject(note.subject || 'mathematics');
     setIsDirty(false);
+    setDraftBanner(null);
+
     setTimeout(() => {
       const ed = document.getElementById('note-editor');
-      if (ed) ed.innerHTML = DOMPurify.sanitize(note.content || '');
+      if (!ed) return;
+
+      // Check for a persisted draft
+      const draft = noteDrafts[note.id];
+      if (draft && draft !== (note.content || '')) {
+        ed.innerHTML = DOMPurify.sanitize(draft);
+        setDraftBanner({ noteId: note.id, serverContent: note.content || '' });
+      } else {
+        ed.innerHTML = DOMPurify.sanitize(note.content || '');
+      }
     }, 50);
   };
+
+  /** Debounced draft save — fires 500ms after user stops typing */
+  const handleEditorInput = useCallback(() => {
+    if (!selectedNote) return;
+    setIsDirty(true);
+    clearTimeout(draftTimerRef.current);
+    draftTimerRef.current = setTimeout(() => {
+      const content = document.getElementById('note-editor')?.innerHTML || '';
+      saveNoteDraft(selectedNote.id, content);
+    }, 500);
+  }, [selectedNote, saveNoteDraft]);
 
   const handleSave = () => {
     if (!selectedNote) return;
     const content = document.getElementById('note-editor')?.innerHTML || '';
     saveNote({ id: selectedNote.id, data: { title: editTitle, subject: editSubject, content } });
+  };
+
+  const discardDraft = () => {
+    if (!draftBanner) return;
+    const ed = document.getElementById('note-editor');
+    if (ed) ed.innerHTML = DOMPurify.sanitize(draftBanner.serverContent);
+    clearNoteDraft(draftBanner.noteId);
+    setDraftBanner(null);
+    setIsDirty(false);
   };
 
   const handleImageUpload = async (e) => {
@@ -189,7 +236,9 @@ export default function NotesPage() {
           {/* List */}
           <div className="scroll-y" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12, paddingRight: 4, paddingBottom: 24 }}>
             {isLoading ? (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><Spinner /></div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }} aria-label="Loading notes…">
+                {Array.from({ length: 4 }).map((_, i) => <Skeleton.Note key={i} />)}
+              </div>
             ) : notes.length === 0 ? (
               <EmptyState 
                 icon={<FileEditIcon />} 
@@ -357,12 +406,32 @@ export default function NotesPage() {
                   </motion.button>
                 </div>
 
+                {/* Draft Restore Banner */}
+                {draftBanner && (
+                  <div style={{
+                    padding: '10px 24px', background: 'rgba(245,158,11,0.12)',
+                    borderBottom: '1px solid rgba(245,158,11,0.3)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+                    fontSize: 13, color: 'var(--warning)',
+                  }}>
+                    <span>⚠️ {isAr ? 'تم استرجاع محتوى غير محفوظ' : 'Unsaved draft restored'}</span>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={handleSave} style={{ background: 'var(--warning)', color: '#000', border: 'none', borderRadius: 8, padding: '4px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                        {isAr ? 'حفظ' : 'Save'}
+                      </button>
+                      <button onClick={discardDraft} style={{ background: 'transparent', color: 'var(--text3)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 12px', fontSize: 12, cursor: 'pointer' }}>
+                        {isAr ? 'تجاهل' : 'Discard'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Rich Editor Pane */}
                 <div
                   id="note-editor"
                   contentEditable
                   suppressContentEditableWarning
-                  onInput={() => setIsDirty(true)}
+                  onInput={handleEditorInput}
                   className="scroll-y"
                   style={{
                     flex: 1, padding: '48px 60px', outline: 'none', fontSize: 16, lineHeight: 1.9,

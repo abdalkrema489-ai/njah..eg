@@ -248,7 +248,7 @@ router.get('/my-students', async (req, res) => {
   }
 });
 
-// ── POST /push-token — Save FCM/APNs Push Token ──────────────
+// ── POST /push-token — Save FCM/APNs Push Token (native Capacitor) ─
 router.post('/push-token', async (req, res) => {
   try {
     const { token, platform } = req.body;
@@ -260,6 +260,28 @@ router.post('/push-token', async (req, res) => {
          push_token_updated = NOW()
        WHERE id = $3`,
       [token, platform || 'android', req.user.id]
+    );
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── POST /push-subscription — Register a Web Push (VAPID) subscription ─────
+// Called by the browser after PushManager.subscribe(). Stores endpoint + keys
+// in push_subscriptions so the backend can send web push notifications.
+router.post('/push-subscription', async (req, res) => {
+  try {
+    const { endpoint, keys } = req.body;
+    if (!endpoint || !keys?.p256dh || !keys?.auth) {
+      return res.status(400).json({ error: 'Invalid push subscription object' });
+    }
+    await pool.query(
+      `INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (endpoint) DO UPDATE
+         SET user_id = $1, p256dh = $3, auth = $4, created_at = NOW()`,
+      [req.user.id, endpoint, keys.p256dh, keys.auth]
     );
     res.json({ success: true });
   } catch (e) {

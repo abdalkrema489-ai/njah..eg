@@ -106,6 +106,8 @@ app.use(helmet({
       imgSrc:      ["'self'", 'data:', 'blob:', 'https://firebasestorage.googleapis.com', 'https://lh3.googleusercontent.com', 'https://storage.googleapis.com'],
       connectSrc:  ["'self'", 'https://generativelanguage.googleapis.com', 'https://api.openai.com', 'https://app.mem0.ai', 'wss:', 'ws:'],
       mediaSrc:    ["'self'", 'blob:', 'https://firebasestorage.googleapis.com'],
+      // worker-src required for service workers (web push notifications, offline caching)
+      workerSrc:   ["'self'", 'blob:'],
       frameSrc:    ["'none'"],
       objectSrc:   ["'none'"],
       baseUri:     ["'self'"],

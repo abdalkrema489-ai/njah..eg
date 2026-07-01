@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { supportAPI } from '../../api/index';
+import { useTranslation } from '../../i18n/index';
 
 export default function SupportPage() {
   const [activeTab, setActiveTab] = useState('new'); // 'new', 'history'
   const [loading, setLoading]     = useState(false);
   const [tickets, setTickets]     = useState([]);
+  const { t }                     = useTranslation();
   
   // Form State
   const [category, setCategory] = useState('general');
@@ -33,13 +35,13 @@ export default function SupportPage() {
       const { data } = await supportAPI.getMyTickets();
       setTickets(data.tickets);
     } catch {
-      toast.error('Failed to load tickets');
+      toast.error(t('toast.ticketLoadFailed'));
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!subject.trim() || !message.trim()) return toast.error('يرجى تعبئة جميع الحقول');
+    if (!subject.trim() || !message.trim()) return toast.error(t('toast.fillAllFields'));
     
     setLoading(true);
     try {

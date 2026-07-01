@@ -7,8 +7,13 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      // injectManifest lets us use a fully custom SW (src/sw.js) so we can
+      // add push notification handlers while keeping all the Workbox caching.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
       registerType: 'autoUpdate',
-      devOptions: { enabled: false },
+      devOptions: { enabled: false, type: 'module' },
       injectRegister: 'auto',
       includeAssets: [
         'favicon.ico', 'apple-touch-icon.png',
@@ -57,79 +62,11 @@ export default defineConfig({
         prefer_related_applications: false,
       },
 
-      // ── Workbox Strategies ────────────────────────────────────
+      // workbox options used during injectManifest build
       workbox: {
         globPatterns: ['**/*.{js,css,ico,png,svg,woff2,webp,json}'],
-        navigateFallback: null,
-        cleanupOutdatedCaches: true,
-        skipWaiting: true,
-        clientsClaim: true,
-        // Bump this version string whenever you need to force-clear all user caches
-        cacheId: 'najah-v5',
-
-        runtimeCaching: [
-          // Google Fonts → Cache-first (works offline)
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-stylesheets',
-              expiration: { maxEntries: 10, maxAgeSeconds: 31536000 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-webfonts',
-              expiration: { maxEntries: 20, maxAgeSeconds: 31536000 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-          // Images → Stale-while-revalidate
-          {
-            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'najah-images-v2',
-              expiration: { maxEntries: 150, maxAgeSeconds: 2592000 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-          // Firebase Storage files → Cache-first
-          {
-            urlPattern: /^https:\/\/firebasestorage\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'firebase-storage-v2',
-              expiration: { maxEntries: 100, maxAgeSeconds: 604800 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-          // JS/CSS chunks → Stale-while-revalidate
-          {
-            urlPattern: /\.(?:js|css)$/i,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'najah-static-v2',
-              expiration: { maxEntries: 60, maxAgeSeconds: 86400 },
-              cacheableResponse: { statuses: [200] },
-            },
-          },
-          // Railway API → NetworkFirst, only cache 200s, timeout 8s
-          {
-            urlPattern: /^https:\/\/njaheg-backend-production\.up\.railway\.app\/api\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'najah-api-v2',
-              networkTimeoutSeconds: 8,
-              expiration: { maxEntries: 30, maxAgeSeconds: 300 },
-              cacheableResponse: { statuses: [200] },
-            },
-          },
-        ],
-
+        // Bump this string whenever you need to force-clear all user caches
+        injectionPoint: 'self.__WB_MANIFEST',
       },
     }),
   ],

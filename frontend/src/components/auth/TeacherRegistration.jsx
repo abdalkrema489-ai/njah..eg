@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { useTranslation } from '../../i18n/index';
 
 export default function TeacherRegistration() {
   const [step, setStep] = useState(1);
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: '', email: '', password: '', 
     subject: '', grades: [], experience: '',
@@ -19,7 +21,7 @@ export default function TeacherRegistration() {
     if (step < 4) {
       nextStep();
     } else {
-      toast.success('Teacher application submitted successfully! Pending approval.');
+      toast.success(t('toast.teacherSubmitted'));
       navigate('/login');
     }
   };

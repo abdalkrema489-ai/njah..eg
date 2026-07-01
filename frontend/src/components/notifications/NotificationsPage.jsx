@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { notificationsAPI } from '../../api/index';
 import { useNotifStore } from '../../context/store';
+import { useTranslation } from '../../i18n/index';
 import { Card, Btn, SectionHeader, EmptyState, Spinner } from '../shared/UI';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 
@@ -25,6 +26,7 @@ export default function NotificationsPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const { setAll } = useNotifStore();
+  const { t } = useTranslation();
 
   const indicatorRef = usePullToRefresh(() => {
     qc.invalidateQueries(['notifications']);
@@ -50,7 +52,7 @@ export default function NotificationsPage() {
   });
   const { mutate: markAll }  = useMutation({
     mutationFn: notificationsAPI.markAll,
-    onSuccess:  () => { qc.invalidateQueries(['notifications']); toast.success('All marked as read'); },
+    onSuccess:  () => { qc.invalidateQueries(['notifications']); toast.success(t('toast.allRead')); },
   });
   const { mutate: remove }   = useMutation({
     mutationFn: notificationsAPI.remove,

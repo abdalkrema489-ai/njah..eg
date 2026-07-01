@@ -3,13 +3,13 @@
 const router = require('express').Router();
 const fc     = require('../controllers/filesController');
 const { authenticate }               = require('../middleware/auth');
-const { uploadSingle }               = require('../middleware/upload');
+const { uploadSingle, validateFileMagicBytes } = require('../middleware/upload');
 const { uploadLimiter }              = require('../middleware/rateLimiter');
 
 router.use(authenticate);
 
 router.get ('/',            fc.listFiles);
-router.post('/',            uploadLimiter, uploadSingle, fc.uploadFile);
+router.post('/',            uploadLimiter, uploadSingle, validateFileMagicBytes, fc.uploadFile);
 router.get ('/:id',         fc.getFile);
 router.patch('/:id',        fc.updateFile);
 router.delete('/:id',       fc.deleteFile);

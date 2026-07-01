@@ -395,6 +395,76 @@ const ar = {
     submit:      'تسليم الامتحان',
     results:     'النتائج',
   },
+
+  // ── Toast / feedback messages ────────────────────────────────
+  toast: {
+    // Notes
+    noteCreated:       'تم إنشاء الملاحظة',
+    noteSaved:         'تم حفظ التغييرات',
+    noteDeleted:       'تم حذف الملاحظة',
+    imagePploaded:     'تم رفع الصورة وإدراجها بنجاح!',
+    imageUploadFailed: 'فشل رفع الصورة',
+    // Auth
+    loginSuccess:      'أهلاً بعودتك! 👋',
+    logoutSuccess:     'تم تسجيل الخروج. إلى اللقاء! 👋',
+    registerSuccess:   'تم إنشاء الحساب — أهلاً بك!',
+    passwordUpdated:   'تم تحديث كلمة المرور بنجاح!',
+    passwordMismatch:  'كلمتا المرور غير متطابقتين',
+    teacherSubmitted:  'تم إرسال طلبك! في انتظار الموافقة.',
+    // Profile
+    profileUpdated:    'تم تحديث الملف الشخصي بنجاح!',
+    avatarUpdated:     'تم تحديث صورة الملف الشخصي!',
+    // Files
+    downloadSuccess:   'تم التحميل بنجاح!',
+    fileDeleted:       'تم حذف الملف من الخزينة',
+    // Planner
+    sessionAdded:      'تمت إضافة الجلسة!',
+    statusUpdated:     'تم تحديث الحالة',
+    sessionDeleted:    'تم حذف الجلسة',
+    // Notifications
+    allRead:           'تم تحديد الكل كمقروء',
+    // Board
+    postShared:        'تمت مشاركة المحتوى!',
+    shareFailed:       'فشلت المشاركة',
+    // Chat
+    sent:              'تم الإرسال!',
+    voiceSent:         'تم إرسال الرسالة الصوتية',
+    uploadFailed:      'فشل الرفع',
+    voiceFailed:       'فشل الإرسال الصوتي',
+    micRequired:       'يجب السماح بالوصول إلى الميكروفون',
+    callDeclined:      'تم رفض المكالمة',
+    callFailed:        'فشل الاتصال بالمكالمة',
+    noMicCam:          'تعذّر الوصول إلى الميكروفون / الكاميرا',
+    callAcceptFailed:  'تعذّر قبول المكالمة',
+    // AI
+    voiceNotSupported: 'الإدخال الصوتي غير مدعوم في هذا المتصفح',
+    voiceStartFailed:  'تعذّر بدء التعرف على الصوت',
+    ttsNotSupported:   'ميزة النص إلى كلام غير مدعومة في هذا المتصفح',
+    loadFailed:        'فشل التحميل',
+    // Support
+    ticketLoadFailed:  'فشل تحميل التذاكر',
+    fillAllFields:     'يرجى تعبئة جميع الحقول',
+    // Admin
+    noDataExport:      'لا توجد بيانات للتصدير',
+    sessionExpired:    'انتهت الجلسة',
+    feeMustBe:         'يجب أن تكون العمولة بين 0 و 50%',
+    feeUpdateFailed:   'فشل تحديث العمولة',
+    payoutFailed:      'فشل تسوية المدفوعات',
+    aiAdvisorError:    'خطأ في مستشار الذكاء الاصطناعي',
+    codeGenFailed:     'فشل إنشاء الأكواد',
+    brandingUpdated:   'تم تحديث الهوية البصرية! جارٍ إعادة التشغيل…',
+    brandingFailed:    'فشل تحديث الهوية البصرية',
+    couponCreated:     'تم إنشاء الكوبون بنجاح!',
+    replySent:         'تم إرسال الرد بنجاح',
+    replyFailed:       'فشل إرسال الرد',
+    operationFailed:   'فشلت العملية',
+    // Tools
+    articleNotFound:   'لم يُعثر على المقالة. جرب مصطلح بحث مختلف.',
+    triviaLoadFailed:  'تعذّر تحميل أسئلة المسابقة. حاول مجدداً!',
+    // Draft
+    draftRestored:     'تم استرجاع محتوى غير محفوظ',
+    changesSynced:     'تم حفظ التغييرات',
+  },
 };
 
 export default ar;

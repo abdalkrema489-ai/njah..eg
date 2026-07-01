@@ -829,3 +829,160 @@ export function StarRating({ value = 0, onChange, readonly = false, size = 22, c
     </div>
   );
 }
+
+/* ══════════════════════════════════════════════════════
+   Skeleton — shimmer placeholder components
+   All shapes are pure CSS (global.css @keyframes shimmer)
+   ══════════════════════════════════════════════════════ */
+
+/**
+ * Base skeleton bone.
+ * @param {string} className  - additional shape class e.g. 'skeleton-text'
+ * @param {object} style      - inline overrides (width, height, etc.)
+ */
+export function Skeleton({ className = '', style = {} }) {
+  return <div className={`skeleton ${className}`} style={style} aria-hidden="true" />;
+}
+
+/** A single line of placeholder text */
+Skeleton.Text = function SkeletonText({ width = '100%', style = {} }) {
+  return <div className="skeleton skeleton-text" style={{ width, ...style }} aria-hidden="true" />;
+};
+
+/** Multi-line text block */
+Skeleton.Paragraph = function SkeletonParagraph({ lines = 3, style = {} }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, ...style }} aria-hidden="true">
+      {Array.from({ length: lines }).map((_, i) => (
+        <div
+          key={i}
+          className="skeleton skeleton-text"
+          style={{ width: i === lines - 1 ? '70%' : '100%' }}
+        />
+      ))}
+    </div>
+  );
+};
+
+/** Circle avatar placeholder */
+Skeleton.Avatar = function SkeletonAvatar({ size = 44, style = {} }) {
+  return (
+    <div
+      className="skeleton skeleton-avatar"
+      style={{ width: size, height: size, ...style }}
+      aria-hidden="true"
+    />
+  );
+};
+
+/** Rounded badge / chip */
+Skeleton.Badge = function SkeletonBadge({ width = 72, style = {} }) {
+  return <div className="skeleton skeleton-badge" style={{ width, ...style }} aria-hidden="true" />;
+};
+
+/** Button-shaped bone */
+Skeleton.Button = function SkeletonButton({ width = 100, style = {} }) {
+  return <div className="skeleton skeleton-btn" style={{ width, ...style }} aria-hidden="true" />;
+};
+
+/** Card with inner content rows */
+Skeleton.Card = function SkeletonCard({ rows = 3, showAvatar = false, style = {} }) {
+  return (
+    <div className="skeleton-card" style={style} aria-hidden="true">
+      {showAvatar && (
+        <div className="skeleton-row">
+          <Skeleton.Avatar />
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <Skeleton.Text width="55%" />
+            <Skeleton.Text width="35%" />
+          </div>
+        </div>
+      )}
+      <Skeleton.Paragraph lines={rows} />
+      <div className="skeleton-row" style={{ marginTop: 4 }}>
+        <Skeleton.Badge />
+        <Skeleton.Badge width={55} />
+        <div style={{ flex: 1 }} />
+        <Skeleton.Button width={88} />
+      </div>
+    </div>
+  );
+};
+
+/** Tall block (image / video / chart placeholder) */
+Skeleton.Block = function SkeletonBlock({ height = 140, style = {} }) {
+  return <div className="skeleton skeleton-block" style={{ height, ...style }} aria-hidden="true" />;
+};
+
+/** Full page grid of skeleton cards */
+Skeleton.Grid = function SkeletonGrid({ count = 6, cols = 3, rows = 3, showAvatar = false, style = {} }) {
+  return (
+    <div
+      className={`skeleton-grid skeleton-grid-${cols}`}
+      style={style}
+      aria-busy="true"
+      aria-label="Loading…"
+    >
+      {Array.from({ length: count }).map((_, i) => (
+        <Skeleton.Card key={i} rows={rows} showAvatar={showAvatar} />
+      ))}
+    </div>
+  );
+};
+
+/** Page-level header skeleton (title + subtitle + action btn) */
+Skeleton.Header = function SkeletonHeader({ style = {} }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24, ...style }} aria-hidden="true">
+      <div style={{ flex: 1 }}>
+        <Skeleton.Text width="38%" style={{ height: 26, marginBottom: 10 }} />
+        <Skeleton.Text width="55%" />
+      </div>
+      <Skeleton.Button width={120} style={{ height: 42 }} />
+    </div>
+  );
+};
+
+/** Note-card shaped skeleton */
+Skeleton.Note = function SkeletonNote({ style = {} }) {
+  return (
+    <div className="skeleton-card" style={{ gap: 10, ...style }} aria-hidden="true">
+      <Skeleton.Text width="50%" style={{ height: 18, marginBottom: 4 }} />
+      <div className="skeleton skeleton-note" />
+      <div style={{ display: 'flex', gap: 8 }}>
+        <Skeleton.Badge />
+        <Skeleton.Badge width={52} />
+      </div>
+    </div>
+  );
+};
+
+/** Chat message skeleton (alternating left/right) */
+Skeleton.Message = function SkeletonMessage({ align = 'left', style = {} }) {
+  const isRight = align === 'right';
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: isRight ? 'row-reverse' : 'row',
+        alignItems: 'flex-start',
+        gap: 10,
+        marginBottom: 14,
+        ...style,
+      }}
+      aria-hidden="true"
+    >
+      {!isRight && <Skeleton.Avatar size={34} />}
+      <div style={{ maxWidth: 260, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div
+          className="skeleton"
+          style={{
+            height: 38,
+            width: 180 + Math.random() * 80,
+            borderRadius: isRight ? '12px 4px 12px 12px' : '4px 12px 12px 12px',
+          }}
+        />
+      </div>
+    </div>
+  );
+};

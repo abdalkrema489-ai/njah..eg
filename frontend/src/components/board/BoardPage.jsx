@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { boardAPI, filesAPI } from '../../api/index';
-import { Card, Btn, Modal, Input, Select, Tag, EmptyState, Avatar, SectionHeader, Spinner } from '../shared/UI';
+import { useTranslation } from '../../i18n/index';
+import { Card, Btn, Modal, Input, Select, Tag, EmptyState, Avatar, SectionHeader, Spinner, Skeleton } from '../shared/UI';
 
 const SUBJECTS = ['mathematics','science','arabic','english','social_studies'];
 const S_ICONS  = { mathematics:'📐',science:'🔬',arabic:'📚',english:'🌐',social_studies:'🌍' };
@@ -86,6 +87,7 @@ export default function BoardPage() {
   const [shareOpen, setShare] = useState(false);
   const [form, setForm] = useState({ title: '', description: '', subject: 'mathematics', file_id: '' });
   const qc = useQueryClient();
+  const { t } = useTranslation();
 
   const { data, isLoading } = useQuery({
     queryKey: ['board', subject, search, sort],
@@ -99,8 +101,8 @@ export default function BoardPage() {
   const { mutate: save_ } = useMutation({ mutationFn: boardAPI.save, onSuccess: () => qc.invalidateQueries(['board']) });
   const { mutate: create, isPending } = useMutation({
     mutationFn: () => boardAPI.create(form),
-    onSuccess: () => { qc.invalidateQueries(['board']); setShare(false); toast.success('📋 Resource Shared!'); },
-    onError: () => toast.error('Share failed'),
+    onSuccess: () => { qc.invalidateQueries(['board']); setShare(false); toast.success(t('toast.postShared')); },
+    onError: () => toast.error(t('toast.shareFailed')),
   });
 
   return (
@@ -131,8 +133,30 @@ export default function BoardPage() {
       </div>
 
       {isLoading ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))', gap: 28 }}>
-          {[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="skeleton" style={{ height: 420, borderRadius: 24 }} />)}
+        <div
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))', gap: 28 }}
+          aria-busy="true"
+          aria-label="Loading posts…"
+        >
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="skeleton-card" style={{ gap: 16, padding: 24, borderRadius: 24 }}>
+              <div className="skeleton-row">
+                <Skeleton.Avatar size={44} />
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 7 }}>
+                  <Skeleton.Text width="52%" style={{ height: 16 }} />
+                  <Skeleton.Text width="38%" style={{ height: 12 }} />
+                </div>
+                <Skeleton.Badge />
+              </div>
+              <Skeleton.Text width="75%" style={{ height: 18 }} />
+              <Skeleton.Paragraph lines={3} />
+              <Skeleton.Block height={130} />
+              <div className="skeleton-row">
+                <Skeleton.Button width={80} style={{ height: 32 }} />
+                <Skeleton.Button width={80} style={{ height: 32 }} />
+              </div>
+            </div>
+          ))}
         </div>
       ) : posts.length === 0 ? (
         <div className="floating-panel">

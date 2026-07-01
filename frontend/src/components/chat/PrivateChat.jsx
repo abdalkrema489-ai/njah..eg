@@ -8,6 +8,7 @@ import { usersAPI, filesAPI } from '../../api/index';
 import { getSocket, useSocket } from '../../hooks/index';
 import { useVoice } from '../../hooks/useVoice';
 import { useAuthStore, useChatStore } from '../../context/store';
+import { useTranslation } from '../../i18n/index';
 import { Avatar, Spinner } from '../shared/UI';
 
 // ── Helpers ──────────────────────────────────────────────
@@ -162,6 +163,7 @@ function ContactItem({ chat, active, onClick, unread }) {
 // ── MAIN ──────────────────────────────────────────────────
 export default function PrivateChat() {
   const { user } = useAuthStore();
+  const { t } = useTranslation();
   const {
     activePrivateChat, setActivePrivateChat,
     privateMessages, setPrivateMessages, addPrivateMessage,
@@ -215,7 +217,7 @@ export default function PrivateChat() {
     };
     const onIce = ({ candidate }) => { if (peerRef.current && candidate) peerRef.current.addIceCandidate(new RTCIceCandidate(candidate)); };
     const onEnded = () => { toast('Call ended'); closePeer(); };
-    const onDeclined = () => { toast.error('Call declined'); closePeer(); };
+    const onDeclined = () => { toast.error(t('toast.callDeclined')); closePeer(); };
     socket.on('call_incoming', onIncoming); socket.on('call_answered', onAnswered);
     socket.on('ice_candidate', onIce); socket.on('call_ended', onEnded); socket.on('call_declined', onDeclined);
     return () => {
@@ -252,7 +254,7 @@ export default function PrivateChat() {
       await pc.setLocalDescription(offer);
       socket.emit('call_offer', { targetId: activePrivateChat, offer, callType: type });
       setCallType(type); setCallState('calling');
-    } catch { toast.error('Could not access microphone/camera'); }
+    } catch { toast.error(t('toast.noMicCam')); }
   }, [socket, activePrivateChat, closePeer]);
 
   const acceptCall = useCallback(async () => {
@@ -270,7 +272,7 @@ export default function PrivateChat() {
       await pc.setLocalDescription(answer);
       socket.emit('call_answer', { callerId: incomingCall.callerId, answer });
       setCallState('in-call'); setIncomingCall(null);
-    } catch { toast.error('Could not accept call'); }
+    } catch { toast.error(t('toast.callAcceptFailed')); }
   }, [incomingCall, socket, closePeer]);
 
   const declineCall = useCallback(() => {
@@ -316,8 +318,8 @@ export default function PrivateChat() {
         receiverId: activePrivateChat, content: file.name,
         type: file.type.startsWith('image/') ? 'image' : 'file', fileUrl: data.file.file_url,
       });
-      toast.success('Sent!', { id: 'p-upload' });
-    } catch { toast.error('Upload failed', { id: 'p-upload' }); }
+      toast.success(t('toast.sent'), { id: 'p-upload' });
+    } catch { toast.error(t('toast.uploadFailed'), { id: 'p-upload' }); }
   };
 
   const toggleVoice = async () => {
@@ -328,12 +330,12 @@ export default function PrivateChat() {
         try {
           const { data } = await filesAPI.upload(file, { is_public: false });
           socket.emit('send_private_message', { receiverId: activePrivateChat, content: 'Voice Message', type: 'audio', fileUrl: data.file.file_url });
-          toast.success('Voice sent', { id: 'p-voice' });
-        } catch { toast.error('Failed', { id: 'p-voice' }); }
+          toast.success(t('toast.voiceSent'), { id: 'p-voice' });
+        } catch { toast.error(t('toast.voiceFailed'), { id: 'p-voice' }); }
       }
     } else {
       const ok = await startRecording();
-      if (!ok) toast.error('Microphone access required');
+      if (!ok) toast.error(t('toast.micRequired'));
     }
   };
 

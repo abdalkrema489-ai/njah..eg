@@ -362,6 +362,77 @@ const en = {
     submit:      'Submit Exam',
     results:     'Results',
   },
+
+  // ── Toast / feedback messages ────────────────────────────────
+  // Keep these separate so they stay short and easy to translate.
+  toast: {
+    // Notes
+    noteCreated:       'Note created',
+    noteSaved:         'Changes synced',
+    noteDeleted:       'Note deleted',
+    imagePploaded:     'Image uploaded and inserted!',
+    imageUploadFailed: 'Image upload failed',
+    // Auth
+    loginSuccess:      'Welcome back! 👋',
+    logoutSuccess:     'Signed out. See you soon! 👋',
+    registerSuccess:   'Account created — welcome!',
+    passwordUpdated:   'Password updated successfully!',
+    passwordMismatch:  'Passwords do not match',
+    teacherSubmitted:  'Application submitted! Pending approval.',
+    // Profile
+    profileUpdated:    'Profile updated successfully!',
+    avatarUpdated:     'Profile picture updated!',
+    // Files
+    downloadSuccess:   'Downloaded successfully!',
+    fileDeleted:       'File removed from Vault',
+    // Planner
+    sessionAdded:      'Session added!',
+    statusUpdated:     'Status updated',
+    sessionDeleted:    'Session deleted',
+    // Notifications
+    allRead:           'All marked as read',
+    // Board
+    postShared:        'Resource shared!',
+    shareFailed:       'Share failed',
+    // Chat
+    sent:              'Sent!',
+    voiceSent:         'Voice note sent',
+    uploadFailed:      'Upload failed',
+    voiceFailed:       'Voice note failed',
+    micRequired:       'Microphone access required',
+    callDeclined:      'Call declined',
+    callFailed:        'Failed to connect call',
+    noMicCam:          'Could not access microphone/camera',
+    callAcceptFailed:  'Could not accept call',
+    // AI
+    voiceNotSupported: 'Voice input is not supported in your browser',
+    voiceStartFailed:  'Could not start voice recognition',
+    ttsNotSupported:   'Text-to-speech not supported in this browser',
+    loadFailed:        'Failed to load',
+    // Support
+    ticketLoadFailed:  'Failed to load tickets',
+    fillAllFields:     'Please fill in all fields',
+    // Admin
+    noDataExport:      'No data to export',
+    sessionExpired:    'Session expired',
+    feeMustBe:         'Fee must be between 0 and 50%',
+    feeUpdateFailed:   'Failed to update fee',
+    payoutFailed:      'Failed to settle payouts',
+    aiAdvisorError:    'AI Advisor error',
+    codeGenFailed:     'Failed to generate codes',
+    brandingUpdated:   'Branding updated! Reloading…',
+    brandingFailed:    'Failed to update branding',
+    couponCreated:     'Coupon created successfully!',
+    replySent:         'Reply sent successfully',
+    replyFailed:       'Failed to send reply',
+    operationFailed:   'Operation failed',
+    // Tools
+    articleNotFound:   'Article not found. Try a different search term.',
+    triviaLoadFailed:  'Could not load trivia questions. Try again!',
+    // Draft
+    draftRestored:     'Unsaved draft restored',
+    changesSynced:     'Changes synced',
+  },
 };
 
 export default en;

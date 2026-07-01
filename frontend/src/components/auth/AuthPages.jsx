@@ -324,6 +324,7 @@ export function LoginPage() {
   const location = useLocation();
   const { language } = useUIStore();
   const isAr = language === 'ar';
+  const { t } = useTranslation();
 
   const { isBiometricAvailable, loginWithBiometric, enableBiometric } = useBiometric();
   const [biometricAvail, setBiometricAvail] = useState(false);
@@ -336,7 +337,7 @@ export function LoginPage() {
     try {
       const { data } = await authAPI.login({ ...d, role });
       setAuth(data);
-      toast.success('Welcome back! 👋');
+      toast.success(t('toast.loginSuccess'));
 
       const biometricEnabled = localStorage.getItem('biometric_enabled');
       if (!biometricEnabled && await isBiometricAvailable()) {

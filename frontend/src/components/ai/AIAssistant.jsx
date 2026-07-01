@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import DOMPurify from 'dompurify';
 import { aiAPI, filesAPI, aiClient } from '../../api/index';
-import { useUIStore, useAuthStore } from '../../context/store';
+import { useUIStore, useAuthStore, useDraftStore } from '../../context/store';
 import { Spinner } from '../shared/UI';
 import HomeworkCorrector from './HomeworkCorrector';
 
@@ -210,6 +210,7 @@ function AIChat() {
   const { user } = useAuthStore();
   const { language } = useUIStore();
   const isAr = language === 'ar';
+  const { t } = useTranslation();
 
   const [messages, setMessages] = useState([{
     role: 'assistant',
@@ -219,8 +220,10 @@ function AIChat() {
     provider: 'gemini', ts: new Date(),
   }]);
 
+  const { chatDraft, setChatDraft, clearChatDraft } = useDraftStore();
+
   const [convId, setConvId] = useState(null);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState(chatDraft || ''); // restored from persisted draft
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -277,7 +280,7 @@ function AIChat() {
   }, [language]);
 
   const toggleVoice = () => {
-    if (!recognitionRef.current) return toast.error('Voice input is not supported in your browser');
+    if (!recognitionRef.current) return toast.error(t('toast.voiceNotSupported'));
     if (isRecording) {
       recognitionRef.current.stop();
       setIsRecording(false);
@@ -286,14 +289,14 @@ function AIChat() {
         recognitionRef.current.start();
         setIsRecording(true);
       } catch {
-        toast.error('Could not start voice recognition');
+        toast.error(t('toast.voiceStartFailed'));
       }
     }
   };
 
   // ── TTS ──
   const speak = useCallback((text) => {
-    if (!('speechSynthesis' in window)) return toast.error('TTS not supported');
+    if (!('speechSynthesis' in window)) return toast.error(t('toast.ttsNotSupported'));
     if (speaking) { window.speechSynthesis.cancel(); setSpeaking(false); return; }
     const plain = text.replace(/[*#`_]/g, '').replace(/<[^>]+>/g, '');
     const utter = new SpeechSynthesisUtterance(plain);
@@ -310,6 +313,7 @@ function AIChat() {
     const msg = (text || input).trim();
     if (!msg || loading) return;
     setInput('');
+    clearChatDraft(); // draft consumed on send
     setSuggestions([]);
     setLoading(true);
 
@@ -482,7 +486,7 @@ function AIChat() {
       setSuggestions([]);
       setShowHistory(false);
       toast.success(isAr ? 'تم تحميل المحادثة' : 'Conversation loaded');
-    } catch { toast.error('Failed to load'); }
+    } catch { toast.error(t('toast.loadFailed')); }
   };
 
   const QUICK_PROMPTS = isAr ? [
@@ -700,7 +704,7 @@ function AIChat() {
               <textarea
                 ref={inputRef}
                 value={input}
-                onChange={e => setInput(e.target.value)}
+                onChange={e => { setInput(e.target.value); setChatDraft(e.target.value); }}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
                 placeholder={searchMode
                   ? (isAr ? 'ابحث عن أي موضوع...' : 'Search any topic...')

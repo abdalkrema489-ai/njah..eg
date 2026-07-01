@@ -203,13 +203,14 @@ export const useChatStore = create(set => ({
   })),
 }));
 
-// ── Draft / Data-loss Prevention ──────────────────────────
+// ── Draft / Data-loss Prevention ──────────────────────────────
 export const useDraftStore = create(
   persist(
     (set) => ({
       noteDrafts: {},       // { [noteId]: content }
       quizProgress: null,   // { questions, answers, startedAt, fileIds }
       chatDraft: '',        // AI chat input
+      plannerDraft: null,   // { subject, topic, days, generatedPlan, savedAt }
 
       saveNoteDraft:  (id, content) => set(s => ({ noteDrafts: { ...s.noteDrafts, [id]: content } })),
       clearNoteDraft: (id) => set(s => { const d = { ...s.noteDrafts }; delete d[id]; return { noteDrafts: d }; }),
@@ -219,6 +220,9 @@ export const useDraftStore = create(
 
       setChatDraft:   (text) => set({ chatDraft: text }),
       clearChatDraft: () => set({ chatDraft: '' }),
+
+      setPlannerDraft:   (draft) => set({ plannerDraft: { ...draft, savedAt: Date.now() } }),
+      clearPlannerDraft: () => set({ plannerDraft: null }),
     }),
     { name: 'najah-drafts' }
   )

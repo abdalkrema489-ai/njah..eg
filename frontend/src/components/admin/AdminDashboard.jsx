@@ -6,6 +6,7 @@ import axios from 'axios';
 import { io } from 'socket.io-client';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { useUIStore } from '../../context/store';
+import { useTranslation } from '../../i18n/index';
 
 // ── Export Users CSV (UTF-8 BOM for Excel Arabic support) ────
 function exportUsersCSV(users, isAr) {
@@ -28,8 +29,8 @@ function exportUsersCSV(users, isAr) {
   link.click();
 }
 
-function downloadCSV(data, filename) {
-  if (!data || !data.length) return toast.error('No data to export');
+function downloadCSV(data, filename, isAr) {
+  if (!data || !data.length) return toast.error(isAr ? 'لا توجد بيانات للتصدير' : 'No data to export');
   const headers = Object.keys(data[0]);
   const rows = data.map(obj => headers.map(h => {
     const val = obj[h];
@@ -279,6 +280,7 @@ export default function AdminDashboard() {
   const nav = useNavigate();
   const { darkMode, toggleDark, language, setLanguage } = useUIStore();
   const isAr = language === 'ar';
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats]         = useState(null);
   const [earnings, setEarnings]   = useState(null);
@@ -332,7 +334,7 @@ export default function AdminDashboard() {
       if (coupData.status === 'fulfilled') setCoupons(coupData.value.data.coupons || []);
       if (tickData.status === 'fulfilled') setTickets(tickData.value.data.tickets || []);
     } catch {
-      toast.error('Session expired'); logout();
+      toast.error(t('toast.sessionExpired')); logout();
     } finally {
       setLoading(false);
     }
@@ -373,17 +375,17 @@ export default function AdminDashboard() {
       await adminClient().patch(`/admin/users/${u.id}`, { is_active: !u.is_active });
       setUsers(prev => prev.map(x => x.id === u.id ? { ...x, is_active: !x.is_active } : x));
       toast.success(`User ${u.is_active ? 'banned' : 'activated'}`);
-    } catch { toast.error('Failed'); }
+    } catch { toast.error(t('toast.operationFailed')); }
   };
 
   const updateFee = async () => {
     const fee = parseFloat(feeInput);
-    if (isNaN(fee) || fee < 0 || fee > 50) return toast.error('Fee must be 0–50%');
+    if (isNaN(fee) || fee < 0 || fee > 50) return toast.error(t('toast.feeMustBe'));
     try {
       await adminClient().patch('/admin/settings/fee', { feePercent: fee });
       toast.success(`Platform fee updated to ${fee}%`);
       fetchStats();
-    } catch { toast.error('Failed to update fee'); }
+    } catch { toast.error(t('toast.feeUpdateFailed')); }
   };
 
   const settleTeacher = async (teacherName) => {
@@ -392,7 +394,7 @@ export default function AdminDashboard() {
       toast.success(`Successfully settled ${data.settledCount} transactions for ${teacherName}`);
       fetchStats(); // Refresh data immediately
     } catch (err) {
-      toast.error('Failed to settle payouts');
+      toast.error(t('toast.payoutFailed'));
     }
   };
 
@@ -408,7 +410,7 @@ export default function AdminDashboard() {
       const { data } = await adminClient().post('/admin/advisor', payload);
       setAdvisorChat(prev => [...prev, { role: 'ai', content: data.advice }]);
     } catch (err) {
-      toast.error('AI Advisor error');
+      toast.error(t('toast.aiAdvisorError'));
     } finally {
       setAdvisorLoading(false);
     }
@@ -423,16 +425,16 @@ export default function AdminDashboard() {
       toast.success(`Generated ${data.count} codes successfully!`);
       fetchStats();
       e.target.reset();
-    } catch { toast.error('Failed to generate codes'); }
+    } catch { toast.error(t('toast.codeGenFailed')); }
   };
 
   const updateBranding = async (e) => {
     e.preventDefault();
     try {
       await adminClient().post('/admin/branding', branding);
-      toast.success('Branding updated! Reloading app to apply globally...');
+      toast.success(t('toast.brandingUpdated'));
       setTimeout(() => window.location.reload(), 1500);
-    } catch { toast.error('Failed to update branding'); }
+    } catch { toast.error(t('toast.brandingFailed')); }
   };
 
   const generateCoupon = async (e) => {
@@ -445,7 +447,7 @@ export default function AdminDashboard() {
     };
     try {
       await adminClient().post('/admin/coupons', payload);
-      toast.success('Coupon created successfully!');
+      toast.success(t('toast.couponCreated'));
       fetchStats();
       e.target.reset();
     } catch (err) { toast.error(err.response?.data?.error || 'Failed to create coupon'); }
@@ -456,9 +458,9 @@ export default function AdminDashboard() {
     const reply = e.target.reply.value;
     try {
       await adminClient().patch(`/admin/support-tickets/${id}`, { reply, status: 'resolved' });
-      toast.success('Reply sent successfully');
+      toast.success(t('toast.replySent'));
       fetchStats();
-    } catch (err) { toast.error('Failed to reply'); }
+    } catch (err) { toast.error(t('toast.replyFailed')); }
   };
 
   const bgStyle = {

@@ -5,6 +5,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { toolsAPI } from '../../api/index';
 import { useUIStore, useAuthStore } from '../../context/store';
+import { useTranslation } from '../../i18n/index';
 import { useTextToSpeech } from '../../hooks/useTextToSpeech';
 
 // ── Shared UI primitives ─────────────────────────────────────
@@ -191,12 +192,13 @@ function WikiSnapTab() {
   const [query, setQuery]   = useState('');
   const [result, setResult] = useState(null);
   const { language }        = useUIStore();
+  const { t }               = useTranslation();
   const { isSpeaking, isPaused, isSupported, toggle } = useTextToSpeech();
 
   const { mutate: search, isPending } = useMutation({
     mutationFn: () => toolsAPI.wikipedia(query.trim(), language),
     onSuccess: ({ data }) => setResult(data),
-    onError:   () => { toast.error('Article not found. Try a different search term.'); setResult(null); },
+    onError:   () => { toast.error(t('toast.articleNotFound')); setResult(null); },
   });
 
   const SUGGESTIONS = ['Photosynthesis', 'Pythagorean theorem', 'Ancient Egypt', 'Solar system', 'World War II', 'DNA', 'French Revolution', 'Newton laws'];
@@ -290,11 +292,11 @@ function TriviaBoostTab() {
   const [quiz,       setQuiz]       = useState(null);
   const [answers,    setAnswers]    = useState({});
   const [submitted,  setSubmitted]  = useState(false);
-
+  const { t }                       = useTranslation();
   const { mutate: fetchTrivia, isPending } = useMutation({
     mutationFn: () => toolsAPI.trivia(subject, 5, difficulty),
     onSuccess:  ({ data }) => { setQuiz(data); setAnswers({}); setSubmitted(false); },
-    onError:    () => toast.error('Could not load trivia questions. Try again!'),
+    onError:    () => toast.error(t('toast.triviaLoadFailed')),
   });
 
   const score    = quiz ? quiz.questions.filter((q, i) => answers[i] === q.correct).length : 0;

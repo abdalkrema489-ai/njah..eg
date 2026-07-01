@@ -88,6 +88,27 @@ router.get('/me', adminAuth, (req, res) => {
   res.json({ email: OWNER_EMAIL, name: OWNER_NAME, platformFeePercent: getFee() });
 });
 
+// ── POST /api/admin/push-test — Verify push credentials are live ──────────
+router.post('/push-test', adminAuth, async (req, res) => {
+  try {
+    const { sendPush } = require('../services/pushService');
+    // Look up the admin's own user record by email to get their push registrations
+    const { rows } = await pool.query('SELECT id FROM users WHERE email = $1', [OWNER_EMAIL]);
+    if (!rows[0]) {
+      return res.status(404).json({ error: 'Admin user not found in users table. Ensure you are registered.' });
+    }
+    await sendPush(rows[0].id, {
+      title: '✅ Najah Push Test',
+      body: 'Push notifications are configured and working correctly.',
+      link: '/admin/dashboard',
+    });
+    res.json({ success: true, message: 'Push test sent. Check your device/browser for the notification.' });
+  } catch (err) {
+    logger.error('[Admin] Push test failed:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── GET /api/admin/stats ──────────────────────────────────────
 router.get('/stats', adminAuth, async (req, res) => {
   try {

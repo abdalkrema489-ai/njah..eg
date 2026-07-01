@@ -6,7 +6,7 @@ import { format, startOfWeek, addDays, isSameDay, parseISO } from 'date-fns';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { plannerAPI, aiAPI } from '../../api/index';
-import { Card, Button, Input, Select, Modal, Tabs, ProgressBar, EmptyState, SectionHeader, Btn, Spinner } from '../shared/UI';
+import { Card, Button, Input, Select, Modal, Tabs, ProgressBar, EmptyState, SectionHeader, Btn, Spinner, Skeleton } from '../shared/UI';
 import { useTranslation } from '../../i18n/index';
 import StudyPlanGenerator from './StudyPlanGenerator';
 
@@ -27,7 +27,7 @@ const STATUS_COLORS = {
 
 // ── Add Session Modal ──
 function AddSessionModal({ open, onClose, onSaved }) {
-  const { lang } = useTranslation();
+  const { lang, t } = useTranslation();
   const isAr = lang === 'ar';
   
   const SUBJECTS = [
@@ -44,7 +44,7 @@ function AddSessionModal({ open, onClose, onSaved }) {
 
   const onSubmit = async (data) => {
     await plannerAPI.createSession(data);
-    toast.success('✅ Session added!');
+    toast.success(t('toast.sessionAdded'));
     reset();
     onSaved();
     onClose();
@@ -323,12 +323,12 @@ export default function PlannerPage() {
 
   const { mutate: updateStatus } = useMutation({
     mutationFn: ({ id, status }) => plannerAPI.updateSession(id, { status }),
-    onSuccess: () => { qc.invalidateQueries(['sessions']); toast.success('Status updated'); },
+    onSuccess: () => { qc.invalidateQueries(['sessions']); toast.success(t('toast.statusUpdated')); },
   });
 
   const { mutate: deleteSession } = useMutation({
     mutationFn: plannerAPI.deleteSession,
-    onSuccess: () => { qc.invalidateQueries(['sessions']); toast.success('Session deleted'); },
+    onSuccess: () => { qc.invalidateQueries(['sessions']); toast.success(t('toast.sessionDeleted')); },
   });
 
   const completed = sessions.filter(s => s.status === 'completed').length;
@@ -405,8 +405,22 @@ export default function PlannerPage() {
       {activeTab === 'weekly' && (
         <div className="floating-panel" style={{ padding: 28 }}>
           {isLoading ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {[1,2,3,4].map(i => <div key={i} className="skeleton" style={{ height: 68, borderRadius: 16 }} />)}
+            <div
+              style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
+              aria-busy="true"
+              aria-label="Loading sessions…"
+            >
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="skeleton-card" style={{ flexDirection: 'row', alignItems: 'center', gap: 16, padding: '16px 20px', borderRadius: 16 }}>
+                  <div className="skeleton" style={{ width: 48, height: 48, borderRadius: 12, flexShrink: 0 }} />
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <Skeleton.Text width="40%" style={{ height: 16 }} />
+                    <Skeleton.Text width="60%" style={{ height: 12 }} />
+                  </div>
+                  <Skeleton.Badge width={80} style={{ height: 26 }} />
+                  <Skeleton.Button width={88} style={{ height: 34 }} />
+                </div>
+              ))}
             </div>
           ) : (
             <WeeklyView

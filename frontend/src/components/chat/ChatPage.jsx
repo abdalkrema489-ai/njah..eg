@@ -7,6 +7,7 @@ import { chatAPI, filesAPI, usersAPI, groupsAPI } from '../../api/index';
 import { getSocket, useSocket } from '../../hooks/index';
 import { useVoice } from '../../hooks/useVoice';
 import { useAuthStore, useChatStore, useUIStore, playPing } from '../../context/store';
+import { useTranslation } from '../../i18n/index';
 import { Avatar, Spinner, Modal, Button } from '../shared/UI';
 import CreateGroupWizard from '../groups/CreateGroupWizard';
 
@@ -27,6 +28,7 @@ export default function ChatPage() {
   const { user } = useAuthStore();
   const lang = useUIStore(s => s.language);
   const isAr = lang === 'ar';
+  const { t } = useTranslation();
   const {
     activePrivateChat, setActivePrivateChat, privateMessages, setPrivateMessages,
     addPrivateMessage, markMessagesRead, recentChats, setRecentChats, updateRecentChat,
@@ -150,7 +152,7 @@ export default function ChatPage() {
 
     } catch (err) {
       console.error(err);
-      toast.error('Could not access microphone/camera');
+      toast.error(t('toast.noMicCam'));
       cleanupCall();
     }
   };
@@ -219,7 +221,7 @@ export default function ChatPage() {
 
     } catch (err) {
       console.error(err);
-      toast.error('Could not accept call');
+      toast.error(t('toast.callAcceptFailed'));
       socket.emit('call_end', { targetId: callerId });
       cleanupCall();
     }
@@ -443,7 +445,7 @@ export default function ChatPage() {
           iceQueueRef.current = [];
         } catch (err) {
           console.error(err);
-          toast.error('Failed to connect call');
+          toast.error(t('toast.callFailed'));
           cleanupCall();
         }
       }
@@ -463,7 +465,7 @@ export default function ChatPage() {
     };
 
     const onCallDeclined = () => {
-      toast.error('Call declined');
+      toast.error(t('toast.callDeclined'));
       cleanupCall();
     };
 
@@ -618,8 +620,8 @@ export default function ChatPage() {
         type: file.type.startsWith('image/') ? 'image' : file.type.startsWith('audio/') ? 'audio' : 'file',
         fileUrl: data.file.file_url,
       });
-      toast.success('Sent!', { id: 'upload' });
-    } catch { toast.error('Upload failed', { id: 'upload' }); }
+      toast.success(t('toast.sent'), { id: 'upload' });
+    } catch { toast.error(t('toast.uploadFailed'), { id: 'upload' }); }
   };
 
   // ---------------------------------- 10. Voice recording ──
@@ -634,12 +636,12 @@ export default function ChatPage() {
             receiverId: activePrivateChat, content: 'Voice Message',
             type: 'audio', fileUrl: data.file.file_url,
           });
-          toast.success('Sent!', { id: 'voice' });
-        } catch { toast.error('Voice note failed', { id: 'voice' }); }
+          toast.success(t('toast.voiceSent'), { id: 'voice' });
+        } catch { toast.error(t('toast.voiceFailed'), { id: 'voice' }); }
       }
     } else {
       const ok = await startRecording();
-      if (!ok) toast.error('Microphone access required');
+      if (!ok) toast.error(t('toast.micRequired'));
     }
   };
 
