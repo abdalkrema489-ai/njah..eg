@@ -85,6 +85,8 @@ async function runMigrations(client) {
         -- study_sessions
         ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
         ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS pomodoros_done INTEGER DEFAULT 0;
+        ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS reminder_minutes INT DEFAULT 0;
+        ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS color_override VARCHAR(20);
         -- pomodoro_sessions
         ALTER TABLE pomodoro_sessions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
         -- files
@@ -195,6 +197,8 @@ async function runMigrations(client) {
       notes       TEXT,
       linked_file UUID,
       pomodoros_done INTEGER DEFAULT 0,
+      reminder_minutes INTEGER DEFAULT 0,
+      color_override VARCHAR(20),
       created_at  TIMESTAMPTZ  DEFAULT NOW()
     );
 
