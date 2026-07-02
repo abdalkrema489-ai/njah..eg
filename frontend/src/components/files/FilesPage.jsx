@@ -1,4 +1,5 @@
 // src/components/files/FilesPage.jsx
+// Force Vite HMR Cache Invalidation
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -166,7 +167,7 @@ function UploadDropzone({ onUploaded }) {
   );
 }
 
-function FileCard({ file, onDelete, onAnalyze }) {
+function FileCard({ file, onDelete, onAnalyze, onQuizThis }) {
   const { lang } = useTranslation();
   const isAr = lang === 'ar';
   return (
@@ -203,6 +204,9 @@ function FileCard({ file, onDelete, onAnalyze }) {
 
       <div style={{ display: 'flex', gap: 10 }}>
         <Btn size="sm" variant="glass" onClick={() => onAnalyze(file)}>🤖 {isAr ? 'تحليل AI' : 'AI ANALYZE'}</Btn>
+        {file.mime_type === 'application/pdf' && (
+          <Btn size="sm" variant="glass" onClick={() => onQuizThis(file)}>🎯 {isAr ? 'اختبرني' : 'Quiz This'}</Btn>
+        )}
         <a href={file.file_url} target="_blank" rel="noopener noreferrer">
           <Btn size="sm" variant="ghost">👁</Btn>
         </a>
@@ -222,6 +226,7 @@ export default function FilesPage() {
   const [subject, setSubject] = useState('');
   const [search, setSearch] = useState('');
   const [analyzeFile, setAnalyzeFile] = useState(null);
+  const [selectedQuizFile, setSelectedQuizFile] = useState(null);
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -349,6 +354,10 @@ export default function FilesPage() {
                       <FileCard key={f.id} file={f}
                         onDelete={(id) => { if (window.confirm('Remove this file from your vault?')) deleteFile(id); }}
                         onAnalyze={(f) => setAnalyzeFile(f)}
+                        onQuizThis={(f) => {
+                          setSelectedQuizFile(f);
+                          setActiveTab('quiz');
+                        }}
                       />
                     ))}
                   </AnimatePresence>
@@ -405,7 +414,10 @@ export default function FilesPage() {
             exit={{ opacity: 0, x: -15 }}
             transition={{ duration: 0.18 }}
           >
-            <QuizPanel />
+            <QuizPanel
+              preloadedFile={selectedQuizFile}
+              onClearPreloaded={() => setSelectedQuizFile(null)}
+            />
           </motion.div>
         ) : (
           <motion.div

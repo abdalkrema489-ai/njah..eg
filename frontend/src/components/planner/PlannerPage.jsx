@@ -33,7 +33,7 @@ const STATUS_COLORS = {
 };
 
 // ── Add/Edit Session Modal ──
-function AddSessionModal({ open, onClose, onSaved, prefilledDate, editingSession }) {
+function AddSessionModal({ open, onClose, onSaved, onDelete, prefilledDate, editingSession }) {
   const { lang, t } = useTranslation();
   const isAr = lang === 'ar';
 
@@ -294,6 +294,21 @@ function AddSessionModal({ open, onClose, onSaved, prefilledDate, editingSession
         </div>
 
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+          {editingSession && onDelete && (
+            <Button
+              type="button"
+              variant="danger"
+              onClick={() => {
+                if (window.confirm(isAr ? 'هل أنت متأكد من حذف هذه الجلسة؟' : 'Are you sure you want to delete this session?')) {
+                  onDelete(editingSession.id);
+                  onClose();
+                }
+              }}
+              style={{ marginRight: 'auto' }}
+            >
+              {isAr ? 'حذف' : 'Delete'}
+            </Button>
+          )}
           <Button type="button" onClick={onClose}>{isAr ? "إلغاء" : "Cancel"}</Button>
           <Button type="submit" variant="primary" loading={isSubmitting}>
             {editingSession ? (isAr ? "تعديل الجلسة ←" : "Update Session →") : (isAr ? "إضافة جلسة ←" : "Add Session →")}
@@ -631,6 +646,8 @@ function WeeklyView({ sessions, onUpdateSession, onAddPrefilled, onSessionClick 
 function MonthlyView({ sessions, onAddPrefilled, onSessionClick }) {
   const { lang } = useTranslation();
   const isAr = lang === 'ar';
+  const AR_DAYS   = { Sun: 'أح', Mon: 'إث', Tue: 'ثل', Wed: 'أر', Thu: 'خم', Fri: 'جم', Sat: 'سب' };
+  const AR_STATUS = { planned: 'مخطط', in_progress: 'جارٍ', completed: 'مكتمل', cancelled: 'ملغى' };
   
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -671,7 +688,7 @@ function MonthlyView({ sessions, onAddPrefilled, onSessionClick }) {
         {/* Day headers */}
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
           <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 900, color: 'var(--text4)', textTransform: 'uppercase', paddingBottom: 6 }}>
-            {isAr ? t(`day.${d}`) || d : d}
+            {isAr ? (AR_DAYS[d] || d) : d}
           </div>
         ))}
 
@@ -758,7 +775,7 @@ function MonthlyView({ sessions, onAddPrefilled, onSessionClick }) {
                       fontSize: 10, padding: '3px 8px', borderRadius: 20,
                       background: st.bg, color: st.color, fontWeight: 700
                     }}>
-                      {isAr ? t(`status.${s.status}`) || s.status : s.status}
+                      {isAr ? (AR_STATUS[s.status] || s.status) : s.status}
                     </span>
                   </div>
                 );
@@ -806,11 +823,11 @@ export default function PlannerPage() {
   });
 
   const { mutate: deleteSession } = useMutation({
-    mutationFn: plannerAPI.deleteSession,
+    mutationFn: (id) => plannerAPI.deleteSession(id),
     onSuccess: () => {
       qc.invalidateQueries(['sessions']);
       qc.invalidateQueries(['sessions-analytics']);
-      toast.success(t('toast.sessionDeleted'));
+      toast.success(isAr ? 'تم حذف الجلسة' : 'Session deleted');
     },
   });
 
@@ -958,6 +975,7 @@ export default function PlannerPage() {
         open={addOpen}
         onClose={() => { setAddOpen(false); setEditingSession(null); setPrefilledDate(null); }}
         onSaved={() => qc.invalidateQueries(['sessions'])}
+        onDelete={deleteSession}
         prefilledDate={prefilledDate}
         editingSession={editingSession}
       />

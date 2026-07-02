@@ -1,3 +1,4 @@
+// Force Vite HMR Cache Invalidation
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';

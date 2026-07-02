@@ -469,6 +469,38 @@ const ar = {
     draftSaved:        'تم حفظ المسودة',
     draftCleared:      'تم مسح المسودة',
   },
+  chat: {
+    directMessages: 'الرسائل المباشرة',
+    groups: 'المجموعات',
+    noChats: 'لا توجد محادثات بعد',
+    searchPlaceholder: 'ابحث عن شخص...',
+    calling: 'الرنين...',
+    incoming: 'مكالمة واردة',
+    inCall: 'أثناء المكالمة',
+    endCall: 'إنهاء المكالمة',
+    accept: 'قبول',
+    decline: 'رفض',
+    mute: 'كتم الصوت',
+    unmute: 'إلغاء الكتم',
+    cameraOff: 'إيقاف الكاميرا',
+    cameraOn: 'تشغيل الكاميرا',
+    voiceCall: 'مكالمة صوتية',
+    videoCall: 'مكالمة فيديو',
+  },
+  quiz: {
+    useFiles: 'من ملفاتي',
+    bySubject: 'حسب المادة',
+    selectFiles: 'اختر ملفات للاختبار',
+    noFiles: 'لا توجد ملفات مرفوعة. ارفع ملفاً أولاً.',
+    quizThis: 'اختبر هذا',
+  },
+  planner: {
+    addSession: 'إضافة جلسة',
+    updateSession: 'تعديل الجلسة',
+    focusComplete: 'انتهت جلسة التركيز! 🎉',
+    breakTime: 'وقت الاستراحة ☕',
+    longBreak: 'استراحة طويلة 🌙',
+  },
 };
 
 export default ar;

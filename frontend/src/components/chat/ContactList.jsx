@@ -73,7 +73,7 @@ export default function ContactList({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <h2 style={{ fontSize: 18, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em' }}>
-              {t('chat.directMessages') ? t('chat.directMessages').split(' ')[0] : 'Messages'}
+              {isAr ? 'الرسائل' : 'Messages'}
             </h2>
             <motion.button
               whileHover={{ scale: 1.1, rotate: 90 }} whileTap={{ scale: 0.9 }}

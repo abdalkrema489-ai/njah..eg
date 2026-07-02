@@ -437,6 +437,38 @@ const en = {
     draftSaved:        'Draft saved',
     draftCleared:      'Draft cleared',
   },
+  chat: {
+    directMessages: 'Direct Messages',
+    groups: 'Groups',
+    noChats: 'No recent chats yet',
+    searchPlaceholder: 'Search people...',
+    calling: 'Calling…',
+    incoming: 'Incoming Call',
+    inCall: 'In Call',
+    endCall: 'End Call',
+    accept: 'Accept',
+    decline: 'Decline',
+    mute: 'Mute',
+    unmute: 'Unmute',
+    cameraOff: 'Camera Off',
+    cameraOn: 'Camera On',
+    voiceCall: 'Voice Call',
+    videoCall: 'Video Call',
+  },
+  quiz: {
+    useFiles: 'From My Files',
+    bySubject: 'By Subject',
+    selectFiles: 'Select Files for Quiz',
+    noFiles: 'No files uploaded yet. Upload a file first.',
+    quizThis: 'Quiz This',
+  },
+  planner: {
+    addSession: 'Add Session',
+    updateSession: 'Update Session',
+    focusComplete: 'Focus session complete! 🎉',
+    breakTime: 'Time for a break ☕',
+    longBreak: 'Long break time 🌙',
+  },
 };
 
 export default en;

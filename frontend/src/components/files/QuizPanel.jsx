@@ -1,8 +1,8 @@
-// src/components/files/QuizPanel.jsx
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { aiAPI } from '../../api/index';
+import { useQuery } from '@tanstack/react-query';
+import { aiAPI, filesAPI } from '../../api/index';
 import { Spinner, EmptyState } from '../shared/UI';
 import { useUIStore, useDraftStore } from '../../context/store';
 
@@ -13,7 +13,7 @@ const SUBJECTS_LIST = [
   { key: 'chemistry',      en: 'Chemistry',       ar: 'الكيمياء',         icon: '🧪', color: '#EC4899' },
   { key: 'biology',        en: 'Biology',         ar: 'الأحياء',           icon: '🧬', color: '#10B981' },
   { key: 'arabic',         en: 'Arabic',          ar: 'اللغة العربية',     icon: '📚', color: '#F59E0B' },
-  { key: 'english',        en: 'English',         ar: 'اللغة الإنجليزية',   icon: '🌐', color: '#3B82F6' },
+  { key: 'english',         en: 'English',          ar: 'اللغة الإنجليزية',   icon: '🌐', color: '#3B82F6' },
   { key: 'social_studies', en: 'Social Studies',  ar: 'الدراسات الاجتماعية', icon: '🌍', color: '#EF4444' },
   { key: 'islamic_studies',en: 'Islamic Studies', ar: 'التربية الإسلامية',  icon: '🕌', color: '#059669' },
 ];
@@ -26,7 +26,7 @@ const DIFFICULTIES = [
   { key: 'hard',   en: 'Hard',   ar: 'صعب',   color: '#EF4444' },
 ];
 
-export default function QuizPanel() {
+export default function QuizPanel({ preloadedFile = null, onClearPreloaded }) {
   const { language } = useUIStore();
   const isAr = language === 'ar';
   const { quizProgress, saveQuizProgress, clearQuizProgress } = useDraftStore();
@@ -43,6 +43,42 @@ export default function QuizPanel() {
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore]         = useState(null);
   const [showRestoreBanner, setShowRestoreBanner] = useState(() => !!(hasFreshDraft && quizProgress?.questions));
+
+  // File selection states
+  const [useFiles, setUseFiles]         = useState(!!preloadedFile);
+  const [selectedFiles, setSelectedFiles] = useState(() => preloadedFile ? [preloadedFile] : []);
+
+  const { data: filesData } = useQuery({
+    queryKey: ['user-files'],
+    queryFn:  () => filesAPI.list({ limit: 50 }),
+    enabled:  useFiles,
+    staleTime: 5 * 60 * 1000,
+  });
+  const userFiles = filesData?.data?.files || [];
+
+  useEffect(() => {
+    if (preloadedFile) {
+      setSelectedFiles([preloadedFile]);
+      setUseFiles(true);
+      setSubject(preloadedFile.subject || 'mathematics');
+    } else {
+      setSelectedFiles([]);
+    }
+  }, [preloadedFile]);
+
+  const handleToggleFile = (file) => {
+    setSelectedFiles(prev => {
+      const exists = prev.find(f => f.id === file.id);
+      if (exists) {
+        return prev.filter(f => f.id !== file.id);
+      }
+      if (prev.length >= 5) {
+        toast.error(isAr ? 'يمكنك اختيار 5 ملفات كحد أقصى' : 'You can select up to 5 files');
+        return prev;
+      }
+      return [...prev, file];
+    });
+  };
 
   // Auto-save answers whenever they change (quiz in progress)
   useEffect(() => {
@@ -63,17 +99,28 @@ export default function QuizPanel() {
     setScore(null);
     setShowRestoreBanner(false);
     try {
-      const { data } = await aiAPI.generateQuiz({ subject, difficulty, count, language });
-      if (!data?.questions?.length) throw new Error();
+      const payload = {
+        difficulty,
+        count,
+        language,
+        ...(useFiles && selectedFiles.length > 0
+          ? { fileIds: selectedFiles.map(f => f.id) }
+          : { subject, topic: '' }
+        ),
+      };
+      const { data } = await aiAPI.generateQuiz(payload);
+      if (!data?.questions?.length) throw new Error('No questions returned');
       setQuiz(data);
       saveQuizProgress({
-        subject, difficulty, count,
+        subject: useFiles ? 'files' : subject,
+        difficulty, count,
         questions: data.questions,
         answers: {},
         startedAt: Date.now(),
+        fileIds: useFiles ? selectedFiles.map(f => f.id) : undefined,
       });
-    } catch {
-      toast.error(isAr ? 'فشل إنشاء الاختبار. تأكد من اتصالك بالإنترنت.' : 'Failed to generate quiz. Please try again.');
+    } catch (err) {
+      toast.error(isAr ? 'فشل إنشاء الاختبار. حاول مرة أخرى.' : 'Failed to generate quiz. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -88,8 +135,8 @@ export default function QuizPanel() {
     clearQuizProgress();
     try {
       await aiAPI.submitQuiz({
-        subject,
-        topic: 'General AI Quiz',
+        subject: useFiles ? 'files' : subject,
+        topic: selectedFiles.length > 0 ? selectedFiles[0].original_name : 'General AI Quiz',
         totalQ: total,
         correctQ: correct,
         difficulty,
@@ -146,39 +193,166 @@ export default function QuizPanel() {
               </p>
             </div>
 
-            {/* Subject card grid */}
-            <div style={{ marginBottom: 24 }}>
-              <label style={{ fontSize: 12, fontWeight: 800, color: 'var(--text3)', display: 'block', marginBottom: 12, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                📚 {isAr ? 'اختر المادة الدراسية' : 'Select Academic Subject'}
-              </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 10 }}>
-                {SUBJECTS_LIST.map((s) => {
-                  const isSelected = subject === s.key;
-                  return (
-                    <motion.div
-                      key={s.key}
-                      whileHover={{ scale: 1.03, y: -2 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => setSubject(s.key)}
-                      style={{
-                        padding: '16px 12px',
-                        borderRadius: 16,
-                        cursor: 'pointer',
-                        textAlign: 'center',
-                        background: isSelected ? `${s.color}15` : 'var(--surface2)',
-                        border: '2px solid',
-                        borderColor: isSelected ? s.color : 'var(--border)',
-                        color: 'var(--text)',
-                        transition: 'border-color 0.15s, background-color 0.15s',
-                      }}
-                    >
-                      <div style={{ fontSize: 28, marginBottom: 8 }}>{s.icon}</div>
-                      <div style={{ fontSize: 13, fontWeight: 800 }}>{isAr ? s.ar : s.en}</div>
-                    </motion.div>
-                  );
-                })}
+            {/* ── File Mode Toggle ── */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUseFiles(false);
+                    setSelectedFiles([]);
+                    if (onClearPreloaded) onClearPreloaded();
+                  }}
+                  style={{
+                    flex: 1, padding: '10px 0', borderRadius: 12, border: '2px solid',
+                    borderColor: !useFiles ? 'var(--primary)' : 'var(--border)',
+                    background: !useFiles ? 'rgba(99,102,241,0.1)' : 'transparent',
+                    color: !useFiles ? 'var(--primary-light)' : 'var(--text3)',
+                    fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s',
+                  }}
+                >
+                  📐 {isAr ? 'اختبار بالمادة' : 'By Subject'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUseFiles(true)}
+                  style={{
+                    flex: 1, padding: '10px 0', borderRadius: 12, border: '2px solid',
+                    borderColor: useFiles ? '#10B981' : 'var(--border)',
+                    background: useFiles ? 'rgba(16,185,129,0.1)' : 'transparent',
+                    color: useFiles ? '#10B981' : 'var(--text3)',
+                    fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s',
+                  }}
+                >
+                  📁 {isAr ? 'اختبار من ملفاتي' : 'From My Files'}
+                </button>
               </div>
+
+              {/* File picker grid — shown when useFiles=true */}
+              {useFiles && (
+                <div>
+                  {userFiles.length === 0 ? (
+                    <div style={{
+                      padding: '20px', textAlign: 'center', borderRadius: 12,
+                      border: '1px dashed var(--border)', color: 'var(--text3)', fontSize: 13,
+                    }}>
+                      {isAr ? '📭 لا توجد ملفات مرفوعة. ارفع ملفاً أولاً من صفحة الملفات.' : '📭 No files uploaded yet. Upload a file first.'}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 240, overflowY: 'auto' }}>
+                      {userFiles.map(file => {
+                        const isSelected = selectedFiles.some(f => f.id === file.id);
+                        const icon = file.file_type === 'application/pdf' ? '📄' : file.file_type?.startsWith('image/') ? '🖼️' : '📎';
+                        return (
+                          <div
+                            key={file.id}
+                            onClick={() => {
+                              setSelectedFiles(prev => {
+                                const exists = prev.some(f => f.id === file.id);
+                                if (exists) {
+                                  return prev.filter(f => f.id !== file.id);
+                                }
+                                if (prev.length >= 5) {
+                                  toast.error(isAr ? 'يمكنك اختيار 5 ملفات كحد أقصى' : 'You can select up to 5 files');
+                                  return prev;
+                                }
+                                return [...prev, file];
+                              });
+                            }}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 12,
+                              padding: '10px 14px', borderRadius: 12, cursor: 'pointer',
+                              border: '1.5px solid', transition: 'all 0.2s',
+                              borderColor: isSelected ? '#10B981' : 'var(--border)',
+                              background: isSelected ? 'rgba(16,185,129,0.08)' : 'var(--surface2)',
+                            }}
+                          >
+                            <span style={{ fontSize: 20 }}>{icon}</span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{
+                                fontSize: 13, fontWeight: 600, color: 'var(--text)',
+                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                              }}>
+                                {file.original_name || file.file_name}
+                              </div>
+                              <div style={{ fontSize: 11, color: 'var(--text3)' }}>
+                                {file.subject || (isAr ? 'غير محدد' : 'No subject')}
+                              </div>
+                            </div>
+                            <div style={{
+                              width: 22, height: 22, borderRadius: '50%', border: '2px solid',
+                              borderColor: isSelected ? '#10B981' : 'var(--border)',
+                              background: isSelected ? '#10B981' : 'transparent',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              color: '#fff', fontSize: 12, fontWeight: 900, flexShrink: 0,
+                            }}>
+                              {isSelected ? '✓' : ''}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Selected files chips */}
+                  {selectedFiles.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
+                      {selectedFiles.map(f => (
+                        <span key={f.id} style={{
+                          fontSize: 12, fontWeight: 600, padding: '4px 10px',
+                          background: 'rgba(16,185,129,0.12)', color: '#10B981',
+                          border: '1px solid rgba(16,185,129,0.3)', borderRadius: 99,
+                          display: 'flex', alignItems: 'center', gap: 6,
+                        }}>
+                          📄 {(f.original_name || f.file_name || '').slice(0, 20)}
+                          <button
+                            type="button"
+                            onClick={e => { e.stopPropagation(); setSelectedFiles(prev => prev.filter(x => x.id !== f.id)); }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#10B981', fontWeight: 900, fontSize: 14, padding: 0, lineHeight: 1 }}
+                          >×</button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
+
+            {/* Subject card grid */}
+            {!useFiles && (
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ fontSize: 12, fontWeight: 800, color: 'var(--text3)', display: 'block', marginBottom: 12, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  📚 {isAr ? 'اختر المادة الدراسية' : 'Select Academic Subject'}
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 10 }}>
+                  {SUBJECTS_LIST.map((s) => {
+                    const isSelected = subject === s.key;
+                    return (
+                      <motion.div
+                        key={s.key}
+                        whileHover={{ scale: 1.03, y: -2 }}
+                        whileTap={{ scale: 0.97 }}
+                        onClick={() => setSubject(s.key)}
+                        style={{
+                          padding: '16px 12px',
+                          borderRadius: 16,
+                          cursor: 'pointer',
+                          textAlign: 'center',
+                          background: isSelected ? `${s.color}15` : 'var(--surface2)',
+                          border: '2px solid',
+                          borderColor: isSelected ? s.color : 'var(--border)',
+                          color: 'var(--text)',
+                          transition: 'border-color 0.15s, background-color 0.15s',
+                        }}
+                      >
+                        <div style={{ fontSize: 28, marginBottom: 8 }}>{s.icon}</div>
+                        <div style={{ fontSize: 13, fontWeight: 800 }}>{isAr ? s.ar : s.en}</div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Difficulty + Question Count */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 28 }}>
@@ -309,6 +483,8 @@ export default function QuizPanel() {
               <button
                 onClick={() => {
                   if (window.confirm(isAr ? 'هل تريد التراجع وإلغاء الاختبار الحالي؟' : 'Are you sure you want to exit the quiz?')) {
+                    clearQuizProgress();
+                    setAnswers({});
                     setQuiz(null);
                   }
                 }}

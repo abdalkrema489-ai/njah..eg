@@ -1,3 +1,4 @@
+// Force Vite HMR Cache Invalidation
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
@@ -156,7 +157,7 @@ export default function MessageBubble({
           >
             <button onClick={() => { onReply(msg); setShowMenu(false); }} title={isAr ? 'رد' : 'Reply'} style={btnStyle}>↩️</button>
             <button onClick={handleCopy} title={isAr ? 'نسخ' : 'Copy'} style={btnStyle}>📋</button>
-            {canEdit && <button onClick={() => { onEdit(msg); setShowMenu(false); }} title={isAr ? 'تعديل' : 'Edit'} style={btnStyle}>✏️</button>
+            {canEdit && <button onClick={() => { onEdit(msg); setShowMenu(false); }} title={isAr ? 'تعديل' : 'Edit'} style={btnStyle}>✏️</button>}
             {isMe && <button onClick={() => { onDelete(msg.id); setShowMenu(false); }} title={isAr ? 'حذف' : 'Delete'} style={{ ...btnStyle, color: '#ef4444' }}>🗑️</button>}
           </motion.div>
         )}
