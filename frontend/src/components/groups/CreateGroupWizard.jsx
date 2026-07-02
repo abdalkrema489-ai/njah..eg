@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { groupsAPI } from '../../api/index';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../../i18n/index';
 import { SCHOOL_CURRICULUM, UNIVERSITY_CURRICULUM } from '../../data/egyptianCurriculum';
 import toast from 'react-hot-toast';
+import { useDraftStore } from '../../context/store';
 import PaidGroupActivationModal from './PaidGroupActivationModal';
 
 const GROUP_TYPES = [
@@ -40,12 +41,14 @@ const STEPS = [
 export default function CreateGroupWizard({ onClose, onCreated }) {
   const { t, lang } = useTranslation();
   const navigate     = useNavigate();
-  const [step, setStep] = useState(1);
+  const { groupWizardDraft, setGroupWizardDraft, clearGroupWizardDraft } = useDraftStore();
+
+  const [step, setStep] = useState(() => groupWizardDraft?.step || 1);
   const [loading, setLoading] = useState(false);
   // Paid-group activation modal state
   const [activationData, setActivationData] = useState(null); // { group, listingFee, platformFeePercent }
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(() => groupWizardDraft?.form || {
     groupType:   '',
     name:        '',
     subject:     '',
@@ -61,6 +64,10 @@ export default function CreateGroupWizard({ onClose, onCreated }) {
     curriculumLinked: null,
     joinCode:    Math.random().toString(36).slice(2,8).toUpperCase(),
   });
+
+  useEffect(() => {
+    setGroupWizardDraft({ step, form });
+  }, [step, form, setGroupWizardDraft]);
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
@@ -89,6 +96,8 @@ export default function CreateGroupWizard({ onClose, onCreated }) {
       };
 
       const { data } = await groupsAPI.create(payload);
+
+      clearGroupWizardDraft();
 
       if (data.requiresPayment) {
         // Don't close wizard — show the activation payment modal instead

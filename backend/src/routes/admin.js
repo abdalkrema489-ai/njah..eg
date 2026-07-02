@@ -55,6 +55,45 @@ function adminAuth(req, res, next) {
   }
 }
 
+// ── POST /api/admin/push-test ─────────────────────────────────
+// Self-test: send a push notification to the platform owner's registered devices.
+// Use this to verify VAPID + FCM credentials are configured correctly before go-live.
+router.post('/push-test', adminAuth, async (req, res) => {
+  try {
+    const { sendPush } = require('../services/pushService');
+
+    // Find the owner's user record by email
+    const { rows } = await pool.query(
+      'SELECT id FROM users WHERE email = $1 LIMIT 1',
+      [OWNER_EMAIL]
+    );
+
+    if (!rows[0]) {
+      return res.status(404).json({
+        error: `No user account found for OWNER_EMAIL (${OWNER_EMAIL}). ` +
+               'Create an account with this email first.',
+      });
+    }
+
+    const userId = rows[0].id;
+    await sendPush(userId, {
+      title: '🔔 Push Test — Najah Admin',
+      body:  'If you see this, VAPID/FCM push notifications are working correctly!',
+      link:  '/admin/dashboard',
+    });
+
+    logger.info(`[PushTest] Test push sent to owner (userId=${userId})`);
+    res.json({
+      success: true,
+      message: 'Push test sent. Check your devices — if they are registered, you should receive a notification within a few seconds.',
+      userId,
+    });
+  } catch (err) {
+    logger.error('[PushTest] Push test failed:', err.message);
+    res.status(500).json({ error: 'Push test failed: ' + err.message });
+  }
+});
+
 // ── POST /api/admin/login ─────────────────────────────────────
 router.post('/login', adminLoginLimiter, async (req, res) => {
   const { email, password } = req.body;

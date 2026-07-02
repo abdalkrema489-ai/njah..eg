@@ -1,9 +1,10 @@
 // src/components/teacher/ExamBuilder.jsx — Najah v7
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { aiAPI } from '../../api/index';
 import { useTranslation } from '../../i18n/index';
 import toast from 'react-hot-toast';
+import { useDraftStore } from '../../context/store';
 
 const SUBJECTS = ['الرياضيات','الفيزياء','الكيمياء','الأحياء','اللغة العربية','اللغة الإنجليزية','الدراسات الاجتماعية','الجيولوجيا','علم الحاسب','التربية الدينية'];
 const GRADES   = ['الصف الأول الابتدائي','الصف الثاني الابتدائي','الصف الثالث الابتدائي','الصف الرابع الابتدائي','الصف الخامس الابتدائي','الصف السادس الابتدائي','الصف الأول الإعدادي','الصف الثاني الإعدادي','الصف الثالث الإعدادي','الصف الأول الثانوي','الصف الثاني الثانوي','الصف الثالث الثانوي'];
@@ -89,15 +90,28 @@ function QuestionCard({ q, index, onToggle, selected }) {
 export default function ExamBuilder() {
   const { lang } = useTranslation();
   const isAr = lang === 'ar';
+  const { examBuilderDraft, setExamBuilderDraft, clearExamBuilderDraft } = useDraftStore();
 
-  const [subject,  setSubject]  = useState('');
-  const [grade,    setGrade]    = useState('');
-  const [topic,    setTopic]    = useState('');
-  const [count,    setCount]    = useState(10);
+  const [subject,  setSubject]  = useState(() => examBuilderDraft?.subject  || '');
+  const [grade,    setGrade]    = useState(() => examBuilderDraft?.grade    || '');
+  const [topic,    setTopic]    = useState(() => examBuilderDraft?.topic    || '');
+  const [count,    setCount]    = useState(() => examBuilderDraft?.count    || 10);
   const [loading,  setLoading]  = useState(false);
-  const [questions,setQuestions]= useState([]);
-  const [selected, setSelected] = useState(new Set());
-  const [examTitle,setExamTitle]= useState('');
+  const [questions,setQuestions]= useState(() => examBuilderDraft?.questions || []);
+  const [selected, setSelected] = useState(() => new Set(examBuilderDraft?.selected || []));
+  const [examTitle,setExamTitle]= useState(() => examBuilderDraft?.examTitle || '');
+
+  useEffect(() => {
+    setExamBuilderDraft({
+      subject,
+      grade,
+      topic,
+      count,
+      questions,
+      selected: [...selected],
+      examTitle,
+    });
+  }, [subject, grade, topic, count, questions, selected, examTitle, setExamBuilderDraft]);
 
   const handleGenerate = async () => {
     if (!subject || !grade || !topic) return toast.error(isAr ? 'يرجى ملء جميع الحقول' : 'Please fill all fields');

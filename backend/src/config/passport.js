@@ -5,9 +5,11 @@ const { pool }   = require('./postgres');
 const logger     = require('../utils/logger');
 
 function setupPassport() {
-  console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID);
-  console.log('GOOGLE_CLIENT_SECRET:', process.env.GOOGLE_CLIENT_SECRET ? '***' : 'missing');
-  console.log('GOOGLE_CALLBACK_URL:', process.env.GOOGLE_CALLBACK_URL);
+  // SEC-05: Never log full credentials — show only masked suffix
+  if (process.env.GOOGLE_CLIENT_ID) {
+    const masked = '...' + process.env.GOOGLE_CLIENT_ID.slice(-6);
+    logger.info(`Google OAuth client configured: ${masked}`);
+  }
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET || !process.env.GOOGLE_CALLBACK_URL) {
     logger.warn('Google OAuth disabled: missing GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, or GOOGLE_CALLBACK_URL');
     return;

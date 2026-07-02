@@ -410,22 +410,30 @@ export function Avatar({ src, name, size = 40, ring = false }) {
     ? safeName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
     : 'N';
 
+  const fallbackStyle = {
+    width: size, height: size, borderRadius: '50%', flexShrink: 0,
+    background: 'linear-gradient(135deg, var(--primary), var(--accent-cyan))',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: Math.round(size * 0.38),
+    fontWeight: 800, color: '#fff', userSelect: 'none',
+    fontFamily: 'var(--font-head)',
+  };
+
   const inner = src
-    ? <img
-        src={String(src)} alt={safeName}
-        style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-        onError={e => { e.target.style.display = 'none'; }}
-      />
-    : <div style={{
-        width: size, height: size, borderRadius: '50%', flexShrink: 0,
-        background: 'linear-gradient(135deg, var(--primary), var(--accent-cyan))',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: Math.round(size * 0.38),
-        fontWeight: 800, color: '#fff', userSelect: 'none',
-        fontFamily: 'var(--font-head)',
-      }}>
-        {initials}
-      </div>;
+    ? (
+      <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
+        <div style={fallbackStyle} aria-hidden="true">{initials}</div>
+        <img
+          src={String(src)} alt={safeName}
+          style={{
+            position: 'absolute', inset: 0,
+            width: size, height: size, borderRadius: '50%', objectFit: 'cover',
+          }}
+          onError={e => { e.currentTarget.style.display = 'none'; }}
+        />
+      </div>
+    )
+    : <div style={fallbackStyle}>{initials}</div>;
 
   if (!ring) return inner;
   return (

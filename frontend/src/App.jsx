@@ -80,7 +80,7 @@ function PageLoader() {
   const { t } = useTranslation();
   return (
     <div style={{
-      minHeight: '100vh', display: 'flex', flexDirection: 'column',
+      minHeight: '100dvh', display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
       background: 'var(--ink)', gap: 20,
     }}>
@@ -232,7 +232,7 @@ function NotFound() {
   const { t } = useTranslation();
   return (
     <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center',
+      minHeight: '100dvh', display: 'flex', alignItems: 'center',
       justifyContent: 'center', background: 'var(--ink)',
     }}>
       <div style={{
@@ -256,7 +256,7 @@ function NotFound() {
           {t('errors.notFound')}
         </h2>
         <p style={{ color: 'var(--text3)', fontSize: 15, marginBottom: 32, lineHeight: 1.65 }}>
-          The page you're looking for doesn't exist or has been moved.
+          {t('errors.notFoundBody')}
         </p>
         <a href="/" style={{
           padding: '13px 32px', background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', color: '#fff',
@@ -264,10 +264,34 @@ function NotFound() {
           display: 'inline-block', boxShadow: '0 4px 20px rgba(99,102,241,0.3)',
           transition: 'all 0.3s var(--ease)',
         }}>
-          ← {t('nav.dashboard')}
+          {t('errors.goHome')}
         </a>
       </div>
     </div>
+  );
+}
+
+// ── Dynamic Toaster — flips to bottom-left for Arabic RTL ────
+function AppToaster() {
+  const { language } = useUIStore();
+  return (
+    <Toaster
+      position={language === 'ar' ? 'bottom-left' : 'bottom-right'}
+      toastOptions={{
+        duration: 3500,
+        style: {
+          background: 'var(--surface3)',
+          color: 'var(--text)',
+          border: '1px solid var(--border2)',
+          borderRadius: 12,
+          fontSize: 14,
+          boxShadow: 'var(--shadow), var(--glow)',
+          backdropFilter: 'var(--glass-blur)',
+        },
+        success: { iconTheme: { primary: '#10B981', secondary: '#fff' } },
+        error:   { iconTheme: { primary: '#EF4444', secondary: '#fff' } },
+      }}
+    />
   );
 }
 
@@ -285,23 +309,7 @@ export default function App() {
           <OfflineBanner />
           <InstallPrompt />
           <CommandPalette />
-          <Toaster
-            position="bottom-right"
-            toastOptions={{
-              duration: 3500,
-              style: {
-                background: 'var(--surface3)',
-                color: 'var(--text)',
-                border: '1px solid var(--border2)',
-                borderRadius: 12,
-                fontSize: 14,
-                boxShadow: 'var(--shadow), var(--glow)',
-                backdropFilter: 'var(--glass-blur)',
-              },
-              success: { iconTheme: { primary: '#10B981', secondary: '#fff' } },
-              error:   { iconTheme: { primary: '#EF4444', secondary: '#fff' } },
-            }}
-          />
+          <AppToaster />
 
           <Routes>
             {/* ── Marketing ── */}

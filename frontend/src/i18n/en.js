@@ -279,16 +279,18 @@ const en = {
     password:      'Password',
   },
   errors: {
-    required:    'This field is required',
-    email:       'Invalid email address',
-    minLength:   'Too short',
-    maxLength:   'Too long',
-    password:    'Password is too weak',
-    confirmPass: 'Passwords do not match',
-    server:      'Server error. Please try again',
-    notFound:    'Page not found',
-    unauthorized:'Unauthorized. Please sign in',
-    network:     'Check your internet connection',
+    required:       'This field is required',
+    email:          'Invalid email address',
+    minLength:      'Too short',
+    maxLength:      'Too long',
+    password:       'Password is too weak',
+    confirmPass:    'Passwords do not match',
+    server:         'Server error. Please try again',
+    notFound:       'Page not found',
+    notFoundBody:   "The page you're looking for doesn't exist or has been moved.",
+    goHome:         '← Go to Dashboard',
+    unauthorized:   'Unauthorized. Please sign in',
+    network:        'Check your internet connection',
   },
 
   board: {
@@ -432,6 +434,8 @@ const en = {
     // Draft
     draftRestored:     'Unsaved draft restored',
     changesSynced:     'Changes synced',
+    draftSaved:        'Draft saved',
+    draftCleared:      'Draft cleared',
   },
 };
 

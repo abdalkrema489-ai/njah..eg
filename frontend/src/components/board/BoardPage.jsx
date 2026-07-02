@@ -1,5 +1,5 @@
 // src/components/board/BoardPage.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { boardAPI, filesAPI } from '../../api/index';
 import { useTranslation } from '../../i18n/index';
 import { Card, Btn, Modal, Input, Select, Tag, EmptyState, Avatar, SectionHeader, Spinner, Skeleton } from '../shared/UI';
+import { useDraftStore } from '../../context/store';
 
 const SUBJECTS = ['mathematics','science','arabic','english','social_studies'];
 const S_ICONS  = { mathematics:'📐',science:'🔬',arabic:'📚',english:'🌐',social_studies:'🌍' };
@@ -81,13 +82,18 @@ function PostCard({ post, onLike, onSave }) {
 }
 
 export default function BoardPage() {
+  const { boardDraft, setBoardDraft, clearBoardDraft } = useDraftStore();
   const [subject, setSubject] = useState('');
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('newest');
   const [shareOpen, setShare] = useState(false);
-  const [form, setForm] = useState({ title: '', description: '', subject: 'mathematics', file_id: '' });
+  const [form, setForm] = useState(() => boardDraft || { title: '', description: '', subject: 'mathematics', file_id: '' });
   const qc = useQueryClient();
   const { t } = useTranslation();
+
+  useEffect(() => {
+    setBoardDraft(form);
+  }, [form, setBoardDraft]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['board', subject, search, sort],
@@ -101,7 +107,13 @@ export default function BoardPage() {
   const { mutate: save_ } = useMutation({ mutationFn: boardAPI.save, onSuccess: () => qc.invalidateQueries(['board']) });
   const { mutate: create, isPending } = useMutation({
     mutationFn: () => boardAPI.create(form),
-    onSuccess: () => { qc.invalidateQueries(['board']); setShare(false); toast.success(t('toast.postShared')); },
+    onSuccess: () => { 
+      qc.invalidateQueries(['board']); 
+      setShare(false); 
+      clearBoardDraft();
+      setForm({ title: '', description: '', subject: 'mathematics', file_id: '' });
+      toast.success(t('toast.postShared')); 
+    },
     onError: () => toast.error(t('toast.shareFailed')),
   });
 

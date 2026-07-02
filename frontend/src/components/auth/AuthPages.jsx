@@ -439,7 +439,7 @@ export function LoginPage() {
 
         <Divider label={isAr ? "أو المتابعة باستخدام" : "or continue with"} margin={24} />
 
-        <motion.button onClick={() => authAPI.googleLogin('student')}
+        <motion.button onClick={() => authAPI.googleLogin(role)}
           whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
           style={{ width: '100%', padding: '12px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, color: 'var(--text)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
         >
@@ -511,7 +511,18 @@ export function RegisterPage() {
                                 (isAr ? 'رحلة تعلمك تبدأ الآن! 🚀' : 'Your learning journey begins! 🚀')
       );
       navigate('/');
-    } catch (err) { toast.error(err.response?.data?.error || (isAr ? 'تعذر التسجيل' : 'Unable to register')); }
+    } catch (err) {
+      if (err.response?.data?.code === 'USE_GOOGLE') {
+        toast.error(
+          isAr
+            ? 'هذا الإيميل مرتبط بحساب جوجل — اضغط “التسجيل بجوجل” بدلاً من ذلك'
+            : 'This email is linked to a Google account — click “Continue with Google” instead',
+          { duration: 6000 }
+        );
+        return;
+      }
+      toast.error(err.response?.data?.error || (isAr ? 'تعذر التسجيل' : 'Unable to register'));
+    }
   };
 
 

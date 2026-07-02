@@ -100,7 +100,9 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc:  ["'self'"],
-      scriptSrc:   ["'self'", "'unsafe-inline'", 'https://www.gstatic.com', 'https://apis.google.com'],
+      // 'unsafe-inline' intentionally REMOVED from scriptSrc — Vite outputs external bundles only.
+      // If a future change adds inline scripts to index.html, use a nonce instead.
+      scriptSrc:   ["'self'", 'https://www.gstatic.com', 'https://apis.google.com'],
       styleSrc:    ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc:     ["'self'", 'https://fonts.gstatic.com', 'data:'],
       imgSrc:      ["'self'", 'data:', 'blob:', 'https://firebasestorage.googleapis.com', 'https://lh3.googleusercontent.com', 'https://storage.googleapis.com'],

@@ -79,8 +79,26 @@ export default defineConfig({
       ? true
       : ['postmalarial-linearly-milly.ngrok-free.dev'],
     proxy: {
-      '/api':       { target: 'http://localhost:5000', changeOrigin: true },
-      '/socket.io': { target: 'http://localhost:5000', ws: true, changeOrigin: true },
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on('error', (err) => {
+            // Silently ignore backend restarts / ECONNRESET in dev
+            if (err.code !== 'ECONNRESET') console.warn('[vite proxy /api]', err.message);
+          });
+        },
+      },
+      '/socket.io': {
+        target: 'http://localhost:5000',
+        ws: true,
+        changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on('error', (err) => {
+            if (err.code !== 'ECONNRESET') console.warn('[vite proxy /socket.io]', err.message);
+          });
+        },
+      },
     },
   },
 

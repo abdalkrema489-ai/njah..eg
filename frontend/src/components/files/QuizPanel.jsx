@@ -1,10 +1,10 @@
 // src/components/files/QuizPanel.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { aiAPI } from '../../api/index';
 import { Spinner, EmptyState } from '../shared/UI';
-import { useUIStore } from '../../context/store';
+import { useUIStore, useDraftStore } from '../../context/store';
 
 const SUBJECTS_LIST = [
   { key: 'mathematics',    en: 'Mathematics',     ar: 'الرياضيات',       icon: '📐', color: '#6366F1' },
@@ -18,6 +18,8 @@ const SUBJECTS_LIST = [
   { key: 'islamic_studies',en: 'Islamic Studies', ar: 'التربية الإسلامية',  icon: '🕌', color: '#059669' },
 ];
 
+const DRAFT_STALE_MS = 2 * 60 * 60 * 1000; // 2 hours — older than this, don't restore
+
 const DIFFICULTIES = [
   { key: 'easy',   en: 'Easy',   ar: 'سهل',   color: '#10B981' },
   { key: 'medium', en: 'Medium', ar: 'متوسط', color: '#F59E0B' },
@@ -27,15 +29,31 @@ const DIFFICULTIES = [
 export default function QuizPanel() {
   const { language } = useUIStore();
   const isAr = language === 'ar';
+  const { quizProgress, saveQuizProgress, clearQuizProgress } = useDraftStore();
 
-  const [subject, setSubject] = useState('mathematics');
-  const [difficulty, setDifficulty] = useState('medium');
-  const [count, setCount] = useState(10);
-  const [quiz, setQuiz] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [answers, setAnswers] = useState({});
+  // Restore from persisted progress if not stale (< 2h)
+  const hasFreshDraft = quizProgress?.savedAt && (Date.now() - quizProgress.savedAt < DRAFT_STALE_MS);
+
+  const [subject, setSubject]     = useState(() => quizProgress?.subject     || 'mathematics');
+  const [difficulty, setDifficulty] = useState(() => quizProgress?.difficulty || 'medium');
+  const [count, setCount]         = useState(() => quizProgress?.count       || 10);
+  const [quiz, setQuiz]           = useState(() => hasFreshDraft ? (quizProgress?.questions ? { questions: quizProgress.questions } : null) : null);
+  const [loading, setLoading]     = useState(false);
+  const [answers, setAnswers]     = useState(() => hasFreshDraft ? (quizProgress?.answers || {}) : {});
   const [submitted, setSubmitted] = useState(false);
-  const [score, setScore] = useState(null);
+  const [score, setScore]         = useState(null);
+  const [showRestoreBanner, setShowRestoreBanner] = useState(() => !!(hasFreshDraft && quizProgress?.questions));
+
+  // Auto-save answers whenever they change (quiz in progress)
+  useEffect(() => {
+    if (!quiz || submitted) return;
+    saveQuizProgress({
+      subject, difficulty, count,
+      questions: quiz.questions,
+      answers,
+      startedAt: quizProgress?.startedAt || Date.now(),
+    });
+  }, [answers, quiz, submitted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const generate = async () => {
     setLoading(true);
@@ -43,10 +61,17 @@ export default function QuizPanel() {
     setAnswers({});
     setSubmitted(false);
     setScore(null);
+    setShowRestoreBanner(false);
     try {
       const { data } = await aiAPI.generateQuiz({ subject, difficulty, count, language });
       if (!data?.questions?.length) throw new Error();
       setQuiz(data);
+      saveQuizProgress({
+        subject, difficulty, count,
+        questions: data.questions,
+        answers: {},
+        startedAt: Date.now(),
+      });
     } catch {
       toast.error(isAr ? 'فشل إنشاء الاختبار. تأكد من اتصالك بالإنترنت.' : 'Failed to generate quiz. Please try again.');
     } finally {
@@ -59,6 +84,8 @@ export default function QuizPanel() {
     const total = quiz.questions.length;
     setScore({ correct, total, pct: Math.round((correct / total) * 100) });
     setSubmitted(true);
+    // Clear saved progress — quiz is done
+    clearQuizProgress();
     try {
       await aiAPI.submitQuiz({
         subject,
@@ -73,6 +100,30 @@ export default function QuizPanel() {
 
   return (
     <div style={{ maxWidth: 840, margin: '0 auto', padding: '12px 12px 48px' }}>
+      {/* ── Quiz Draft Restore Banner ── */}
+      <AnimatePresence>
+        {showRestoreBanner && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+            style={{
+              marginBottom: 16, padding: '14px 20px', borderRadius: 14,
+              background: 'rgba(99,102,241,0.10)', border: '1.5px solid rgba(99,102,241,0.3)',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13,
+            }}
+          >
+            <span>📝 {isAr ? 'لديك اختبار لم يكتمل — هل تريد الاستمرار؟' : 'You have an unfinished quiz — continue?'}</span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setShowRestoreBanner(false)} style={{ fontSize: 12, fontWeight: 700, color: '#6366F1', background: 'none', border: 'none', cursor: 'pointer' }}>
+                {isAr ? 'استمر' : 'Continue'}
+              </button>
+              <button onClick={() => { clearQuizProgress(); setShowRestoreBanner(false); setQuiz(null); setAnswers({}); }}
+                style={{ fontSize: 12, fontWeight: 700, color: 'var(--text3)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                {isAr ? 'ابدأ من جديد' : 'Start fresh'}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <AnimatePresence mode="wait">
         {/* Step 1: Config Selector */}
         {!quiz && (

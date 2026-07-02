@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import DOMPurify from 'dompurify';
 import { aiAPI, filesAPI, aiClient } from '../../api/index';
 import { useUIStore, useAuthStore, useDraftStore } from '../../context/store';
+import { useTranslation } from '../../i18n/index';
 import { Spinner } from '../shared/UI';
 import HomeworkCorrector from './HomeworkCorrector';
 

@@ -25,9 +25,19 @@ async function register(req, res) {
   if (!['student', 'teacher', 'university'].includes(role))
     return res.status(400).json({ error: 'role must be student, university, or teacher' });
 
-  const { rows: existingUsers } = await pool.query('SELECT id FROM users WHERE email=$1', [email]);
-  if (existingUsers.length > 0)
-    return res.status(409).json({ error: 'Email already in use' });
+  const { rows: existing } = await pool.query(
+    'SELECT id, google_id FROM users WHERE email=$1', [email]
+  );
+  if (existing[0]) {
+    if (existing[0].google_id) {
+      return res.status(409).json({
+        error: 'هذا البريد الإلكتروني مرتبط بحساب Google. يرجى تسجيل الدخول باستخدام Google.',
+        error_en: 'This email is linked to a Google account. Please sign in with Google.',
+        code: 'USE_GOOGLE',
+      });
+    }
+    return res.status(409).json({ error: 'البريد الإلكتروني مستخدم بالفعل', error_en: 'Email already in use' });
+  }
 
   // Use the institution field as the "school" column (backwards-compatible)
   const institutionName = institution || school || universityName || null;

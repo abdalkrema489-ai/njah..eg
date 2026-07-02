@@ -1,5 +1,5 @@
 // src/components/planner/StudyPlanGenerator.jsx
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import client from '../../api/index';
 import { Spinner } from '../shared/UI';
 import { haptic } from '../../utils/haptics';
+import { useDraftStore } from '../../context/store';
 
 const SUBJECTS_LIST = [
   { key: 'mathematics',    en: 'Mathematics',    ar: 'رياضيات', icon: '📐' },
@@ -74,13 +75,31 @@ function MarkdownPlan({ content, isAr }) {
 export default function StudyPlanGenerator({ isAr }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { plannerDraft, setPlannerDraft, clearPlannerDraft } = useDraftStore();
 
-  const [examDate, setExamDate]       = useState('');
-  const [subjects, setSubjects]       = useState([]);
-  const [hoursPerDay, setHoursPerDay] = useState(4);
-  const [level, setLevel]             = useState('intermediate');
-  const [plan, setPlan]               = useState(null);
+  // ── Restore from draft on mount ─────────────────────────────
+  const [examDate, setExamDate]       = useState(() => plannerDraft?.examDate      || '');
+  const [subjects, setSubjects]       = useState(() => plannerDraft?.subjects      || []);
+  const [hoursPerDay, setHoursPerDay] = useState(() => plannerDraft?.hoursPerDay   || 4);
+  const [level, setLevel]             = useState(() => plannerDraft?.level         || 'intermediate');
+  const [plan, setPlan]               = useState(() => plannerDraft?.generatedPlan || null);
   const [applying, setApplying]       = useState(false);
+  const [showDraftBanner, setShowDraftBanner] = useState(() => !!plannerDraft?.savedAt);
+
+  // ── Debounced draft save (500ms) ─────────────────────────────
+  const draftTimer = useRef(null);
+  const saveDraft = useCallback((updates) => {
+    clearTimeout(draftTimer.current);
+    draftTimer.current = setTimeout(() => {
+      setPlannerDraft(updates);
+    }, 500);
+  }, [setPlannerDraft]);
+
+  // Auto-save whenever wizard state changes
+  useEffect(() => {
+    saveDraft({ examDate, subjects, hoursPerDay, level, generatedPlan: plan });
+    return () => clearTimeout(draftTimer.current);
+  }, [examDate, subjects, hoursPerDay, level, plan, saveDraft]);
 
   const toggleSubject = (key) =>
     setSubjects(s => s.includes(key) ? s.filter(k => k !== key) : [...s, key]);
@@ -208,6 +227,9 @@ export default function StudyPlanGenerator({ isAr }) {
       qc.invalidateQueries(['sessions']);
 
       if (successCount > 0) {
+        // Clear the draft after successful apply
+        clearPlannerDraft();
+        setShowDraftBanner(false);
         if (skippedCount > 0) {
           toast.success(isAr
             ? `📅 تم إضافة ${successCount} جلسة، وتجاوز ${skippedCount} بسبب تعارض المواعيد`
@@ -233,6 +255,50 @@ export default function StudyPlanGenerator({ isAr }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 720, margin: '0 auto' }}>
+
+      {/* ── Draft Restored Banner ── */}
+      <AnimatePresence>
+        {showDraftBanner && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            style={{
+              padding: '14px 20px',
+              borderRadius: 14,
+              background: 'rgba(99,102,241,0.12)',
+              border: '1.5px solid rgba(99,102,241,0.35)',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              fontSize: 13, color: 'var(--text)',
+            }}
+          >
+            <span>
+              💾 {isAr
+                ? 'تم استرجاع مسودة محفوظة — هل تريد الاستمرار؟'
+                : 'Draft restored — continue where you left off?'}
+            </span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => setShowDraftBanner(false)}
+                style={{ fontSize: 12, fontWeight: 700, color: '#6366F1', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                {isAr ? 'استمر' : 'Continue'}
+              </button>
+              <button
+                onClick={() => {
+                  clearPlannerDraft();
+                  setShowDraftBanner(false);
+                  setExamDate(''); setSubjects([]); setHoursPerDay(4);
+                  setLevel('intermediate'); setPlan(null);
+                }}
+                style={{ fontSize: 12, fontWeight: 700, color: 'var(--text3)', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                {isAr ? 'مسح المسودة' : 'Clear draft'}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Config Panel ── */}
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}

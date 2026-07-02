@@ -211,6 +211,11 @@ export const useDraftStore = create(
       quizProgress: null,   // { questions, answers, startedAt, fileIds }
       chatDraft: '',        // AI chat input
       plannerDraft: null,   // { subject, topic, days, generatedPlan, savedAt }
+      boardDraft: null,     // { title, description, subject, file_id }
+      examBuilderDraft: null, // { subject, grade, topic, count, examTitle, questions, selected }
+      lessonPlannerDraft: null, // { step, subject, grade, topic, duration, style, plan }
+      groupWizardDraft: null, // { step, form }
+      privateChatDrafts: {}, // { [targetId]: text }
 
       saveNoteDraft:  (id, content) => set(s => ({ noteDrafts: { ...s.noteDrafts, [id]: content } })),
       clearNoteDraft: (id) => set(s => { const d = { ...s.noteDrafts }; delete d[id]; return { noteDrafts: d }; }),
@@ -223,6 +228,21 @@ export const useDraftStore = create(
 
       setPlannerDraft:   (draft) => set({ plannerDraft: { ...draft, savedAt: Date.now() } }),
       clearPlannerDraft: () => set({ plannerDraft: null }),
+
+      setBoardDraft:   (draft) => set({ boardDraft: draft }),
+      clearBoardDraft: () => set({ boardDraft: null }),
+
+      setExamBuilderDraft:   (draft) => set({ examBuilderDraft: draft }),
+      clearExamBuilderDraft: () => set({ examBuilderDraft: null }),
+
+      setLessonPlannerDraft:   (draft) => set({ lessonPlannerDraft: draft }),
+      clearLessonPlannerDraft: () => set({ lessonPlannerDraft: null }),
+
+      setGroupWizardDraft:   (draft) => set({ groupWizardDraft: draft }),
+      clearGroupWizardDraft: () => set({ groupWizardDraft: null }),
+
+      setPrivateChatDraft:   (targetId, text) => set(s => ({ privateChatDrafts: { ...s.privateChatDrafts, [targetId]: text } })),
+      clearPrivateChatDraft: (targetId) => set(s => { const d = { ...s.privateChatDrafts }; delete d[targetId]; return { privateChatDrafts: d }; }),
     }),
     { name: 'najah-drafts' }
   )

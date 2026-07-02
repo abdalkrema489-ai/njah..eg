@@ -1,9 +1,10 @@
 // src/components/teacher/LessonPlanner.jsx — Najah v7
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { aiAPI } from '../../api/index';
 import { useTranslation } from '../../i18n/index';
 import toast from 'react-hot-toast';
+import { useDraftStore } from '../../context/store';
 
 const SUBJECTS = ['الرياضيات','الفيزياء','الكيمياء','الأحياء','اللغة العربية','اللغة الإنجليزية','الدراسات الاجتماعية','الجيولوجيا','علم الحاسب','التربية الدينية'];
 const GRADES   = ['الصف الأول الابتدائي','الصف الثاني الابتدائي','الصف الثالث الابتدائي','الصف الرابع الابتدائي','الصف الخامس الابتدائي','الصف السادس الابتدائي','الصف الأول الإعدادي','الصف الثاني الإعدادي','الصف الثالث الإعدادي','الصف الأول الثانوي','الصف الثاني الثانوي','الصف الثالث الثانوي'];
@@ -48,15 +49,28 @@ const fadeSlide = {
 export default function LessonPlanner() {
   const { lang } = useTranslation();
   const isAr = lang === 'ar';
+  const { lessonPlannerDraft, setLessonPlannerDraft, clearLessonPlannerDraft } = useDraftStore();
 
-  const [step,     setStep]     = useState(0);
-  const [subject,  setSubject]  = useState('');
-  const [grade,    setGrade]    = useState('');
-  const [topic,    setTopic]    = useState('');
-  const [duration, setDuration] = useState(45);
-  const [style,    setStyle]    = useState('mixed');
+  const [step,     setStep]     = useState(() => lessonPlannerDraft?.step     || 0);
+  const [subject,  setSubject]  = useState(() => lessonPlannerDraft?.subject  || '');
+  const [grade,    setGrade]    = useState(() => lessonPlannerDraft?.grade    || '');
+  const [topic,    setTopic]    = useState(() => lessonPlannerDraft?.topic    || '');
+  const [duration, setDuration] = useState(() => lessonPlannerDraft?.duration || 45);
+  const [style,    setStyle]    = useState(() => lessonPlannerDraft?.style    || 'mixed');
   const [loading,  setLoading]  = useState(false);
-  const [plan,     setPlan]     = useState('');
+  const [plan,     setPlan]     = useState(() => lessonPlannerDraft?.plan     || '');
+
+  useEffect(() => {
+    setLessonPlannerDraft({
+      step,
+      subject,
+      grade,
+      topic,
+      duration,
+      style,
+      plan,
+    });
+  }, [step, subject, grade, topic, duration, style, plan, setLessonPlannerDraft]);
 
   const SelectBtn = ({ options, value, onChange }) => (
     <div style={{ display:'flex', flexWrap:'wrap', gap:10 }}>
