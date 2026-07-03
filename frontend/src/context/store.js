@@ -195,6 +195,19 @@ export const useChatStore = create(set => ({
     },
   })),
 
+  // Replace a temp/optimistic message with the real server message (dedup)
+  replacePrivateMessage: (targetId, tempId, realMsg) => set(s => ({
+    privateMessages: {
+      ...s.privateMessages,
+      [targetId]: (s.privateMessages[targetId] || []).map(m =>
+        m.id === tempId
+          ? { ...realMsg, id: realMsg.id || realMsg._id?.toString(), status: realMsg.status || 'sent' }
+          : m
+      ),
+    },
+  })),
+
+
   setActivePrivateChat: targetId => set({ activePrivateChat: targetId }),
   
   setRecentChats: chats => set({ recentChats: chats }),

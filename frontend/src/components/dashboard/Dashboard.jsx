@@ -91,149 +91,264 @@ const stagger = {
 };
 
 /* ════════════════════════════════════════════════════════
-   WelcomeBanner
+   WelcomeBanner — Premium Redesign v2
    ════════════════════════════════════════════════════════ */
 function WelcomeBanner({ user }) {
   const { lang } = useTranslation();
+  const navigate = useNavigate();
   const isAr = lang === 'ar';
-  const hr      = new Date().getHours();
-  
+  const hr = new Date().getHours();
+
   let greet = '';
   if (isAr) {
-    greet = hr < 5 ? 'طابت ليلتك' : hr < 12 ? 'صباح الخير' : hr < 17 ? 'مساء الخير' : 'مساء الخير';
+    greet = hr < 5 ? 'طابت ليلتك' : hr < 12 ? 'صباح الخير' : hr < 17 ? 'مساء الخير' : 'مساء النور';
   } else {
     greet = hr < 5 ? 'Good Night' : hr < 12 ? 'Good Morning' : hr < 17 ? 'Good Afternoon' : 'Good Evening';
   }
-  
-  const emoji   = hr < 5 ? '🌙' : hr < 12 ? '🌅' : hr < 17 ? '☀️' : '🌆';
+
+  const timeEmoji = hr < 5 ? '🌙' : hr < 12 ? '☀️' : hr < 17 ? '🌤️' : '🌆';
   const nextLvl = (Number(user?.level) || 1) * 500;
-  const curXp   = Number(user?.xp_points) || 0;
-  const pct     = Math.min(100, Math.round((curXp / nextLvl) * 100));
-  const name    = typeof user?.name === 'string' ? user.name.split(' ')[0] : (isAr ? 'طالب' : 'Student');
+  const curXp = Number(user?.xp_points) || 0;
+  const pct = Math.min(100, Math.round((curXp / nextLvl) * 100));
+  const name = typeof user?.name === 'string' ? user.name.split(' ')[0] : (isAr ? 'طالب' : 'Student');
+  const level = Number(user?.level) || 1;
+  const streak = user?.streak_days || 0;
+
+  // Arc progress circle params
+  const R = 34, C = 2 * Math.PI * R;
+  const arcOffset = C - (pct / 100) * C;
+
+  const chips = [
+    { icon: '🔥', val: `${streak}${isAr ? 'ي' : 'd'}`, label: isAr ? 'سلسلة' : 'Streak', color: '#FB923C' },
+    { icon: '💎', val: `${curXp.toLocaleString()}`, label: 'XP', color: '#A78BFA' },
+    { icon: '🏅', val: user?.rank || '—', label: isAr ? 'ترتيب' : 'Rank', color: '#34D399' },
+    { icon: '⭐', val: `Lv.${level}`, label: isAr ? 'مستوى' : 'Level', color: '#FBBF24' },
+  ];
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-      className="floating-panel animate-breathe"
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
       style={{
-        marginBottom: 28, borderRadius: 28,
-        padding: 0,
+        marginBottom: 28,
+        borderRadius: 32,
         overflow: 'hidden',
         position: 'relative',
-        background: 'linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(139,92,246,0.08) 50%, rgba(99,102,241,0.04) 100%)',
-        border: '1px solid var(--border)',
-        boxShadow: 'var(--shadow-premium)'
+        background: 'linear-gradient(135deg, #0f0c29 0%, #1a1040 40%, #0d1b3e 100%)',
+        boxShadow: '0 24px 80px rgba(99,102,241,0.22), 0 4px 16px rgba(0,0,0,0.4)',
+        minHeight: 220,
       }}
     >
-      {/* Background decoration */}
-      <div style={{
-        position: 'absolute', right: -60, top: -60,
-        width: 320, height: 320,
-        borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%)',
-        pointerEvents: 'none',
-      }}/>
-      <div style={{
-        position: 'absolute', left: '40%', bottom: -40,
-        width: 200, height: 200,
-        borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(139,92,246,0.06) 0%, transparent 70%)',
-        pointerEvents: 'none',
-      }}/>
+      {/* ── SVG animated mesh ── */}
+      <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }} preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <radialGradient id="orb1" cx="20%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#7C3AED" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="#7C3AED" stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id="orb2" cx="80%" cy="30%" r="45%">
+            <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="#3B82F6" stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id="orb3" cx="65%" cy="85%" r="35%">
+            <stop offset="0%" stopColor="#EC4899" stopOpacity="0.18" />
+            <stop offset="100%" stopColor="#EC4899" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#orb1)" />
+        <rect width="100%" height="100%" fill="url(#orb2)" />
+        <rect width="100%" height="100%" fill="url(#orb3)" />
+        {/* subtle grid lines */}
+        <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="1"/>
+        </pattern>
+        <rect width="100%" height="100%" fill="url(#grid)" />
+      </svg>
 
-      <div style={{ padding: '32px 40px', position: 'relative', zIndex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 24 }}>
-          {/* Left — greeting */}
-          <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 12, fontWeight: 800, color: 'var(--primary-light)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>
-              {emoji} {greet}
-            </p>
-            <h2 style={{
-              fontSize: 36, fontWeight: 800,
-              fontFamily: 'var(--font-head)',
-              letterSpacing: '-0.04em',
-              marginBottom: 10,
-              background: 'linear-gradient(135deg, #fff 40%, var(--primary-light) 100%)',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-            }}>
-              {name}
-            </h2>
-            <p style={{ color: 'var(--text2)', fontSize: 14, marginBottom: 22, maxWidth: 500, lineHeight: 1.65 }}>
-              {isAr ? 'مستعد للتعلم؟ أنت في سلسلة نشاط ' : "Ready to learn? You're on a "}
-              <span style={{ color: '#FBBF24', fontWeight: 700 }}>🔥 {user?.streak_days || 0} {isAr ? 'أيام' : 'day streak'}</span>
-              {isAr ? '. استمر في هذا الزخم!' : '. Keep the momentum going!'}
-            </p>
+      {/* ── Floating particle dots ── */}
+      {[{x:'8%',y:'20%',s:6,op:0.25,d:0},{x:'92%',y:'15%',s:4,op:0.2,d:0.5},{x:'50%',y:'75%',s:5,op:0.18,d:1},{x:'75%',y:'60%',s:3,op:0.15,d:0.3},{x:'20%',y:'80%',s:4,op:0.2,d:0.8}].map((p,i) => (
+        <motion.div
+          key={i}
+          animate={{ y: [0, -12, 0], opacity: [p.op, p.op * 1.6, p.op] }}
+          transition={{ duration: 3 + i * 0.5, repeat: Infinity, ease: 'easeInOut', delay: p.d }}
+          style={{ position: 'absolute', left: p.x, top: p.y, width: p.s, height: p.s, borderRadius: '50%', background: '#fff', pointerEvents: 'none' }}
+        />
+      ))}
 
-            {/* Badges */}
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {[
-                { label: user?.grade || (isAr ? 'طالب مصري' : 'Egyptian Student'), icon: '🎓', bg: 'rgba(124,58,237,0.15)', c: 'var(--primary-light)', bc: 'rgba(124,58,237,0.28)' },
-                { label: `${isAr ? 'مستوى' : 'Level'} ${user?.level || 1}`,        icon: '⭐', bg: 'rgba(245,158,11,0.12)', c: '#FBBF24',             bc: 'rgba(245,158,11,0.28)' },
-                { label: `${curXp.toLocaleString()} XP`,    icon: '💎', bg: 'rgba(16,185,129,0.12)', c: '#34D399',             bc: 'rgba(16,185,129,0.28)' },
-              ].map(b => (
-                <span key={b.label} style={{
-                  padding: '5px 13px', borderRadius: 99,
-                  fontSize: 12, fontWeight: 700,
-                  color: b.c, background: b.bg, border: `1px solid ${b.bc}`,
-                  display: 'inline-flex', alignItems: 'center', gap: 5,
-                }}>
-                  {b.icon} {b.label}
-                </span>
-              ))}
-            </div>
-          </div>
+      {/* ── Main content ── */}
+      <div style={{ position: 'relative', zIndex: 1, padding: '36px 44px', display: 'flex', alignItems: 'center', gap: 40, flexWrap: 'wrap' }}>
 
-          {/* Center — Generated Artwork */}
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.8 }} 
-            animate={{ opacity: 1, scale: 1 }} 
-            transition={{ delay: 0.2, type: 'spring' }}
-            style={{ 
-              flexShrink: 0, 
-              width: 240, height: 180, 
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '-20px 20px -20px 0'
+        {/* LEFT: Greeting + Name + Chips */}
+        <div style={{ flex: '1 1 300px', minWidth: 0 }}>
+          {/* Greeting pill */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 99, padding: '6px 16px', marginBottom: 18,
+              backdropFilter: 'blur(12px)',
             }}
           >
-            <img src="/images/showcase-6.jpeg" alt="Student Studying" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 24, boxShadow: '0 10px 20px rgba(0,0,0,0.2)' }} />
+            <span style={{ fontSize: 18 }}>{timeEmoji}</span>
+            <span style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.75)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+              {greet}
+            </span>
           </motion.div>
 
-          {/* Right — XP progress */}
-          <div style={{ minWidth: 220 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                {isAr ? 'تقدم المستوى' : 'Level Progress'}
-              </span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--primary-light)' }}>{pct}%</span>
-            </div>
-            <ProgressBar value={curXp} max={nextLvl} color="primary" height={10} />
-            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 8, ...(isAr ? {textAlign: 'left'} : {textAlign: 'right'}) }}>
-              {curXp.toLocaleString()} / {nextLvl.toLocaleString()} XP {isAr ? `للمستوى ${(Number(user?.level) || 1) + 1}` : `to Level ${(Number(user?.level) || 1) + 1}`}
-            </div>
+          {/* Name */}
+          <motion.h1
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            style={{
+              fontSize: 'clamp(28px, 4vw, 48px)',
+              fontWeight: 900,
+              fontFamily: 'var(--font-head)',
+              letterSpacing: '-0.04em',
+              lineHeight: 1.1,
+              marginBottom: 12,
+              background: 'linear-gradient(135deg, #fff 30%, #a78bfa 70%, #60a5fa 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+          >
+            {name}
+          </motion.h1>
 
-            {/* Mini stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 14 }}>
-              {[
-                { label: isAr ? 'سلسلة الأيام' : 'Streak', value: `${user?.streak_days || 0}${isAr ? 'ي' : 'd'}`, icon: '🔥' },
-                { label: isAr ? 'التصنيف' : 'Rank',   value: user?.rank || '—',             icon: '🏅' },
-              ].map(s => (
-                <div key={s.label} className="floating-card" style={{
-                  padding: '8px 12px',
-                  textAlign: 'center',
-                  borderRadius: 14,
-                }}>
-                  <div style={{ fontSize: 16, marginBottom: 2 }}>{s.icon}</div>
-                  <div style={{ fontSize: 15, fontWeight: 900, color: 'var(--text)', fontFamily: 'var(--font-head)' }}>{s.value}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text4)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{s.label}</div>
+          {/* Subtitle */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', marginBottom: 28, lineHeight: 1.6, maxWidth: 400 }}
+          >
+            {isAr
+              ? `أنت في سلسلة نشاط 🔥 ${streak} ${streak === 1 ? 'يوم' : 'أيام'} — استمر في هذا الزخم!`
+              : `You're on a 🔥 ${streak}-day streak — keep the momentum going!`}
+          </motion.p>
+
+          {/* Stat chips */}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            {chips.map((chip, i) => (
+              <motion.div
+                key={chip.label}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.25 + i * 0.07, type: 'spring', stiffness: 300 }}
+                whileHover={{ y: -4, scale: 1.06 }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  background: 'rgba(255,255,255,0.05)',
+                  border: `1px solid ${chip.color}40`,
+                  borderRadius: 14, padding: '8px 16px',
+                  backdropFilter: 'blur(12px)',
+                  cursor: 'default',
+                }}
+              >
+                <span style={{ fontSize: 16 }}>{chip.icon}</span>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 900, color: chip.color, lineHeight: 1.2 }}>{chip.val}</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{chip.label}</div>
                 </div>
-              ))}
-            </div>
+              </motion.div>
+            ))}
           </div>
         </div>
+
+        {/* CENTER: XP Arc + level */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
+          style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}
+        >
+          <div style={{ position: 'relative', width: 100, height: 100 }}>
+            <svg width="100" height="100" style={{ transform: 'rotate(-90deg)' }}>
+              {/* Track */}
+              <circle cx="50" cy="50" r={R} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="7" />
+              {/* Progress */}
+              <motion.circle
+                cx="50" cy="50" r={R}
+                fill="none"
+                stroke="url(#arcGrad)"
+                strokeWidth="7"
+                strokeLinecap="round"
+                strokeDasharray={C}
+                initial={{ strokeDashoffset: C }}
+                animate={{ strokeDashoffset: arcOffset }}
+                transition={{ duration: 1.2, delay: 0.5, ease: 'easeOut' }}
+              />
+              <defs>
+                <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#7C3AED" />
+                  <stop offset="100%" stopColor="#60A5FA" />
+                </linearGradient>
+              </defs>
+            </svg>
+            {/* Center label */}
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: 22, fontWeight: 900, color: '#fff', fontFamily: 'var(--font-head)', lineHeight: 1 }}>{pct}%</span>
+              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: 700, textTransform: 'uppercase' }}>XP</span>
+            </div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.6)' }}>
+              {curXp.toLocaleString()} / {nextLvl.toLocaleString()}
+            </div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>
+              {isAr ? `للمستوى ${level + 1}` : `to Level ${level + 1}`}
+            </div>
+          </div>
+        </motion.div>
+
+        {/* RIGHT: CTA buttons */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.35 }}
+          style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 10, minWidth: 160 }}
+        >
+          {[
+            { icon: '🤖', label: isAr ? 'اسأل المعلم الذكي' : 'Ask AI Tutor', path: '/ai', grad: 'linear-gradient(135deg,#7C3AED,#4F46E5)' },
+            { icon: '📅', label: isAr ? 'خطط لمذاكرتك' : 'Plan My Study', path: '/planner', grad: 'linear-gradient(135deg,#3B82F6,#1D4ED8)' },
+            { icon: '📁', label: isAr ? 'الملفات الدراسية' : 'Study Files', path: '/files', grad: 'linear-gradient(135deg,#10B981,#059669)' },
+          ].map((btn, i) => (
+            <motion.button
+              key={btn.path}
+              onClick={() => navigate(btn.path)}
+              whileHover={{ x: isAr ? -6 : 6, scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 + i * 0.08 }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                background: btn.grad,
+                border: 'none', borderRadius: 14,
+                padding: '12px 18px', cursor: 'pointer', color: '#fff',
+                fontSize: 13, fontWeight: 700, textAlign: isAr ? 'right' : 'left',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+                flexDirection: isAr ? 'row-reverse' : 'row',
+              }}
+            >
+              <span style={{ fontSize: 18 }}>{btn.icon}</span>
+              <span>{btn.label}</span>
+              <span style={{ marginLeft: isAr ? 0 : 'auto', marginRight: isAr ? 'auto' : 0, opacity: 0.6 }}>{isAr ? '←' : '→'}</span>
+            </motion.button>
+          ))}
+        </motion.div>
+
       </div>
     </motion.div>
   );
 }
+
 
 /* ════════════════════════════════════════════════════════
    QuickActions

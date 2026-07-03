@@ -136,6 +136,8 @@ function AddSessionModal({ open, onClose, onSaved, onDelete, prefilledDate, edit
           const startBase = new Date(data.start_time);
           const endBase = new Date(data.end_time);
 
+          let created = 0;
+          let skipped = 0;
           for (let i = 0; i < count; i++) {
             let offsetDays = 0;
             if (data.repeat === 'daily') {
@@ -143,28 +145,39 @@ function AddSessionModal({ open, onClose, onSaved, onDelete, prefilledDate, edit
             } else if (data.repeat === 'weekly') {
               offsetDays = i * 7;
             } else if (data.repeat === 'weekdays') {
-              // Add offset, skipping weekends if needed (simple weekday addition)
               let tempDate = new Date(startBase);
               let added = 0;
               while (added < i) {
                 tempDate.setDate(tempDate.getDate() + 1);
-                if (tempDate.getDay() !== 5 && tempDate.getDay() !== 6) {
-                  added++;
-                }
+                if (tempDate.getDay() !== 5 && tempDate.getDay() !== 6) added++;
               }
               offsetDays = Math.round((tempDate - startBase) / 86400000);
             }
 
             const nextStart = new Date(startBase.getTime() + offsetDays * 86400000).toISOString();
-            const nextEnd = new Date(endBase.getTime() + offsetDays * 86400000).toISOString();
+            const nextEnd   = new Date(endBase.getTime()   + offsetDays * 86400000).toISOString();
 
-            await plannerAPI.createSession({
-              ...data,
-              start_time: nextStart,
-              end_time: nextEnd,
-            });
+            try {
+              await plannerAPI.createSession({ ...data, start_time: nextStart, end_time: nextEnd });
+              created++;
+            } catch (slotErr) {
+              if (slotErr.response?.status === 409) {
+                skipped++; // conflict — silently skip this slot
+              } else {
+                throw slotErr; // unexpected error — re-throw to outer catch
+              }
+            }
           }
-          toast.success(isAr ? 'تمت إضافة الجلسات المتكررة بنجاح' : 'Repeated sessions created successfully');
+
+          if (created === 0) {
+            toast.error(isAr ? 'جميع المواعيد تتعارض مع جلسات موجودة' : 'All slots conflict with existing sessions');
+          } else if (skipped > 0) {
+            toast.success(isAr
+              ? `تم إنشاء ${created} جلسة، وتم تخطي ${skipped} بسبب تعارض`
+              : `Created ${created} session(s), skipped ${skipped} due to conflicts`);
+          } else {
+            toast.success(isAr ? 'تمت إضافة الجلسات المتكررة بنجاح' : 'Repeated sessions created successfully');
+          }
         } else {
           await plannerAPI.createSession(data);
           toast.success(t('toast.sessionAdded'));

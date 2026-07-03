@@ -87,6 +87,31 @@ export function useSocket() {
       window.__najahSocket = socketInstance;
     }
 
+    // ── Proactive token refresh before it expires ──────────────────────
+    // Decode the JWT expiry without a library and schedule a refresh
+    // 2 minutes before expiry so the socket never hits "Token expired".
+    let refreshTimer = null;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      if (payload.exp) {
+        const msUntilExpiry = payload.exp * 1000 - Date.now();
+        const refreshIn     = Math.max(msUntilExpiry - 2 * 60 * 1000, 30_000); // at least 30 s
+        if (refreshIn < msUntilExpiry) {
+          refreshTimer = setTimeout(async () => {
+            const ref = localStorage.getItem('refresh');
+            if (!ref) return;
+            try {
+              const axios = (await import('axios')).default;
+              const API   = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+              const { data: r } = await axios.post(`${API}/auth/refresh`, { refresh: ref });
+              localStorage.setItem('token', r.token);
+              if (r.refresh) localStorage.setItem('refresh', r.refresh);
+              if (socketInstance) socketInstance.auth.token = r.token;
+            } catch { /* will be handled reactively on next connect_error */ }
+          }, refreshIn);
+        }
+      }
+    } catch { /* malformed token — ignore */ }
     // Group room messages handler (only)
     const handleNewMessage = ({ roomId, ...msg }) => {
       const room = roomId.replace('room:', '');

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Avatar } from '../shared/UI';
 import { useTranslation } from '../../i18n/index';
@@ -29,6 +29,8 @@ export default function CallOverlay({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const remoteAudioRef = useRef(null);
+
   useEffect(() => {
     if (localVideoRef?.current && localStream) {
       localVideoRef.current.srcObject = localStream;
@@ -39,11 +41,19 @@ export default function CallOverlay({
     if (remoteVideoRef?.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
     }
+    // For audio-only calls, route remoteStream to a hidden <audio> element
+    if (remoteAudioRef.current && remoteStream) {
+      remoteAudioRef.current.srcObject = remoteStream;
+    }
   }, [remoteStream, callState, remoteVideoRef]);
 
   if (!callState) return null;
 
   return (
+    <>
+    {/* Hidden audio element for voice-only calls — must always be in DOM when callState exists */}
+    <audio ref={remoteAudioRef} autoPlay playsInline style={{ display: 'none' }} />
+
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -384,6 +394,7 @@ export default function CallOverlay({
       )}
 
     </motion.div>
+    </>
   );
 }
 

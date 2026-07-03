@@ -19,6 +19,26 @@ export default function useChatSocket(socket, user, activePrivateChat, webrtc, s
 
     const onNewPrivate = (msg) => {
       const targetId = msg.senderId === user?.id ? msg.receiverId : msg.senderId;
+
+      // ── Dedup: if sender is self, replace optimistic temp message ──
+      if (msg.senderId === user?.id) {
+        const state = useChatStore.getState();
+        const existing = (state.privateMessages?.[targetId] || []);
+        const tempIdx = existing.findIndex(m =>
+          m.id?.toString().startsWith('temp-') &&
+          m.content === msg.content &&
+          m.type === (msg.type || 'text') &&
+          Math.abs(new Date(m.createdAt) - new Date(msg.createdAt)) < 8000
+        );
+        if (tempIdx !== -1) {
+          // Replace the temp entry in-place with real server message
+          useChatStore.getState().replacePrivateMessage?.(targetId, existing[tempIdx].id, msg);
+          // Update status in recent chats
+          updateRecentChat(targetId, { lastMsgStatus: msg.status });
+          return; // don't double-add
+        }
+      }
+
       addPrivateMessage(targetId, msg);
       if (msg.senderId !== user?.id) playPing();
 
@@ -44,6 +64,7 @@ export default function useChatSocket(socket, user, activePrivateChat, webrtc, s
         socket.emit('mark_messages_read', { senderId: targetId });
       }
     };
+
 
     const onHistory = ({ targetId, messages }) => {
       setPrivateMessages(targetId, messages);
